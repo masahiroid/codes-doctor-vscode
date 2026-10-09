@@ -1,0 +1,146 @@
+{
+  "name": "codes-doctor",
+  "displayName": "Codes Doctor",
+  "description": "Diagnose the current workspace for God Classes, technical debt, security issues, and dependency structure.",
+  "version": "1.0.0",
+  "publisher": "masahirocom",
+  "license": "Apache-2.0",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/masahiroid/codes-doctor-vscode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/masahiroid/codes-doctor-vscode/issues"
+  },
+  "homepage": "https://github.com/masahiroid/codes-doctor-vscode#readme",
+  "keywords": [
+    "code quality",
+    "god class",
+    "technical debt",
+    "security",
+    "static analysis",
+    "dependency graph",
+    "sbom"
+  ],
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other",
+    "Linters"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codeDoctor",
+          "title": "Codes Doctor",
+          "icon": "media/csap.svg"
+        }
+      ]
+    },
+    "views": {
+      "codeDoctor": [
+        {
+          "id": "codeDoctor.actions",
+          "name": "Dashboard",
+          "type": "webview",
+          "icon": "media/csap.svg"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "codeDoctor.analyzeCurrentWorkspace",
+        "title": "Codes Doctor: Analyze Current Workspace"
+      },
+      {
+        "command": "codeDoctor.setLlmApiKey",
+        "title": "Codes Doctor: Set LLM API Key"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "codeDoctor.analyzeCurrentWorkspace",
+          "when": "view == codeDoctor.actions",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Codes Doctor",
+      "properties": {
+        "codeDoctor.reportOpenMode": {
+          "type": "string",
+          "enum": [
+            "external",
+            "webview",
+            "vscode"
+          ],
+          "default": "external",
+          "description": "How to open generated reports: external browser, VS Code WebView, or VS Code URI open."
+        },
+        "codeDoctor.analysisLanguage": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "typescript",
+            "javascript",
+            "php",
+            "dart",
+            "python"
+          ],
+          "default": "auto",
+          "description": "Language mode used when analyzing the workspace."
+        },
+        "codeDoctor.llmProvider": {
+          "type": "string",
+          "enum": [
+            "openai",
+            "anthropic"
+          ],
+          "enumDescriptions": [
+            "OpenAI (GPT models)",
+            "Anthropic (Claude models)"
+          ],
+          "default": "openai",
+          "description": "LLM provider used for the optional AI structural review. Set the matching API key via the \"Codes Doctor: Set LLM API Key\" command."
+        },
+        "codeDoctor.llmModel": {
+          "type": "string",
+          "default": "",
+          "description": "Model ID to use for LLM review. Leave empty to pick one from the Dashboard's model list (fetched live from the provider)."
+        }
+      }
+    }
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    }
+  },
+  "scripts": {
+    "lint": "echo 'No lint configured'",
+    "vendor:csap": "node scripts/vendor-csap.js",
+    "prepackage": "npm run vendor:csap",
+    "package": "npm run prepackage && npx @vscode/vsce package",
+    "package:release": "npm run prepackage && mkdir -p releases && VERSION=$(node -p \"require('./package.json').version\") && npx @vscode/vsce package -o releases/codes-doctor-$VERSION.vsix && cp releases/codes-doctor-$VERSION.vsix releases/codes-doctor-latest.vsix",
+    "prepublish:marketplace": "npm run vendor:csap",
+    "publish:marketplace": "npx @vscode/vsce publish",
+    "publish:patch": "npm run vendor:csap && npx @vscode/vsce publish patch",
+    "publish:minor": "npm run vendor:csap && npx @vscode/vsce publish minor",
+    "publish:major": "npm run vendor:csap && npx @vscode/vsce publish major"
+  },
+  "dependencies": {
+    "@typescript-eslint/typescript-estree": "^6.0.0",
+    "php-parser": "^3.4.0",
+    "typescript": "^5.3.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^2.26.1"
+  }
+}
