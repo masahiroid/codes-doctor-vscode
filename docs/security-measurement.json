@@ -1,0 +1,162 @@
+{
+  "checkedOn": "2026-10-10",
+  "extensionVersion": "1.5.5",
+  "reportPath": "/Users/masahiro/Library/Application Support/Code/User/globalStorage/masahirocom.codes-doctor/reports/b156353e-351f-4854-8a24-c252a36bbbaf.html",
+  "summary": {
+    "totalFiles": 133,
+    "tsFiles": 61,
+    "phpFiles": 0,
+    "dartFiles": 0,
+    "pythonFiles": 0,
+    "totalClasses": 2,
+    "totalMethods": 8,
+    "avgGodScore": 16
+  },
+  "security": {
+    "overallScore": 99,
+    "grade": "A",
+    "issues": [
+      {
+        "type": "info",
+        "category": "Environment Variables",
+        "description": "環境変数の使用が検出されました",
+        "filePath": "/Volumes/NVMe2TB/code-doctor-vscode/playwright.config.ts",
+        "lineNumber": 8,
+        "recommendation": "環境変数が適切に保護されていることを確認してください"
+      },
+      {
+        "type": "info",
+        "category": "Environment Variables",
+        "description": "環境変数の使用が検出されました",
+        "filePath": "/Volumes/NVMe2TB/code-doctor-vscode/src/scripts/vendor-csap.ts",
+        "lineNumber": 21,
+        "recommendation": "環境変数が適切に保護されていることを確認してください"
+      },
+      {
+        "type": "info",
+        "category": "Environment Variables",
+        "description": "環境変数の使用が検出されました",
+        "filePath": "/Volumes/NVMe2TB/code-doctor-vscode/src/scripts/vendor-csap.ts",
+        "lineNumber": 22,
+        "recommendation": "環境変数が適切に保護されていることを確認してください"
+      },
+      {
+        "type": "info",
+        "category": "Environment Variables",
+        "description": "環境変数の使用が検出されました",
+        "filePath": "/Volumes/NVMe2TB/code-doctor-vscode/scripts/vendor-csap.js",
+        "lineNumber": 22,
+        "recommendation": "環境変数が適切に保護されていることを確認してください"
+      },
+      {
+        "type": "info",
+        "category": "Environment Variables",
+        "description": "環境変数の使用が検出されました",
+        "filePath": "/Volumes/NVMe2TB/code-doctor-vscode/scripts/vendor-csap.js",
+        "lineNumber": 23,
+        "recommendation": "環境変数が適切に保護されていることを確認してください"
+      }
+    ],
+    "summary": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "info": 5
+    },
+    "categoryBreakdown": [
+      {
+        "category": "Environment Variables",
+        "count": 5,
+        "severity": "info",
+        "description": "環境変数の使用（適切な管理が必要）"
+      }
+    ],
+    "explanation": "セキュリティスコア99点（グレードA）: 指摘5件（Critical: 0件、High: 0件、Medium: 0件、Low: 0件、Info: 5件）。各指摘の影響と対応の必要性を確認してください。静的検出による候補のため、実コードで確認が必要です。採点上限はCriticalあり59点、Highあり79点、Mediumあり89点、その他の指摘あり99点です。",
+    "topRisks": [
+      "深刻なセキュリティリスクは検出されませんでした"
+    ]
+  },
+  "technicalDebt": {
+    "overallScore": 92,
+    "grade": "A",
+    "metrics": {
+      "codeComplexity": 100,
+      "maintainability": 72,
+      "circularDeps": 100
+    },
+    "metricsDetail": {
+      "codeComplexity": {
+        "score": 100,
+        "explanation": "コードの複雑度は非常に良好です。適切なクラスサイズが維持されています。",
+        "problems": [],
+        "goodPoints": [
+          "深刻な複雑度の問題はありません",
+          "クラスあたりの平均メソッド数: 4.0, 平均行数: 36"
+        ],
+        "includedInOverall": true,
+        "measurementStatus": "measured"
+      },
+      "maintainability": {
+        "score": 72,
+        "explanation": "モジュール構造はおおむね良好ですが、一部のモジュールで改善の余地があります。",
+        "problems": [],
+        "goodPoints": [
+          "54個の安定したモジュールが存在します",
+          "101個の薄いオーケストレーションモジュールは軽量構成として評価しています",
+          "平均構造スコア: 71.8（参照数・安定性・サイズの合成値。典型は30〜60）",
+          "総モジュール数: 133"
+        ],
+        "includedInOverall": true,
+        "measurementStatus": "measured"
+      },
+      "circularDeps": {
+        "score": 100,
+        "explanation": "循環依存は検出されませんでした",
+        "problems": [],
+        "goodPoints": [
+          "循環依存がないため、依存関係は健全です"
+        ],
+        "includedInOverall": true,
+        "measurementStatus": "measured"
+      }
+    },
+    "issues": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 2
+    },
+    "recommendations": [
+      "コード品質は良好な状態です。この状態を維持してください。",
+      "定期的なコードレビューとリファクタリングの継続を推奨します。"
+    ],
+    "summary": "総合スコア92点（グレードA）: コードベースは非常に健全な状態です。未実装のテストカバレッジとドキュメント評価は総合点から除外しています。"
+  },
+  "classes": [
+    {
+      "className": "CodeDoctorDashboardViewProvider",
+      "filePath": "/Volumes/NVMe2TB/code-doctor-vscode/src/lib/dashboardView.ts",
+      "methodCount": 4,
+      "lineCount": 35,
+      "importCount": 3,
+      "propertyCount": 4,
+      "godScore": 16,
+      "rank": "low",
+      "warnings": []
+    },
+    {
+      "className": "CodeDoctorDashboardViewProvider",
+      "filePath": "/Volumes/NVMe2TB/code-doctor-vscode/lib/dashboardView.js",
+      "methodCount": 4,
+      "lineCount": 36,
+      "importCount": 3,
+      "propertyCount": 4,
+      "godScore": 16,
+      "rank": "low",
+      "warnings": []
+    }
+  ],
+  "circularDependencies": [],
+  "unstableModules": []
+}

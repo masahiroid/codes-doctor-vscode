@@ -4,3 +4,13 @@
 **/*.map
 **/*.ts
 node_modules/.cache/**
+
+test/**
+
+src/**
+browser-tests/**
+test-results/**
+playwright-report/**
+tsconfig*.json
+
+media/report-libraries/*.meta.json

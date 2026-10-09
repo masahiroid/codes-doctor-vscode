@@ -1,5 +1,122 @@
 # Changelog
 
+## 1.5.5
+
+- Restrict the dashboard provider to VS Code view attachment, redraw and subscription cleanup; move UI state and workflow composition into a typed controller factory.
+- Render sections through focused functions instead of routing each section through provider methods, narrowing dashboard interfaces.
+- Dispose replaced view subscriptions and release detached views; add lifecycle regression coverage and refresh structural measurements.
+
+## 1.5.4
+
+- Split dashboard history, controls and browser event handling into focused modules; depend on a dashboard interface instead of the concrete provider.
+- Split UI, engine and report-asset tests by responsibility, removing all reported unstable-module candidates without relaxing analysis thresholds.
+- Replace explicit any annotations with concrete types, typed local imports and vendor API contracts; validate JSON history metadata at runtime.
+- Record extension-version provenance in generated reports and verify the packaged engine against security fixtures, preserving executable-risk detection.
+- Refresh measurement and deployment documentation; prepare the updated local VSIX.
+
+## 1.5.3
+
+- Sanitize Markdown HTML with bundled DOMPurify, upgrade saved report bundles, and restrict webview scripts and network access with CSP hashes.
+- Allow only extension commands from dashboard messages; split dashboard actions from presentation and lifecycle.
+- Exclude literal examples, comments and proven RegExp calls from security findings while retaining executable risks. Measure exported TypeScript declarations and exclude type-only dependency edges.
+- Escape repository/file display names and script-embedded JSON to prevent HTML injection.
+- Replace copy-icon HTML injection with SVG DOM construction, add security regression coverage, make lint run type checking, and refresh development/deployment documentation.
+
+## 1.5.2
+
+- Use Codes Doctor for report titles, headings and attribution, including saved reports.
+- Update dependencies and TypeScript compiler, replace UUID dependency with Node crypto, and rebuild report libraries with patched KaTeX. Embed audited browser libraries and upgrade known legacy CDN tags on opening.
+- Preserve literal replacement sequences in embedded bundles and keep navigation scripts outside library HTML export strings.
+
+## 1.5.1
+
+- Fix report-copy upgrades matching escaped AST source examples and removing closing template markup, which silently prevented report tabs from running.
+- Refresh existing navigation scripts instead of relying only on an installation marker.
+- Move all extension and vendoring implementation sources to TypeScript under src, preserving generated JavaScript entry points for VS Code and existing callers. Add strict compilation and real-browser report navigation tests.
+
+## 1.5.0
+
+- Keep report tabs interactive when browser storage is blocked or optional Markdown/diagram scripts fail. Initialize navigation in its own script.
+- Upgrade tab handling in previously saved reports when opened through the extension, preserving valid saved tab selection.
+
+## 1.0.14
+
+- Separate dashboard presentation and styles, report history storage, and path-specific engine patch strategies while keeping public APIs intact.
+- Use manifest settings as the source of defaults and token constraints, and centralize retry, AST batching, security caps and command identifiers.
+- Add repository boundary regression coverage for sorting, metadata and corrupt files.
+
+## 1.0.13
+
+- Extract static CommonJS imports, re-exports and dynamic imports; resolve internal dependencies by file path and exclude external packages from internal counts.
+- Prevent zero coupling from being classified as high, correct centrality and cycle traversal, and classify layers relative to the workspace.
+- Delegate dashboard LLM review execution to an internal workflow helper while preserving public methods and messages.
+
+## 1.0.12
+
+- Prepend coding-agent implementation instructions when copying LLM reviews and place a compact copy icon at the right of each result. Upgrade copy controls in previously saved reports.
+- Preserve literal dollar replacement sequences, Japanese text, and code when saving LLM results to HTML.
+
+## 1.0.11
+
+- Add Copy for AI buttons to full and AST LLM reviews, preserving original Markdown and code blocks, with clipboard feedback in browsers and VS Code webviews.
+
+## 1.0.10
+
+- Add a configurable LLM output token limit in VS Code settings and the dashboard, defaulting to 16,000, with model-specific starting points and retry cost guidance.
+- Pass the configured limit to review requests and point token-exhaustion errors to the extension setting.
+
+## 1.0.9
+
+- Retry empty OpenAI reviews once with a larger token budget when reasoning exhausts the output limit, and show actionable errors for persistent empty output or refusal.
+- Extract Responses API review text from all message items, including messages following reasoning output.
+
+## 1.0.8
+
+- Show the lightweight structure extraction notice only beside Dart or Python results when files of that language are present.
+
+## 1.0.7
+
+- Simplify AST headings and remove the introductory explanation and sampling notes.
+- Include every analyzed file in the AST report, with 20-file batches and a Show more button for longer lists.
+- Remove structure-item and raw-data truncation limits so complete detected structures and TypeScript/JavaScript/PHP AST data can be inspected. Dart/Python parsing capabilities are unchanged.
+
+## 1.0.6
+
+- Fix class dependency graphs initializing at zero width in hidden tabs; render when visible, resize with the panel, and explain missing links or a failed D3 download.
+- Show initial static AST structures without misleading LLM execution instructions, localize AST headings and structure labels, and fix saved AST-specific review updates.
+- Cap security scores by detected severity (Critical: 59, High: 79, Medium: 89, other findings: 99) so findings cannot round up to 100; make explanations reflect actual severity and distinguish detection candidates from confirmed vulnerabilities.
+
+## 1.0.5
+
+- Fix Japanese Markdown bold rendering next to punctuation and surrounding text in LLM reports, while preserving code spans and fenced code.
+- Improve AI review prompts with actionable inspection, conditional refactoring, and acceptance checks within the existing report sections.
+
+## 1.0.4
+
+- Fix: keep the selected Display & Report Language as an application-wide user preference, preventing older workspace settings from overriding it after selection, rerendering, or restart.
+
+## 1.0.3
+
+- Localize VS Code settings, command titles, and the dashboard view name in Japanese.
+
+- Add English/Japanese dashboard and report language selection, with English as the default. Localize notifications, diagnostic explanations, graphs, and AI review prompts. Historical reports keep their language when an AI review is appended.
+
+## 1.0.2
+
+- Fix: a saved LLM review's Markdown result was patched into the report file as a raw, unrendered string (and could show mojibake), because only the visible text was updated, not the `data-md` attribute the report's Markdown renderer reads on load. Both are now kept in sync.
+- Fix: after "Run LLM Review" completes, the report is now reopened automatically so the result is visible without manually finding and reloading the old tab/panel.
+- Add: Dashboard now shows a "Report History" list (every previously generated report for this workspace, by repo name and analysis time) — click an entry to reopen that report, which also makes it the target for "Run LLM Review".
+
+## 1.0.1
+
+- Fix: OpenAI reasoning/GPT-5 models that reject a custom `temperature` (require the API default) now automatically retry without it, instead of failing the review.
+- Fix: OpenAI models that reject `max_tokens` (require `max_completion_tokens`) now automatically retry with the correct parameter name.
+- Fix: running an LLM review no longer requires `CSAP_LLM_ENABLED` on the bundled engine — a caller-supplied API key is always enough.
+- Change: the generated report's LLM sections are now read-only displays of the saved result. All configuration (provider, API key, model) and the "run" action live only in the Dashboard panel, which is the only place that can securely hold the key.
+- Add: Dashboard now remembers the previously selected model (and keeps it usable) even before models are re-fetched.
+- Add: Dashboard shows a clear running/done/error state while an LLM review is in flight, instead of relying solely on a notification popup.
+- Add: Dashboard lists the history of past LLM reviews (focus, provider, model, timestamp) for the current analysis.
+
 ## 1.0.0
 
 - Initial public release.

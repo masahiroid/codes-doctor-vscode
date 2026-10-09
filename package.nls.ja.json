@@ -1,0 +1,23 @@
+{
+  "extension.description": "現在のワークスペースのGod Class、技術負債、セキュリティ問題、依存構造を診断します。",
+  "view.dashboard": "ダッシュボード",
+  "codeDoctor.analyzeCurrentWorkspace": "Codes Doctor: 現在のワークスペースを解析",
+  "codeDoctor.setLlmApiKey": "Codes Doctor: LLM APIキーを設定",
+  "config.reportOpenMode.description": "生成したレポートの開き方（外部ブラウザー、VS Code WebView、VS Codeで開く）。",
+  "config.analysisLanguage.description": "解析するプログラミング言語。画面・レポートの言語はDisplay Languageで選択します。",
+  "config.llmProvider.description": "AI構造レビューに使うLLMプロバイダー。「Codes Doctor: LLM APIキーを設定」で対応するAPIキーを設定してください。",
+  "config.llmModel.description": "LLMレビューで使うモデルID。空の場合はダッシュボードで取得したモデル一覧から選択できます。",
+  "config.displayLanguage.description": "画面・新規レポート・AIレビューの言語。英語がデフォルトです。変更後は再解析してください。既存レポートは生成時の言語を保持します。",
+  "config.reportOpenMode.option.0": "外部ブラウザー",
+  "config.reportOpenMode.option.1": "VS Code WebView",
+  "config.reportOpenMode.option.2": "VS Codeで開く",
+  "config.analysisLanguage.option.0": "自動検出",
+  "config.analysisLanguage.option.1": "TypeScript / JavaScript",
+  "config.analysisLanguage.option.2": "JavaScriptのみ",
+  "config.analysisLanguage.option.3": "PHP",
+  "config.analysisLanguage.option.4": "Dart",
+  "config.analysisLanguage.option.5": "Python",
+  "config.llmProvider.option.0": "OpenAI（GPTモデル）",
+  "config.llmProvider.option.1": "Anthropic（Claudeモデル）",
+  "config.llmMaxOutputTokens.description": "LLMレビューの初回リクエストで生成するトークン数の上限（入力トークンは別）。OpenAIの推論モデルでは推論分も含みます。目安：非推論モデルは4,000〜8,000、推論モデルは16,000〜32,000。既定値は16,000。選択モデルの出力上限内で設定してください。OpenAIで上限到達により本文が空の場合は、最大値（設定値の2倍、16,000）で1回再試行するため、費用が増える場合があります。"
+}

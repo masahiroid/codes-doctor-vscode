@@ -1,0 +1,49 @@
+{
+  "checkedOn": "2026-10-10",
+  "extensionVersion": "1.5.4",
+  "auditBefore": {
+    "info": 0,
+    "low": 0,
+    "moderate": 2,
+    "high": 8,
+    "critical": 0,
+    "total": 10
+  },
+  "auditAfter": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "auditRuntime": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "directVersions": {
+    "@typescript-eslint/typescript-estree": "8.71.1",
+    "php-parser": "3.7.0",
+    "typescript": "6.0.3",
+    "@playwright/test": "1.64.0",
+    "@types/node": "26.6.4",
+    "@types/vscode": "1.90.0",
+    "@vscode/vsce": "4.0.0",
+    "chart.js": "4.5.1",
+    "d3": "7.9.0",
+    "esbuild": "0.28.2",
+    "marked": "18.1.0",
+    "mermaid": "12.1.0",
+    "typescript-compiler": "7.0.2",
+    "dompurify": "3.4.16"
+  },
+  "overrides": {
+    "mermaid": {
+      "katex": "0.19.0"
+    }
+  }
+}

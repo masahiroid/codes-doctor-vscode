@@ -1,0 +1,176 @@
+{
+  "targetFiles": [
+    "extension.js",
+    "lib/analyzer.js",
+    "lib/commands.js",
+    "lib/config.js",
+    "lib/dashboardView.js",
+    "lib/enginePatches.js",
+    "lib/i18n.js",
+    "lib/lastAnalysisState.js",
+    "lib/localizeEngine.js",
+    "lib/reportCopy.js",
+    "lib/reportViewer.js",
+    "lib/secrets.js",
+    "test/bilingual.test.js",
+    "test/markdown.test.js",
+    "test/openai-response.test.js",
+    "test/report-copy.test.js",
+    "test/report-integrity.test.js"
+  ],
+  "before": {
+    "filesWithDependencies": 0,
+    "internalDependencies": 0
+  },
+  "after": {
+    "filesWithDependencies": 10,
+    "internalDependencies": 26,
+    "cycles": 0
+  },
+  "importsAfter": [
+    {
+      "file": "extension.js",
+      "imports": [
+        "vscode",
+        "./lib/commands",
+        "./lib/dashboardView"
+      ]
+    },
+    {
+      "file": "lib/analyzer.js",
+      "imports": [
+        "node:fs",
+        "node:path",
+        "../vendor/csap/services/llmService"
+      ]
+    },
+    {
+      "file": "lib/commands.js",
+      "imports": [
+        "./i18n",
+        "node:fs",
+        "./reportViewer",
+        "./analyzer",
+        "./config",
+        "./secrets",
+        "./lastAnalysisState"
+      ]
+    },
+    {
+      "file": "lib/config.js",
+      "imports": []
+    },
+    {
+      "file": "lib/dashboardView.js",
+      "imports": [
+        "./dashboardReview",
+        "./i18n",
+        "./config",
+        "./secrets",
+        "./analyzer",
+        "./lastAnalysisState",
+        "./reportViewer"
+      ]
+    },
+    {
+      "file": "lib/enginePatches.js",
+      "imports": [
+        "./dependencyPatches",
+        "./reportCopy"
+      ]
+    },
+    {
+      "file": "lib/i18n.js",
+      "imports": [
+        "./config",
+        "./locales/ui-ja.json"
+      ]
+    },
+    {
+      "file": "lib/lastAnalysisState.js",
+      "imports": []
+    },
+    {
+      "file": "lib/localizeEngine.js",
+      "imports": [
+        "typescript",
+        "./locales/report-en.json"
+      ]
+    },
+    {
+      "file": "lib/reportCopy.js",
+      "imports": []
+    },
+    {
+      "file": "lib/reportViewer.js",
+      "imports": [
+        "./reportCopy",
+        "./i18n",
+        "node:fs",
+        "./config"
+      ]
+    },
+    {
+      "file": "lib/secrets.js",
+      "imports": []
+    },
+    {
+      "file": "test/bilingual.test.js",
+      "imports": [
+        "node:test",
+        "node:assert/strict",
+        "node:fs",
+        "node:os",
+        "node:path",
+        "node:vm",
+        "../lib/config",
+        "../lib/dashboardView",
+        "../lib/analyzer",
+        "../lib/localizeEngine",
+        "../package.json",
+        "../package.nls.json",
+        "../package.nls.ja.json",
+        "../package-lock.json"
+      ]
+    },
+    {
+      "file": "test/markdown.test.js",
+      "imports": [
+        "node:test",
+        "node:assert/strict",
+        "marked",
+        "../lib/enginePatches"
+      ]
+    },
+    {
+      "file": "test/openai-response.test.js",
+      "imports": [
+        "node:test",
+        "node:assert/strict",
+        "node:fs",
+        "node:vm"
+      ]
+    },
+    {
+      "file": "test/report-copy.test.js",
+      "imports": [
+        "node:test",
+        "node:assert/strict",
+        "node:vm",
+        "../lib/reportCopy"
+      ]
+    },
+    {
+      "file": "test/report-integrity.test.js",
+      "imports": [
+        "node:test",
+        "node:assert/strict",
+        "node:fs",
+        "node:os",
+        "node:path",
+        "node:vm",
+        "../lib/analyzer"
+      ]
+    }
+  ]
+}

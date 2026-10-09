@@ -39,6 +39,9 @@ The model list is fetched live from the provider's API each time, so you're neve
 
 ## Settings
 
+Choose **Display & Report Language** in the Dashboard: **English** (default) or **日本語**. The dashboard, notifications, new HTML reports, and AI reviews use that language. Existing reports retain their original language; reviews added to a historical report match that report. Run a new analysis after switching languages to generate a report in the new language.
+
+- `codeDoctor.displayLanguage` (default: `en`) — `en` / `ja`, saved as an application-wide user preference. The selection persists across workspace changes and restarts until you change it again, independently of the programming language being analyzed.
 - `codeDoctor.analysisLanguage` (default: `auto`) — `auto` / `typescript` / `javascript` / `php` / `dart` / `python`
 - `codeDoctor.reportOpenMode` (default: `external`)
   - `external`: open in your default browser
@@ -60,7 +63,7 @@ Dependency graphs, circular dependency detection, layer analysis, and SBOM/vulne
 
 ## Development
 
-This extension bundles the compiled output of the [Code Doctor](https://github.com/masahiroid/code-doctor) analysis engine rather than depending on it at runtime. To build locally:
+This extension bundles the compiled output of the [Code Doctor](https://github.com/masahiroid/code-doctor) analysis engine rather than depending on it at runtime. To build locally, use Node.js 22 or newer:
 
 ```bash
 # 1. Build the engine in a sibling checkout (or point CSAP_ROOT elsewhere)
@@ -70,9 +73,28 @@ cd ../csap-main && npm install && npm run build && cd -
 # 2. Vendor it into this extension and package
 npm install
 npm run vendor:csap   # reads CSAP_ROOT env var, defaults to ../csap-main
+npm test               # verify bilingual UI, reports, and review prompts
 npm run package        # produces codes-doctor-<version>.vsix
 ```
+
+The vendor step generates separate Japanese (`vendor/csap`) and English (`vendor/csap-en`) engine bundles. English translations live in `lib/locales/report-en.json`; the build fails on missing engine translations. Only engine-owned literals are translated, so repository names and source samples remain intact.
 
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE).
+
+Implementation sources are in `src/`. `npm run build` uses TypeScript 7 and rebuilds browser report libraries. `npm run typecheck` checks types; `npm run test:browser` verifies report tabs and diagrams in a real browser. Reports embed the audited libraries and work without a CDN connection. Dependency compatibility constraints and audit results are recorded in `docs/dependency-update.md`.
+
+## Security and TypeScript migration (1.5.5)
+
+All extension and build implementation sources are TypeScript under `src/`. Root `extension.js`, `lib/**/*.js`, and `scripts/*.js` are generated outputs. Strict compilation is enabled. Explicit `any` types have been removed from implementation sources, and compatibility adapters have typed API contracts. Node tests and the vendored engine remain JavaScript.
+
+Bundled DOMPurify sanitizes Markdown HTML. Opening saved reports through the extension refreshes their library bundles. Webviews allow hashed inline scripts and block network connections; dashboard messages can invoke only this extension's analysis and API-key commands.
+
+Security findings are static candidates. Comments, literal code examples and literal RegExp `.exec()` calls are excluded; executable template expressions remain checked. Type-only imports are excluded from runtime dependency graphs. Repositories containing both generated JavaScript and TypeScript may count both. See [remediation evidence](docs/security-remediation.md) and the [deployment guide](docs/INTERNAL_DEPLOYMENT.md).
+
+Run `npm run lint`, `npm test`, and `npm run test:browser`. Install Chromium with `npx playwright install chromium` or set `CODE_DOCTOR_BROWSER_EXECUTABLE` to an existing Chrome executable.
+
+Version 1.5.4 separates dashboard history, controls and browser interactions; remeasurement finds no unstable-module candidates or cycles. Install the current VSIX, run VS Code Reload Window, and generate a fresh analysis to use the updated engine.
+
+Version 1.5.5 restricts the dashboard provider to VS Code attachment, redraw and disposal, with typed state/workflow composition in a controller. Medium class candidates are zero; maintainability is 72 and technical debt is 92.

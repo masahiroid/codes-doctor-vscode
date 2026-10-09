@@ -1,3 +1,8 @@
 *.vsix
 node_modules/
 vendor/
+
+test-results/
+playwright-report/
+
+media/report-libraries/

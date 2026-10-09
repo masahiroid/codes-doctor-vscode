@@ -39,6 +39,9 @@ Codes Doctor は LLM（OpenAI または Anthropic）に分析結果をレビュ�
 
 ## 設定
 
+ダッシュボードの **Display & Report Language / 画面・レポートの言語** で **English**（デフォルト）または **日本語** を選択できます。画面・通知・新しく生成するHTMLレポート・AIレビューに適用されます。既存レポートは生成時の言語を保持し、履歴から追加するAIレビューもその言語に合わせます。言語を切り替えた後、再解析すると選択した言語のレポートを生成できます。
+
+- `codeDoctor.displayLanguage`（デフォルト: `en`） — `en` / `ja`。アプリ全体のユーザー設定として保存され、次に変更するまで、ワークスペースの切り替えや再起動後も選択を保持します。解析対象のプログラミング言語とは独立した設定です。
 - `codeDoctor.analysisLanguage`（デフォルト: `auto`） — `auto` / `typescript` / `javascript` / `php` / `dart` / `python`
 - `codeDoctor.reportOpenMode`（デフォルト: `external`）
   - `external`: 既定のブラウザで開く
@@ -76,3 +79,19 @@ npm run package        # codes-doctor-<version>.vsix を生成
 ## ライセンス
 
 Apache License 2.0 — [LICENSE](LICENSE) を参照してください。
+
+開発・VSIX作成にはNode.js 22以上を使用してください。実装ソースは `src/` にあります。`npm run build` はTypeScript 7でコンパイルし、レポート用ライブラリーを再構築します。`npm run typecheck` で型チェック、`npm run test:browser` で実ブラウザのタブ・図表を検証します。レポートには監査済みライブラリーを埋め込み、CDN接続を不要にしています。依存の互換性制約と監査結果は `docs/dependency-update.md` に記録しています。
+
+## セキュリティーとTypeScript移行（1.5.5）
+
+拡張本体とビルドスクリプトの実装ソースはすべて `src/**/*.ts` です。ルートの `extension.js`、`lib/**/*.js`、`scripts/*.js` は生成物なので直接編集しません。strictモードでコンパイルし、実装ソースの明示的な `any` 型は除去しました。互換アダプターには型契約を定義しています。Nodeテストと同梱エンジンはJavaScriptです。
+
+MarkdownはDOMPurifyでHTMLをサニタイズしてから描画します。既存レポートも拡張経由で開くとライブラリーを更新します。WebViewはインラインスクリプトのハッシュで実行を制限し、ネットワーク接続を禁止します。ダッシュボードから実行できるコマンドは、この拡張の分析とAPIキー設定だけです。
+
+静的セキュリティー検出は候補の確認用です。コメント、文字列内のコード例、正規表現リテラルの `.exec()` は指摘しません。実行されるテンプレート式は検査します。型専用importは実行時の依存グラフに含めません。生成JSとTSソースの両方があるリポジトリでは重複計測されることがあります。最新の結果と残る課題は [改善記録](docs/security-remediation.md)、配布手順は [社内配布マニュアル](docs/INTERNAL_DEPLOYMENT.md) を参照してください。
+
+検証は `npm run lint`、`npm test`、`npm run test:browser` を実行します。ブラウザがない場合は `npx playwright install chromium`、既存Chromeを使う場合は `CODE_DOCTOR_BROWSER_EXECUTABLE` に実行ファイルを指定します。
+
+1.5.4ではダッシュボードの履歴・入力欄・ブラウザ操作を分離し、不安定モジュール候補と循環依存は0件になりました。古いインストール版では修正が反映されないため、最新VSIXをインストール後にVS CodeのReload Windowを実行し、新しい分析を作成してください。
+
+1.5.5ではダッシュボードのproviderをVS Codeとの接続・再描画・破棄に限定し、状態と操作をcontrollerへ分離しました。中程度のクラス候補は0件、保守性72、技術負債92です。

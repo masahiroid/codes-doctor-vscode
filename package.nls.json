@@ -1,0 +1,23 @@
+{
+  "extension.description": "Diagnose the current workspace for God Classes, technical debt, security issues, and dependency structure.",
+  "view.dashboard": "Dashboard",
+  "codeDoctor.analyzeCurrentWorkspace": "Codes Doctor: Analyze Current Workspace",
+  "codeDoctor.setLlmApiKey": "Codes Doctor: Set LLM API Key",
+  "config.reportOpenMode.description": "How to open generated reports: external browser, VS Code WebView, or VS Code URI open.",
+  "config.analysisLanguage.description": "Language mode used when analyzing the workspace.",
+  "config.llmProvider.description": "LLM provider used for the optional AI structural review. Set the matching API key via the \"Codes Doctor: Set LLM API Key\" command.",
+  "config.llmModel.description": "Model ID to use for LLM review. Leave empty to pick one from the Dashboard's model list (fetched live from the provider).",
+  "config.displayLanguage.description": "Dashboard, new report, and AI review language. English by default. Run a new analysis after changing this setting; existing reports keep their original language.",
+  "config.reportOpenMode.option.0": "External Browser",
+  "config.reportOpenMode.option.1": "VS Code WebView",
+  "config.reportOpenMode.option.2": "Open in VS Code",
+  "config.analysisLanguage.option.0": "Auto Detect",
+  "config.analysisLanguage.option.1": "TypeScript / JavaScript",
+  "config.analysisLanguage.option.2": "JavaScript only",
+  "config.analysisLanguage.option.3": "PHP",
+  "config.analysisLanguage.option.4": "Dart",
+  "config.analysisLanguage.option.5": "Python",
+  "config.llmProvider.option.0": "OpenAI (GPT models)",
+  "config.llmProvider.option.1": "Anthropic (Claude models)",
+  "config.llmMaxOutputTokens.description": "Maximum generated tokens per initial LLM review request (input tokens are separate). Includes reasoning for OpenAI reasoning models. Starting points: 4,000–8,000 for non-reasoning models; 16,000–32,000 for reasoning models. Default: 16,000. Stay within the selected model’s output limit. Empty OpenAI output caused by the limit is retried once with max(2 × this value, 16,000); this can increase cost."
+}
