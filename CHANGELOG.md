@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.6
+
+- Remove internal refactoring details, project measurement scores and version-specific progress notes from both READMEs; keep version history in this changelog and describe report behavior for users.
+
 ## 1.5.5
 
 - Restrict the dashboard provider to VS Code view attachment, redraw and subscription cleanup; move UI state and workflow composition into a typed controller factory.

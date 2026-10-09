@@ -85,16 +85,10 @@ Apache License 2.0 — see [LICENSE](LICENSE).
 
 Implementation sources are in `src/`. `npm run build` uses TypeScript 7 and rebuilds browser report libraries. `npm run typecheck` checks types; `npm run test:browser` verifies report tabs and diagrams in a real browser. Reports embed the audited libraries and work without a CDN connection. Dependency compatibility constraints and audit results are recorded in `docs/dependency-update.md`.
 
-## Security and TypeScript migration (1.5.5)
+## Security and report interpretation
 
-All extension and build implementation sources are TypeScript under `src/`. Root `extension.js`, `lib/**/*.js`, and `scripts/*.js` are generated outputs. Strict compilation is enabled. Explicit `any` types have been removed from implementation sources, and compatibility adapters have typed API contracts. Node tests and the vendored engine remain JavaScript.
+Markdown HTML is sanitized before rendering. Reports opened through the extension use bundled browser libraries. Webviews restrict script execution and block network connections.
 
-Bundled DOMPurify sanitizes Markdown HTML. Opening saved reports through the extension refreshes their library bundles. Webviews allow hashed inline scripts and block network connections; dashboard messages can invoke only this extension's analysis and API-key commands.
+Security findings are static candidates that require review. Comments, literal code examples and literal RegExp `.exec()` calls are excluded; executable template expressions remain checked. Type-only imports are excluded from runtime dependency graphs. Repositories containing both generated JavaScript and TypeScript may count both.
 
-Security findings are static candidates. Comments, literal code examples and literal RegExp `.exec()` calls are excluded; executable template expressions remain checked. Type-only imports are excluded from runtime dependency graphs. Repositories containing both generated JavaScript and TypeScript may count both. See [remediation evidence](docs/security-remediation.md) and the [deployment guide](docs/INTERNAL_DEPLOYMENT.md).
-
-Run `npm run lint`, `npm test`, and `npm run test:browser`. Install Chromium with `npx playwright install chromium` or set `CODE_DOCTOR_BROWSER_EXECUTABLE` to an existing Chrome executable.
-
-Version 1.5.4 separates dashboard history, controls and browser interactions; remeasurement finds no unstable-module candidates or cycles. Install the current VSIX, run VS Code Reload Window, and generate a fresh analysis to use the updated engine.
-
-Version 1.5.5 restricts the dashboard provider to VS Code attachment, redraw and disposal, with typed state/workflow composition in a controller. Medium class candidates are zero; maintainability is 72 and technical debt is 92.
+See [CHANGELOG](CHANGELOG.md) for version history.
