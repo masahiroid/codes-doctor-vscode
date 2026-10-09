@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  csap:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: csap-app
+    ports:
+      - "3000:3000"
+    environment:
+      # Server configuration
+      PORT: 3000
+      NODE_ENV: production
+      
+      # LLM configuration
+      CSAP_LLM_ENABLED: ${CSAP_LLM_ENABLED:-false}
+      CSAP_LLM_MODEL: ${CSAP_LLM_MODEL:-gpt-5.4}
+      CSAP_LLM_MAX_TOKENS: ${CSAP_LLM_MAX_TOKENS:-3000}
+      CSAP_LLM_TEMPERATURE: ${CSAP_LLM_TEMPERATURE:-0.2}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      
+      # Feature flags
+      CSAP_PHP_ENABLED: ${CSAP_PHP_ENABLED:-true}
+      
+      # Resource limits
+      CSAP_MAX_FILE_SIZE: ${CSAP_MAX_FILE_SIZE:-524288000}
+    
+    volumes:
+      # Mount directories for persistence and local development
+      - ./uploads:/app/uploads
+      - ./temp:/app/temp
+      - ./output:/app/output
+    
+    # Resource constraints
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: PostgreSQL for future features (prepared by not used yet)
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: csap-postgres
+  #   environment:
+  #     POSTGRES_USER: csap
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-csap}
+  #     POSTGRES_DB: csap_db
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   restart: unless-stopped
+
+# volumes:
+#   postgres_data:
