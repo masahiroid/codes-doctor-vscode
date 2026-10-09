@@ -83,7 +83,7 @@ Node.js 22以上を使用し、`src/` のTypeScriptを編集します。`npm run
 
 ## 7. 実行版の確認とローカル反映（1.5.4）
 
-`code --list-extensions --show-versions` で `masahiroid.codes-doctor` のバージョンを確認します。ソースを変更しただけではインストール済み拡張は更新されません。
+`code --list-extensions --show-versions` で `masahirocom.codes-doctor` のバージョンを確認します。ソースを変更しただけではインストール済み拡張は更新されません。
 
 ```bash
 npm run package:release

@@ -2,8 +2,6 @@
 
 ## 1.5.6
 
-- Correct the Marketplace publisher to masahiroid.
-
 - Remove internal refactoring details, project measurement scores and version-specific progress notes from both READMEs; keep version history in this changelog and describe report behavior for users.
 
 ## 1.5.5
