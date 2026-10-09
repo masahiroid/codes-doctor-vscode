@@ -177,18 +177,19 @@ VS Code 拡張のダッシュボードでは、モデル選択の横にある「
 - **Instability（0–1）**: `fan-out / (fan-in + fan-out)`。1 に近いほど「多くに依存し、依存されていない」モジュール。起動点やエントリーポイントは本質的に不安定だが、それ自体は設計上の問題ではない
 - **技術的負債 / セキュリティスコア（0–100, A–F）**: 90 以上が A、80 以上が B、70 以上が C、60 以上が D、それ未満が F。各スコアの内訳（何件の critical/high 問題があったか）はレポート内の説明文で確認できる
 
-## VS Code 拡張「Code Doctor」
+## VS Code 拡張「Codes Doctor」
 
-`vscode-extension/csap-analyzer` に、ワークスペースを直接解析する VS Code 拡張を用意しています。解析エンジンを拡張内に同梱しているため、このリポジトリのサーバーを別途起動する必要はありません。
+ワークスペースを直接解析する VS Code 拡張は、別リポジトリ [codes-doctor-vscode](https://github.com/masahiroid/codes-doctor-vscode) として管理しています。このリポジトリのビルド済み解析エンジンを同梱しているため、拡張自体はこのリポジトリのサーバーを起動せずに動作しますが、ビルド時にはこのリポジトリを `npm run build` しておく必要があります。
 
 ```bash
-npm run build   # このリポジトリのルートで
-cd vscode-extension/csap-analyzer
+npm run build   # このリポジトリのルートで、dist/ を生成
+git clone https://github.com/masahiroid/codes-doctor-vscode.git ../codes-doctor-vscode
+cd ../codes-doctor-vscode
 npm install
-npm run package  # code-doctor-<version>.vsix を生成
+npm run package  # ../csap-main の dist/ を同梱し、codes-doctor-<version>.vsix を生成
 ```
 
-詳細は [vscode-extension/csap-analyzer/README.md](vscode-extension/csap-analyzer/README.md) を参照してください。
+詳細はそのリポジトリの README を参照してください。
 
 ## ドキュメント
 

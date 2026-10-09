@@ -7,7 +7,7 @@
 
 ## 概要
 
-Code Doctor（パッケージ名 `csap`）は、コードベースを分析し自己完結型の HTML 監査レポートを生成する Node.js/TypeScript アプリケーションです。Express サーバー（ZIP アップロードまたはローカルパス分析）として動作するほか、埋め込んで使うこともできます — VS Code 拡張 `vscode-extension/csap-analyzer` は、コンパイル済みの `dist/` 出力を同梱し、サーバーを起動せずに解析パイプラインをプロセス内で直接呼び出します。
+Code Doctor（パッケージ名 `csap`）は、コードベースを分析し自己完結型の HTML 監査レポートを生成する Node.js/TypeScript アプリケーションです。Express サーバー（ZIP アップロードまたはローカルパス分析）として動作するほか、埋め込んで使うこともできます — VS Code 拡張 [codes-doctor-vscode](https://github.com/masahiroid/codes-doctor-vscode)（別リポジトリ）は、本リポジトリのコンパイル済み `dist/` 出力を同梱し、サーバーを起動せずに解析パイプラインをプロセス内で直接呼び出します。
 
 ## システム構成
 

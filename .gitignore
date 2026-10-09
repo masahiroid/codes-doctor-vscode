@@ -4,12 +4,6 @@ node_modules/
 package-lock.json
 yarn.lock
 
-# VSCode extension build artifacts
-*.vsix
-
-# Nested git repository (tracked separately)
-/vscode-extension/csap-sbom-security/
-
 # Generated SBOM/vulnerability scan scratch output
 /.sbom-tool/
 

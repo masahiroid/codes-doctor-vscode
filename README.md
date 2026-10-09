@@ -177,18 +177,19 @@ How to read the key metrics:
 - **Instability (0–1)**: `fan-out / (fan-in + fan-out)`. Closer to 1 means "depends on many things, is depended on by few." Entrypoints are naturally unstable by this measure — that alone isn't a design flaw
 - **Technical Debt / Security score (0–100, A–F)**: 90+ is A, 80+ is B, 70+ is C, 60+ is D, below that is F. The explanation text in the report breaks down how many critical/high issues drove the score
 
-## VS Code Extension "Code Doctor"
+## VS Code Extension "Codes Doctor"
 
-`vscode-extension/csap-analyzer` ships a VS Code extension that analyzes the open workspace directly. The analysis engine is bundled inside the extension, so you don't need to run this repo's server separately.
+The VS Code extension that analyzes the open workspace directly lives in its own repository: [codes-doctor-vscode](https://github.com/masahiroid/codes-doctor-vscode). It bundles this repo's compiled analysis engine, so it doesn't run this repo's server — only a local build of this repo (`npm run build`) is needed to vendor the engine in.
 
 ```bash
-npm run build   # from this repo's root
-cd vscode-extension/csap-analyzer
+npm run build   # from this repo's root, produces dist/
+git clone https://github.com/masahiroid/codes-doctor-vscode.git ../codes-doctor-vscode
+cd ../codes-doctor-vscode
 npm install
-npm run package  # produces code-doctor-<version>.vsix
+npm run package  # vendors dist/ from ../csap-main and produces codes-doctor-<version>.vsix
 ```
 
-See [vscode-extension/csap-analyzer/README.md](vscode-extension/csap-analyzer/README.md) for details.
+See that repository's README for details.
 
 ## Documentation
 

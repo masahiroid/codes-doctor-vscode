@@ -7,7 +7,7 @@ Last updated: 2026-10-09
 
 ## Overview
 
-Code Doctor (package name `csap`) is a Node.js/TypeScript application that analyzes a codebase and generates a self-contained HTML audit report. It can run as an Express server (ZIP upload or local-path analysis) or be embedded directly — the VS Code extension `vscode-extension/csap-analyzer` vendors the compiled `dist/` output and calls the analysis pipeline in-process, without starting a server.
+Code Doctor (package name `csap`) is a Node.js/TypeScript application that analyzes a codebase and generates a self-contained HTML audit report. It can run as an Express server (ZIP upload or local-path analysis) or be embedded directly — the [codes-doctor-vscode](https://github.com/masahiroid/codes-doctor-vscode) VS Code extension (a separate repository) vendors this repo's compiled `dist/` output and calls the analysis pipeline in-process, without starting a server.
 
 ## System Components
 
