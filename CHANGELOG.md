@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.12
+
+- Add C++ language support: God Class scoring (class/struct + inline member functions, including constructor initializer lists), technical debt, and security pattern scanning (shell command execution via `system`/`popen`, unsafe string functions with buffer overflow risk such as `strcpy`/`strcat`/`sprintf`/`gets`, weak hashing, weak randomness via `rand()`, hardcoded secrets, string-concatenated SQL). Uses the shared `bracelang` parsing engine (same one Java and Kotlin use). Only `.cpp`/`.cc`/`.cxx`/`.hpp`/`.hh` are analyzed — plain `.h`/`.c` are skipped since they may be C, not C++, which this parser doesn't model. Member functions defined outside the class body (`Type::method() {}`) aren't attributed to the class; only inline definitions are counted. No call graph (same limitation as the other lightweight-parser languages).
+
 ## 1.5.11
 
 - Add Java, Kotlin, and Rust language support: God Class scoring, technical debt, and security pattern scanning (shell command execution, weak hashing, hardcoded secrets, string-built SQL) for all three. Java and Kotlin share a new generic lightweight parsing engine (`analyzer/bracelang/engine.ts`) that factors out the comment-stripping/brace-matching/import-extraction plumbing already duplicated across the Go/Swift/C# parsers — new C-family languages now only need to supply their type/method/import regex. Rust keeps its own standalone parser, since its `struct` fields and `impl` methods live in physically separate blocks that don't fit that engine's one-header-one-body model (it pairs them by type name instead, the same receiver-matching approach Go uses). No call graph for any of the three (same limitation as the other lightweight-parser languages).

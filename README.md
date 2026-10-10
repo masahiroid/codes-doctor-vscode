@@ -83,9 +83,12 @@ Choose **Display & Report Language** in the Dashboard: **English** (default) or 
 | Java | ✅ | ✅ | ✅ | — |
 | Kotlin | ✅ | ✅ | ✅ | — |
 | Rust | ✅ | ✅ | ✅ | — |
+| C++ | ✅ | ✅ | ✅ | — |
 | Dart | ✅ | ✅ | — | — |
 
 Dependency graphs, circular dependency detection, layer analysis, and SBOM/vulnerability scanning run across all supported files regardless of language.
+
+C++ analysis covers `.cpp`, `.cc`, `.cxx`, `.hpp`, and `.hh` files. Plain `.h`/`.c` files (which may be C, not C++) are not analyzed.
 
 ## Development
 

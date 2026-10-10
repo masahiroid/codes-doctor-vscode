@@ -18,6 +18,7 @@ const ANALYSIS_LANGUAGE_OPTIONS = [
   { value: 'java', label: 'Java' },
   { value: 'kotlin', label: 'Kotlin' },
   { value: 'rust', label: 'Rust' },
+  { value: 'cpp', label: 'C++' },
 ];
 
 const LLM_PROVIDER_OPTIONS = [

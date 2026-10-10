@@ -4,7 +4,7 @@ import { replaceAllRequired } from './sourceReplacement';
 module.exports = function patch(source: string) {
   const apply = (from: string, to: string) => { source = replaceAllRequired(source, from, to); };
 
-    apply('function generateLayerHeatmap(tsFiles, phpFiles, godClasses, pythonFiles = [], goFiles = [], swiftFiles = [], csharpFiles = [], javaFiles = [], kotlinFiles = [], rustFiles = []) {', `function generateLayerHeatmap(tsFiles, phpFiles, godClasses, pythonFiles = [], goFiles = [], swiftFiles = [], csharpFiles = [], javaFiles = [], kotlinFiles = [], rustFiles = [], repoPath) {
+    apply('function generateLayerHeatmap(tsFiles, phpFiles, godClasses, pythonFiles = [], goFiles = [], swiftFiles = [], csharpFiles = [], javaFiles = [], kotlinFiles = [], rustFiles = [], cppFiles = []) {', `function generateLayerHeatmap(tsFiles, phpFiles, godClasses, pythonFiles = [], goFiles = [], swiftFiles = [], csharpFiles = [], javaFiles = [], kotlinFiles = [], rustFiles = [], cppFiles = [], repoPath) {
     if (repoPath) {
         const path = require('node:path');
         const relative = value => path.relative(repoPath, value).split(path.sep).join('/');
@@ -18,6 +18,7 @@ module.exports = function patch(source: string) {
         javaFiles = javaFiles.map(convert);
         kotlinFiles = kotlinFiles.map(convert);
         rustFiles = rustFiles.map(convert);
+        cppFiles = cppFiles.map(convert);
         godClasses = godClasses.map(convert);
     }`);
     apply('pattern.test(filePath)', "pattern.test('/' + filePath)");
