@@ -17,6 +17,7 @@
   "config.analysisLanguage.option.3": "PHP",
   "config.analysisLanguage.option.4": "Dart",
   "config.analysisLanguage.option.5": "Python",
+  "config.analysisLanguage.option.6": "Go",
   "config.llmProvider.option.0": "OpenAI (GPT models)",
   "config.llmProvider.option.1": "Anthropic (Claude models)",
   "config.llmMaxOutputTokens.description": "Maximum generated tokens per initial LLM review request (input tokens are separate). Includes reasoning for OpenAI reasoning models. Starting points: 4,000–8,000 for non-reasoning models; 16,000–32,000 for reasoning models. Default: 16,000. Stay within the selected model’s output limit. Empty OpenAI output caused by the limit is retried once with max(2 × this value, 16,000); this can increase cost."

@@ -18,10 +18,10 @@ module.exports = function patch(source: string) {
     const notesEnd = source.indexOf('    ${tsStructure', notesStart);
     if (notesStart < 0 || notesEnd < 0) throw new Error('AST notes markers missing');
     source = source.slice(0, notesStart) + source.slice(notesEnd);
-    source = source.replace(/(const (?:tsAstBlocks|phpAstBlocks|dartBlocks|pythonBlocks|tsStructure|phpStructure|dartStructure|pythonStructure) = )(.*)\.join\(''\);/g,
+    source = source.replace(/(const (?:tsAstBlocks|phpAstBlocks|dartBlocks|pythonBlocks|goBlocks|tsStructure|phpStructure|dartStructure|pythonStructure|goStructure) = )(.*)\.join\(''\);/g,
       (_: string, prefix: string, entries: string) => prefix + 'renderAstFileList(' + entries + ');');
     source = replaceRequired(source, '  </section>`;', '  ' + '${' + JSON.stringify(astPaginationScript) + '}' + '\n  </section>`;');
-    for (const language of ['Dart', 'Python']) {
+    for (const language of ['Dart', 'Python', 'Go']) {
       source = replaceRequired(source, '<h3>' + language + '</h3>${' + language.toLowerCase() + 'Structure}',
         '<h3>' + language + '</h3><p>' + language + 'の構造表示は簡易抽出です。完全なAST解析ではありません。</p>${' + language.toLowerCase() + 'Structure}');
     }

@@ -2,7 +2,7 @@
   "name": "codes-doctor",
   "displayName": "Codes Doctor",
   "description": "%extension.description%",
-  "version": "1.5.7",
+  "version": "1.5.8",
   "publisher": "masahirocom",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -96,7 +96,8 @@
             "javascript",
             "php",
             "dart",
-            "python"
+            "python",
+            "go"
           ],
           "default": "auto",
           "description": "%config.analysisLanguage.description%",
@@ -106,7 +107,8 @@
             "%config.analysisLanguage.option.2%",
             "%config.analysisLanguage.option.3%",
             "%config.analysisLanguage.option.4%",
-            "%config.analysisLanguage.option.5%"
+            "%config.analysisLanguage.option.5%",
+            "%config.analysisLanguage.option.6%"
           ]
         },
         "codeDoctor.llmProvider": {

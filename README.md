@@ -77,6 +77,7 @@ Choose **Display & Report Language** in the Dashboard: **English** (default) or 
 | TypeScript / JavaScript | ✅ | ✅ | ✅ | ✅ |
 | PHP | ✅ | ✅ | ✅ | ✅ |
 | Python | ✅ | ✅ | ✅ | — |
+| Go | ✅ | ✅ | ✅ | — |
 | Dart | ✅ | ✅ | — | — |
 
 Dependency graphs, circular dependency detection, layer analysis, and SBOM/vulnerability scanning run across all supported files regardless of language.

@@ -77,6 +77,7 @@ Codes Doctor は LLM（OpenAI または Anthropic）に分析結果をレビュ�
 | TypeScript / JavaScript | ✅ | ✅ | ✅ | ✅ |
 | PHP | ✅ | ✅ | ✅ | ✅ |
 | Python | ✅ | ✅ | ✅ | — |
+| Go | ✅ | ✅ | ✅ | — |
 | Dart | ✅ | ✅ | — | — |
 
 依存グラフ・循環依存検出・レイヤー分析・SBOM/脆弱性スキャンは、言語を問わず対応する全ファイルを横断して実行されます。
