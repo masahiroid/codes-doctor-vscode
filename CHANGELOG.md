@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.13
+
+- When a workspace contains no files in any supported language, the report now shows a warning banner explaining that nothing was analyzed, and the Technical Debt / Security score cards show "N/A" instead of a misleading 100/100 grade A.
+
 ## 1.5.12
 
 - Add C++ language support: God Class scoring (class/struct + inline member functions, including constructor initializer lists), technical debt, and security pattern scanning (shell command execution via `system`/`popen`, unsafe string functions with buffer overflow risk such as `strcpy`/`strcat`/`sprintf`/`gets`, weak hashing, weak randomness via `rand()`, hardcoded secrets, string-concatenated SQL). Uses the shared `bracelang` parsing engine (same one Java and Kotlin use). Only `.cpp`/`.cc`/`.cxx`/`.hpp`/`.hh` are analyzed — plain `.h`/`.c` are skipped since they may be C, not C++, which this parser doesn't model. Member functions defined outside the class body (`Type::method() {}`) aren't attributed to the class; only inline definitions are counted. No call graph (same limitation as the other lightweight-parser languages).
