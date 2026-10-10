@@ -36,7 +36,7 @@ for (const folder of ['csap', 'csap-en']) {
 
   test(`${folder}: AST structure is available without an LLM review`, () => {
     const { astSection } = require(`../vendor/${folder}/report/sections/astSection`);
-    const result = { tsFiles: [{ filePath: path.join(__dirname, '..', 'extension.js') }], phpFiles: [], dartFiles: [], pythonFiles: [], goFiles: [] };
+    const result = { tsFiles: [{ filePath: path.join(__dirname, '..', 'extension.js') }], phpFiles: [], dartFiles: [], pythonFiles: [], goFiles: [], swiftFiles: [] };
     const html = astSection(result);
     assert.doesNotMatch(html, /未実行|Not run yet|Run LLM Review/);
     assert.match(html, /activate\(\)/);
@@ -119,7 +119,7 @@ for (const folder of ['csap', 'csap-en']) {
         fs.writeFileSync(filePath, `class Class${i} { ${methods} }`);
         return { filePath };
       });
-      const html = require(`../vendor/${folder}/report/sections/astSection`).astSection({ tsFiles, phpFiles: [], dartFiles: [], pythonFiles: [], goFiles: [] });
+      const html = require(`../vendor/${folder}/report/sections/astSection`).astSection({ tsFiles, phpFiles: [], dartFiles: [], pythonFiles: [], goFiles: [], swiftFiles: [] });
       for (let i = 0; i < 45; i++) assert.ok(html.includes(`Class${i}`), `Missing file ${i}`);
       assert.match(html, /method34\(\)/);
       assert.doesNotMatch(html, /Sampled|サンプル|読みやすい形式|初回の静的解析|先頭5|構造表示は簡易/);

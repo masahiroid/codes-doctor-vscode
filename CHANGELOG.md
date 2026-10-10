@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.9
+
+- Add Swift language support: God Class scoring (class/struct/enum + methods), technical debt, and security pattern scanning (shell command execution via `Process()`, weak hash/randomness, hardcoded secrets, `UserDefaults`-stored credentials, disabled TLS verification via `NSAllowsArbitraryLoads`). Uses a lightweight brace-tracking parser, matching the approach already used for Go, Python, and Dart. No call graph (same limitation as the other lightweight-parser languages).
+
 ## 1.5.8
 
 - Add Go language support: God Class scoring (struct + methods), technical debt, and security pattern scanning (command injection, SQL injection, weak crypto/randomness, hardcoded secrets, text/template XSS risk, insecure TLS). Uses a lightweight brace-tracking parser, matching the approach already used for Python and Dart. No call graph (same limitation as Python/Dart).

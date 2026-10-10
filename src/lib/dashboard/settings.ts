@@ -13,6 +13,7 @@ const ANALYSIS_LANGUAGE_OPTIONS = [
   { value: 'dart', label: 'Dart' },
   { value: 'python', label: 'Python' },
   { value: 'go', label: 'Go' },
+  { value: 'swift', label: 'Swift' },
 ];
 
 const LLM_PROVIDER_OPTIONS = [
