@@ -5,6 +5,26 @@
 
 Codes Doctor は、現在開いているワークスペースフォルダーを分析し、God Class・技術的負債・セキュリティ問題・依存グラフ・SBOM を含む構造診断レポートを VS Code 内で直接生成します。解析エンジンはプロセス内で実行されるため、外部サーバーは不要です。
 
+## 実際の画面
+
+以下は Codes Doctor を自分自身のソースコードに対して実行して生成した、実際のレポートです。
+
+**Overview & Quality** — 技術的負債スコアとセキュリティスコアが一目でわかり、God Class ランキングも表示されます。
+
+![Overview tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/media/screenshots/overview.png)
+
+**Risk & Security** — 複雑度・保守性・循環依存をスコア化して内訳表示します。
+
+![Risk & Security tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/media/screenshots/risk-security.png)
+
+**Dependency Graphs** — 実際の import 関係から生成されたインタラクティブなモジュール依存グラフです。
+
+![Dependency graph tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/media/screenshots/dependency-graph.png)
+
+**SBOM & Vulnerabilities** — 直接・推移・開発依存の内訳を含む完全なソフトウェア部品表です。
+
+![SBOM tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/media/screenshots/sbom.png)
+
 ## コマンド
 
 - `Codes Doctor: Analyze Current Workspace`
