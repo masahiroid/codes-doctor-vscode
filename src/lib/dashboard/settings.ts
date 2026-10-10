@@ -14,6 +14,7 @@ const ANALYSIS_LANGUAGE_OPTIONS = [
   { value: 'python', label: 'Python' },
   { value: 'go', label: 'Go' },
   { value: 'swift', label: 'Swift' },
+  { value: 'csharp', label: 'C#' },
 ];
 
 const LLM_PROVIDER_OPTIONS = [

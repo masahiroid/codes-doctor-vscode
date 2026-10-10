@@ -4,7 +4,7 @@ import { replaceAllRequired } from './sourceReplacement';
 module.exports = function patch(source: string) {
   const apply = (from: string, to: string) => { source = replaceAllRequired(source, from, to); };
 
-    apply('function generateLayerHeatmap(tsFiles, phpFiles, godClasses, pythonFiles = [], goFiles = [], swiftFiles = []) {', `function generateLayerHeatmap(tsFiles, phpFiles, godClasses, pythonFiles = [], goFiles = [], swiftFiles = [], repoPath) {
+    apply('function generateLayerHeatmap(tsFiles, phpFiles, godClasses, pythonFiles = [], goFiles = [], swiftFiles = [], csharpFiles = []) {', `function generateLayerHeatmap(tsFiles, phpFiles, godClasses, pythonFiles = [], goFiles = [], swiftFiles = [], csharpFiles = [], repoPath) {
     if (repoPath) {
         const path = require('node:path');
         const relative = value => path.relative(repoPath, value).split(path.sep).join('/');
@@ -14,6 +14,7 @@ module.exports = function patch(source: string) {
         pythonFiles = pythonFiles.map(convert);
         goFiles = goFiles.map(convert);
         swiftFiles = swiftFiles.map(convert);
+        csharpFiles = csharpFiles.map(convert);
         godClasses = godClasses.map(convert);
     }`);
     apply('pattern.test(filePath)', "pattern.test('/' + filePath)");
