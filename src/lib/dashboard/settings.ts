@@ -15,6 +15,9 @@ const ANALYSIS_LANGUAGE_OPTIONS = [
   { value: 'go', label: 'Go' },
   { value: 'swift', label: 'Swift' },
   { value: 'csharp', label: 'C#' },
+  { value: 'java', label: 'Java' },
+  { value: 'kotlin', label: 'Kotlin' },
+  { value: 'rust', label: 'Rust' },
 ];
 
 const LLM_PROVIDER_OPTIONS = [

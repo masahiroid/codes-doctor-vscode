@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.11
+
+- Add Java, Kotlin, and Rust language support: God Class scoring, technical debt, and security pattern scanning (shell command execution, weak hashing, hardcoded secrets, string-built SQL) for all three. Java and Kotlin share a new generic lightweight parsing engine (`analyzer/bracelang/engine.ts`) that factors out the comment-stripping/brace-matching/import-extraction plumbing already duplicated across the Go/Swift/C# parsers — new C-family languages now only need to supply their type/method/import regex. Rust keeps its own standalone parser, since its `struct` fields and `impl` methods live in physically separate blocks that don't fit that engine's one-header-one-body model (it pairs them by type name instead, the same receiver-matching approach Go uses). No call graph for any of the three (same limitation as the other lightweight-parser languages).
+
 ## 1.5.10
 
 - Add C# language support: God Class scoring (class/struct/interface/record + methods, with auto-property `{ get; set; }` syntax correctly excluded from method counts), technical debt, and security pattern scanning (shell command execution via `Process.Start`, weak hash/randomness, hardcoded secrets, string-concatenated SQL, disabled TLS verification via `ServerCertificateValidationCallback`). Uses a lightweight brace-tracking parser, matching the approach already used for Go, Swift, Python, and Dart. No call graph (same limitation as the other lightweight-parser languages).
