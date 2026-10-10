@@ -2,7 +2,7 @@
   "name": "codes-doctor",
   "displayName": "Codes Doctor",
   "description": "%extension.description%",
-  "version": "1.5.13",
+  "version": "1.5.14",
   "publisher": "masahirocom",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -135,6 +135,19 @@
           ],
           "default": "openai",
           "description": "%config.llmProvider.description%"
+        },
+        "codeDoctor.llmOutputMode": {
+          "type": "string",
+          "enum": [
+            "review",
+            "agentPrompt"
+          ],
+          "enumDescriptions": [
+            "%config.llmOutputMode.option.0%",
+            "%config.llmOutputMode.option.1%"
+          ],
+          "default": "review",
+          "description": "%config.llmOutputMode.description%"
         },
         "codeDoctor.llmModel": {
           "type": "string",

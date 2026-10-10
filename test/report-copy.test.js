@@ -24,6 +24,23 @@ test('copy includes the requested instruction and preserves Japanese Markdown in
   }
 });
 
+test('agent prompt is copied verbatim without the review instruction prefix', async () => {
+  const markdown = '# 目的\n`UserService` を分割する。';
+  let button, copied;
+  const element = () => ({ style: {}, setAttribute() {}, append() {}, appendChild(child) { this.child = child; }, addEventListener(name, fn) { this.click = fn; } });
+  const result = { getAttribute: () => markdown, before() {} };
+  const document = {
+    documentElement: { lang: 'ja' }, body: { appendChild() {} },
+    getElementById: id => id === 'llmAgentPrompt' ? result : null,
+    createElementNS(namespace, tag) { return { ...element(), tag }; },
+    createElement(tag) { const el = element(); if (tag === 'button') button = el; return el; },
+  };
+  const context = { document, window: { addEventListener() {} }, navigator: { clipboard: { async writeText(text) { copied = text; } } } };
+  vm.runInNewContext('(' + installReviewCopy.toString() + ')()', context);
+  await button.click();
+  assert.equal(copied, markdown);
+});
+
 test('existing copy script is upgraded without duplication or replacement token corruption', () => {
   const old = '<script>(function installReviewCopy() {\n// old\n})();</script>';
   const updated = injectReviewCopy(old);

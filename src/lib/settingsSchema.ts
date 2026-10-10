@@ -3,6 +3,7 @@ interface SettingValues {
   analysisLanguage: string;
   displayLanguage: string;
   llmProvider: string;
+  llmOutputMode: string;
   llmModel: string;
   llmMaxOutputTokens: number;
 }

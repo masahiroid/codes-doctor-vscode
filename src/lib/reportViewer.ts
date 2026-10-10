@@ -48,7 +48,7 @@ export async function openReport(vscode: typeof import('vscode'), reportPath: st
   panel.webview.onDidReceiveMessage(async (input: unknown) => {
     if (!input || typeof input !== 'object') return;
     const message = input as Record<string, unknown>;
-    if (message?.type !== 'copyReview' || typeof message.id !== 'string' || !['llmResult', 'astResult'].includes(message.id) || typeof message.text !== 'string') return;
+    if (message?.type !== 'copyReview' || typeof message.id !== 'string' || !['llmResult', 'astResult', 'llmAgentPrompt'].includes(message.id) || typeof message.text !== 'string') return;
     let ok = true;
     try { await vscode.env.clipboard.writeText(message.text); } catch { ok = false; }
     await panel.webview.postMessage({ type: 'reviewCopied', id: message.id, ok });

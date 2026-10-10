@@ -29,6 +29,11 @@ export function getLlmProvider(vscode: typeof import('vscode')) {
   return provider === 'anthropic' ? 'anthropic' : 'openai';
 }
 
+export function getLlmOutputMode(vscode: typeof import('vscode')) {
+  const mode = getExtensionConfig(vscode).get('llmOutputMode', setting('llmOutputMode').default);
+  return mode === 'agentPrompt' ? 'agentPrompt' : 'review';
+}
+
 export function getLlmModel(vscode: typeof import('vscode')) {
   const config = getExtensionConfig(vscode);
   const model = config.get('llmModel', setting('llmModel').default);
@@ -47,5 +52,6 @@ module.exports = {
   getReportOpenMode,
   getAnalysisLanguage,
   getLlmProvider,
+  getLlmOutputMode,
   getLlmModel,
 };

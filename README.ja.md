@@ -55,6 +55,10 @@ Codes Doctor は LLM（OpenAI または Anthropic）に分析結果をレビュ�
 3. **Fetch** をクリックして、そのキーでアクセス可能なモデル一覧をライブ取得し、1つ選択
 4. 分析を実行した後、**Run LLM Review** をクリック — 結果は生成済みレポートに書き戻されます
 
+### AIコーディング用プロンプトモード
+
+**出力モード** を **AIコーディング用プロンプト** にして **AIコーディング用プロンプトを生成** をクリックすると、人が読むレポートではなく、AIコーディングエージェント（Claude Code、Cursor、GitHub Copilot、Codex）にそのまま貼り付けられる作業指示プロンプトをLLMが書きます。目的・根拠となる指標・優先順位付きタスク（最大5件。それぞれ対象・根拠・先に確認すべきこと・変更内容・変えてはいけないもの・完了条件）・手を付けない項目・エージェントに求める最終報告で構成されます。ファイル名やシンボルは解析結果に含まれるものだけを使い、不確かな点は「確認手順」として書かれます。レポートのLLMタブにコピーボタン付きの専用欄として表示され、レビュー結果は上書きされません。
+
 モデル一覧は毎回プロバイダの API から直接取得されるため、ハードコードされた古いモデル名に縛られることはありません。
 
 ## 設定
@@ -62,12 +66,13 @@ Codes Doctor は LLM（OpenAI または Anthropic）に分析結果をレビュ�
 ダッシュボードの **Display & Report Language / 画面・レポートの言語** で **English**（デフォルト）または **日本語** を選択できます。画面・通知・新しく生成するHTMLレポート・AIレビューに適用されます。既存レポートは生成時の言語を保持し、履歴から追加するAIレビューもその言語に合わせます。言語を切り替えた後、再解析すると選択した言語のレポートを生成できます。
 
 - `codeDoctor.displayLanguage`（デフォルト: `en`） — `en` / `ja`。アプリ全体のユーザー設定として保存され、次に変更するまで、ワークスペースの切り替えや再起動後も選択を保持します。解析対象のプログラミング言語とは独立した設定です。
-- `codeDoctor.analysisLanguage`（デフォルト: `auto`） — `auto` / `typescript` / `javascript` / `php` / `dart` / `python`
+- `codeDoctor.analysisLanguage`（デフォルト: `auto`） — `auto` / `typescript` / `javascript` / `php` / `dart` / `python` / `go` / `swift` / `csharp` / `java` / `kotlin` / `rust` / `cpp`
 - `codeDoctor.reportOpenMode`（デフォルト: `external`）
   - `external`: 既定のブラウザで開く
   - `webview`: VS Code の WebView パネルで開く
   - `vscode`: VS Code 自身の URI ハンドラーで開く
 - `codeDoctor.llmProvider`（デフォルト: `openai`） — `openai` / `anthropic`
+- `codeDoctor.llmOutputMode`（デフォルト: `review`） — `review`（構造レビューレポート） / `agentPrompt`（AIコーディング用プロンプト）
 - `codeDoctor.llmModel`（デフォルト: 空） — ダッシュボードのモデル取得後にドロップダウンから設定
 
 ## 対応言語

@@ -1,4 +1,7 @@
-import { getLlmProvider, getLlmModel, getLlmMaxOutputTokens, getReportOpenMode } from './config';
+import { getLlmProvider, getLlmModel, getLlmMaxOutputTokens, getLlmOutputMode, getReportOpenMode } from './config';
+
+/** Matches AGENT_PROMPT_FOCUS in the vendored engine's llm/openai/prompts. */
+const AGENT_PROMPT_FOCUS = 'agent-prompt';
 import { getApiKey } from './secrets';
 import { runLlmAnalysis, getReportLanguage } from './analyzer';
 import { getLastAnalysis } from './lastAnalysisState';
@@ -22,6 +25,7 @@ export async function executeDashboardReview(dashboard: import('./dashboard/cont
     }
 
     const model = getLlmModel(dashboard.vscode);
+    const agentPrompt = getLlmOutputMode(dashboard.vscode) === 'agentPrompt';
 
     dashboard.isRunningLlmAnalysis = true;
     dashboard.llmAnalysisStatus = { kind: 'running', provider, model };
@@ -30,7 +34,7 @@ export async function executeDashboardReview(dashboard: import('./dashboard/cont
     await dashboard.vscode.window.withProgress(
       {
         location: dashboard.vscode.ProgressLocation.Notification,
-        title: dashboard.t('Running LLM review ({details})', { details: [provider, model].filter(Boolean).join(', ') }),
+        title: dashboard.t(agentPrompt ? 'Generating AI coding prompt ({details})' : 'Running LLM review ({details})', { details: [provider, model].filter(Boolean).join(', ') }),
         cancellable: false,
       },
       async () => {
@@ -41,6 +45,7 @@ export async function executeDashboardReview(dashboard: import('./dashboard/cont
             provider,
             apiKey,
             model: model || undefined,
+            focus: agentPrompt ? AGENT_PROMPT_FOCUS : undefined,
             maxOutputTokens: getLlmMaxOutputTokens(dashboard.vscode),
             displayLanguage: getReportLanguage(lastAnalysis.reportPath),
           });

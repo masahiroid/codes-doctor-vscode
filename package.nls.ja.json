@@ -26,5 +26,8 @@
   "config.analysisLanguage.option.12": "C++",
   "config.llmProvider.option.0": "OpenAI（GPTモデル）",
   "config.llmProvider.option.1": "Anthropic（Claudeモデル）",
+  "config.llmOutputMode.description": "LLMの出力内容。人が読む構造レビューか、AIコーディングエージェント（Claude Code、Cursor、GitHub Copilot、Codex）にそのまま貼り付けられる作業指示プロンプトかを選びます。",
+  "config.llmOutputMode.option.0": "レビューレポート",
+  "config.llmOutputMode.option.1": "AIコーディング用プロンプト",
   "config.llmMaxOutputTokens.description": "LLMレビューの初回リクエストで生成するトークン数の上限（入力トークンは別）。OpenAIの推論モデルでは推論分も含みます。目安：非推論モデルは4,000〜8,000、推論モデルは16,000〜32,000。既定値は16,000。選択モデルの出力上限内で設定してください。OpenAIで上限到達により本文が空の場合は、最大値（設定値の2倍、16,000）で1回再試行するため、費用が増える場合があります。"
 }

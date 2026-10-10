@@ -1,4 +1,4 @@
-import { getReportOpenMode, getAnalysisLanguage, getLlmProvider, getDisplayLanguage } from '../config';
+import { getReportOpenMode, getAnalysisLanguage, getLlmProvider, getLlmOutputMode, getDisplayLanguage } from '../config';
 const REPORT_OPEN_MODE_OPTIONS = [
   { value: 'external', label: "External Browser" },
   { value: 'webview', label: "VS Code WebView" },
@@ -26,6 +26,11 @@ const LLM_PROVIDER_OPTIONS = [
   { value: 'anthropic', label: 'Anthropic (Claude)' },
 ];
 
+const LLM_OUTPUT_MODE_OPTIONS = [
+  { value: 'review', label: 'Review report' },
+  { value: 'agentPrompt', label: 'AI coding agent prompt' },
+];
+
 /** Dashboard <select> elements that map 1:1 to a `codeDoctor.*` setting. */
 export interface SettingsField {
   id: string;
@@ -37,6 +42,7 @@ export const SETTINGS_FIELDS: readonly SettingsField[] = [
   { id: 'reportOpenMode', settingKey: 'reportOpenMode', options: REPORT_OPEN_MODE_OPTIONS, getCurrent: getReportOpenMode },
   { id: 'analysisLanguage', settingKey: 'analysisLanguage', options: ANALYSIS_LANGUAGE_OPTIONS, getCurrent: getAnalysisLanguage },
   { id: 'llmProvider', settingKey: 'llmProvider', options: LLM_PROVIDER_OPTIONS, getCurrent: getLlmProvider },
+  { id: 'llmOutputMode', settingKey: 'llmOutputMode', options: LLM_OUTPUT_MODE_OPTIONS, getCurrent: getLlmOutputMode },
   { id: 'displayLanguage', settingKey: 'displayLanguage', options: [{ value: 'en', label: 'English' }, { value: 'ja', label: '日本語' }], getCurrent: getDisplayLanguage }
 ];
 

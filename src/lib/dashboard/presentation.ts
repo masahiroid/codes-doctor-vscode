@@ -6,7 +6,7 @@ import { buildSelectField, buildModelField, buildLlmAnalysisStatusNote } from '.
 import fs from 'node:fs';
 import path from 'node:path';
 const styles = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
-import { getLlmModel, getLlmMaxOutputTokens, getDisplayLanguage } from '../config';
+import { getLlmModel, getLlmMaxOutputTokens, getLlmOutputMode, getDisplayLanguage } from '../config';
 import { SETTINGS_FIELDS } from './settings';
 import { TOKEN_LIMITS, COMMANDS } from '../settingsSchema';
 
@@ -14,6 +14,9 @@ export function buildHtml(view: DashboardHost) {
     const escapedError = view.modelFetchError
       ? escapeHtmlAttr(view.modelFetchError)
       : '';
+    const runLabel = getLlmOutputMode(view.vscode) === 'agentPrompt'
+      ? view.t("Generate AI Coding Prompt")
+      : view.t("Run LLM Review");
 
     return `<!DOCTYPE html>
 <html lang="${getDisplayLanguage(view.vscode)}">
@@ -74,7 +77,12 @@ export function buildHtml(view: DashboardHost) {
       <div class="note">${view.t("Starting points: non-reasoning 4,000–8,000; reasoning 16,000–32,000. Input tokens are separate; reasoning counts toward this limit. Stay within the model’s output limit. Empty OpenAI output at the limit retries once with max(2 × this value, 16,000), which may increase cost.")}</div>
     </div>
     <div class="field">
-      <button data-action="runLlmAnalysis" ${view.isRunningLlmAnalysis ? 'disabled' : ''}>${view.isRunningLlmAnalysis ? view.t("⏳ Running…") : view.t("Run LLM Review")}</button>
+      <label class="field-label" for="llmOutputMode">${view.t("Output Mode")}</label>
+      ${buildSelectField(view, SETTINGS_FIELDS.find((field) => field.settingKey === 'llmOutputMode'))}
+      <div class="note">${view.t("\"AI coding agent prompt\" writes instructions you can paste into Claude Code, Cursor, GitHub Copilot, or Codex. It appears in the report's LLM tab with a copy button.")}</div>
+    </div>
+    <div class="field">
+      <button data-action="runLlmAnalysis" ${view.isRunningLlmAnalysis ? 'disabled' : ''}>${view.isRunningLlmAnalysis ? view.t("⏳ Running…") : runLabel}</button>
       <div class="note${view.llmAnalysisStatus?.kind === 'error' ? ' error' : ''}">${buildLlmAnalysisStatusNote(view)}</div>
     </div>
     <div class="field">

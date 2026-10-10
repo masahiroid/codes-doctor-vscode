@@ -13,11 +13,12 @@ export function installReviewCopy() {
   const label = ja ? 'AI向けにコピー（Markdown）' : 'Copy for AI (Markdown)';
   let vscode: { postMessage(message: unknown): void } | undefined;
   if (typeof acquireVsCodeApi === 'function') vscode = acquireVsCodeApi();
-  for (const id of ['llmResult', 'astResult']) {
+  for (const id of ['llmResult', 'astResult', 'llmAgentPrompt']) {
     const result = document.getElementById(id);
     const markdown = result?.getAttribute('data-md');
     if (!result || !markdown?.trim()) continue;
-    const text = instruction + '\n\n' + markdown;
+    // The agent prompt is already written as instructions; prefixing another instruction would duplicate them.
+    const text = id === 'llmAgentPrompt' ? markdown : instruction + '\n\n' + markdown;
     const toolbar = document.createElement('div');
     toolbar.style.cssText = 'display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:8px';
     const button = document.createElement('button');

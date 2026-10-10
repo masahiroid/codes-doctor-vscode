@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.14
+
+- Add an LLM **Output Mode** setting (`codeDoctor.llmOutputMode`). The new **AI coding agent prompt** mode asks the LLM to write a ready-to-paste task prompt for Claude Code, Cursor, GitHub Copilot, or Codex — goal, supporting metrics, up to five prioritized tasks with inspect-first steps and acceptance checks, items to leave alone, and the report the agent should return — instead of a review for people to read. It is shown in its own box on the report's LLM tab with a copy button that copies the prompt as-is, and does not overwrite the review.
+- Fix the `codeDoctor.analysisLanguage` values listed in the READMEs, which still showed only the original six languages.
+
 ## 1.5.13
 
 - When a workspace contains no files in any supported language, the report now shows a warning banner explaining that nothing was analyzed, and the Technical Debt / Security score cards show "N/A" instead of a misleading 100/100 grade A.

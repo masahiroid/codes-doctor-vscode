@@ -55,6 +55,10 @@ Codes Doctor can ask an LLM (OpenAI or Anthropic) to review the analysis and wri
 3. Click **Fetch** to pull the live list of models your key can access, then pick one
 4. After running an analysis, click **Run LLM Review** — the result is written back into the generated report
 
+### AI coding agent prompt mode
+
+Set **Output Mode** to **AI coding agent prompt** and click **Generate AI Coding Prompt**. Instead of a report for people to read, the LLM writes a task prompt you can paste unchanged into an AI coding agent (Claude Code, Cursor, GitHub Copilot, Codex). It contains the goal, the supporting metrics, up to five prioritized tasks (each with target, evidence, what to inspect first, the change, what not to change, and acceptance checks), items to leave as-is, and the report the agent should give back. The prompt only names files and symbols that appear in the analysis; anything uncertain is phrased as an inspection step. It appears in its own box on the report's LLM tab with a copy button, alongside — not replacing — the review.
+
 The model list is fetched live from the provider's API each time, so you're never stuck with a hardcoded, possibly outdated model name.
 
 ## Settings
@@ -62,12 +66,13 @@ The model list is fetched live from the provider's API each time, so you're neve
 Choose **Display & Report Language** in the Dashboard: **English** (default) or **日本語**. The dashboard, notifications, new HTML reports, and AI reviews use that language. Existing reports retain their original language; reviews added to a historical report match that report. Run a new analysis after switching languages to generate a report in the new language.
 
 - `codeDoctor.displayLanguage` (default: `en`) — `en` / `ja`, saved as an application-wide user preference. The selection persists across workspace changes and restarts until you change it again, independently of the programming language being analyzed.
-- `codeDoctor.analysisLanguage` (default: `auto`) — `auto` / `typescript` / `javascript` / `php` / `dart` / `python`
+- `codeDoctor.analysisLanguage` (default: `auto`) — `auto` / `typescript` / `javascript` / `php` / `dart` / `python` / `go` / `swift` / `csharp` / `java` / `kotlin` / `rust` / `cpp`
 - `codeDoctor.reportOpenMode` (default: `external`)
   - `external`: open in your default browser
   - `webview`: open in a VS Code WebView panel
   - `vscode`: open via VS Code's own URI handler
 - `codeDoctor.llmProvider` (default: `openai`) — `openai` / `anthropic`
+- `codeDoctor.llmOutputMode` (default: `review`) — `review` (structural review report) / `agentPrompt` (AI coding agent prompt)
 - `codeDoctor.llmModel` (default: empty) — set from the Dashboard's model dropdown after fetching
 
 ## Supported Languages

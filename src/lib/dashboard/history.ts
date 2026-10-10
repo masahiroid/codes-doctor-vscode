@@ -9,6 +9,7 @@ import { escapeHtmlAttr } from './format';
 const FOCUS_LABELS: Record<string, string> = {
   'graph-metrics': 'Structural Review',
   'ast-structure-only': 'AST Review',
+  'agent-prompt': 'AI Coding Prompt',
 };
 
 function focusLabel(focus: string) {
