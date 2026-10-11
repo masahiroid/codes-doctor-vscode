@@ -1,4 +1,3 @@
-import { escapeReportSource } from './engine/reportEscaping';
 const policy = require('./engine/policy');
 const { installJapaneseStrong } = require('./engine/support');
 
@@ -21,7 +20,7 @@ export function patchEngineSource(source: string, relativePath: string) {
   const strategy = strategies[relativePath];
   source = source.replace(/require\(["']uuid["']\)/g, "({ v4: require('node:crypto').randomUUID })");
   const patched = strategy ? strategy(source) : source;
-  const result = escapeReportSource(patched, relativePath);
+  const result = patched;
   return result.includes('CODE_DOCTOR_ENGINE_POLICY')
     ? `const CODE_DOCTOR_ENGINE_POLICY = ${JSON.stringify(policy)};\n${result}`
     : result;

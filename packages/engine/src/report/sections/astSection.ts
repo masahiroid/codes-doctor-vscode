@@ -137,7 +137,7 @@ function renderRawBlock(filePath: string, language: LanguageId, label: string): 
 function renderDetails(filePath: string, body: string): string {
   return `
   <details style="margin: 10px 0;">
-    <summary style="cursor: pointer; font-weight: 600;">${path.basename(filePath)}</summary>
+    <summary style="cursor: pointer; font-weight: 600;">${escapeHtml(path.basename(filePath))}</summary>
     <pre style="${DETAILS_PRE_STYLE}">${escapeHtml(body)}</pre>
   </details>`;
 }

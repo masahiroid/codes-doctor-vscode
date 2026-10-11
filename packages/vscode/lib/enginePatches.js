@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.patchEngineSource = patchEngineSource;
-const reportEscaping_1 = require("./engine/reportEscaping");
 const policy = require('./engine/policy');
 const { installJapaneseStrong } = require('./engine/support');
 const strategies = Object.freeze({
@@ -22,7 +21,7 @@ function patchEngineSource(source, relativePath) {
     const strategy = strategies[relativePath];
     source = source.replace(/require\(["']uuid["']\)/g, "({ v4: require('node:crypto').randomUUID })");
     const patched = strategy ? strategy(source) : source;
-    const result = (0, reportEscaping_1.escapeReportSource)(patched, relativePath);
+    const result = patched;
     return result.includes('CODE_DOCTOR_ENGINE_POLICY')
         ? `const CODE_DOCTOR_ENGINE_POLICY = ${JSON.stringify(policy)};\n${result}`
         : result;

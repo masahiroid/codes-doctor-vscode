@@ -1,4 +1,5 @@
 import type { AnalysisResult } from '../../types';
+import { escapeHtml, scriptJson } from '../../html';
 
 const SBOM_COMPONENT_TABLE_ROW_LIMIT = 50;
 const VULNERABILITY_TABLE_ROW_LIMIT = 60;
@@ -46,8 +47,8 @@ export function generateSBOMSection(result: AnalysisResult): string {
           </thead>
           <tbody>
             ${result.sbom.components.slice(0, SBOM_COMPONENT_TABLE_ROW_LIMIT).map((component) => `<tr style="border-bottom: 1px solid #e5e7eb;">
-              <td style="padding: 12px; color: #1f2937;"><code style="background: #f3f4f6; padding: 3px 6px; border-radius: 3px; font-size: 0.85em;">${component.name}</code></td>
-              <td style="padding: 12px; color: #6b7280; font-family: monospace;">${component.version}</td>
+              <td style="padding: 12px; color: #1f2937;"><code style="background: #f3f4f6; padding: 3px 6px; border-radius: 3px; font-size: 0.85em;">${escapeHtml(component.name)}</code></td>
+              <td style="padding: 12px; color: #6b7280; font-family: monospace;">${escapeHtml(component.version)}</td>
               <td style="padding: 12px; color: #6b7280;">${component.type}</td>
               <td style="padding: 12px; text-align: center;">${component.isDev
                 ? '<span style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 3px; font-size: 0.8em;">Dev</span>'

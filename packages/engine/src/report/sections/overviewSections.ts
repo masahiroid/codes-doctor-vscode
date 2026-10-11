@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { AnalysisResult } from '../../types';
 import { isThinOrchestrationModule } from '../../analyzer/moduleClassification';
 import { LANGUAGES } from '../../analyzer/languages/catalog';
+import { escapeHtml, scriptJson } from '../../html';
 
 /** Instability above this is reported as "unstable" in the report table */
 const UNSTABLE_INSTABILITY_THRESHOLD = 0.8;
@@ -115,7 +116,7 @@ export function godClassSection(result: AnalysisResult): string {
     return '<section><h2>God クラス ランキング</h2><div class="box">God クラスが見つかりません</div></section>';
   }
 
-  const chartData = JSON.stringify(result.godClasses.map((godClass) => godClass.godScore));
+  const chartData = scriptJson(result.godClasses.map((godClass) => godClass.godScore));
   return `
   <section>
     <h2>God クラス ランキング</h2>
@@ -123,7 +124,7 @@ export function godClassSection(result: AnalysisResult): string {
       <thead><tr><th>#</th><th>クラス名</th><th>ファイル</th><th>メソッド</th><th>行数</th><th>インポート</th><th>スコア</th><th>ランク</th></tr></thead>
       <tbody>
         ${result.godClasses.slice(0, GOD_CLASS_TABLE_ROW_LIMIT).map((godClass, index) => `<tr>
-          <td>${index + 1}</td><td><strong>${godClass.className}</strong></td><td>${path.basename(godClass.filePath)}</td><td>${godClass.methodCount}</td><td>${godClass.lineCount}</td><td>${godClass.importCount}</td><td>${godClass.godScore}</td><td>${godClass.rank}</td>
+          <td>${index + 1}</td><td><strong>${escapeHtml(godClass.className)}</strong></td><td>${escapeHtml(path.basename(godClass.filePath))}</td><td>${godClass.methodCount}</td><td>${godClass.lineCount}</td><td>${godClass.importCount}</td><td>${godClass.godScore}</td><td>${godClass.rank}</td>
         </tr>`).join('')}
       </tbody>
     </table>
@@ -134,7 +135,7 @@ export function godClassSection(result: AnalysisResult): string {
     <script>
       (function(){
         const classes = ${chartData};
-        const bins = ${JSON.stringify(GOD_SCORE_HISTOGRAM_BINS)};
+        const bins = ${scriptJson(GOD_SCORE_HISTOGRAM_BINS)};
         const ranges = bins.map((upper, i) => (i === 0 ? '0' : bins[i - 1] + 1) + '-' + upper).concat((bins[bins.length - 1] + 1) + '-100');
         const counts = new Array(bins.length + 1).fill(0);
         classes.forEach(score => {
@@ -162,7 +163,7 @@ export function moduleMetricsSection(result: AnalysisResult): string {
   const thinOrchestrationCount = result.moduleMetrics.filter((metric) => isThinOrchestrationModule(metric)).length;
   const stableCount = result.moduleMetrics.filter((metric) => metric.instability <= STABLE_INSTABILITY_THRESHOLD).length;
   const avgStructural = result.moduleMetrics.reduce((sum, metric) => sum + metric.structuralScore, 0) / result.moduleMetrics.length;
-  const bubble = JSON.stringify(result.moduleMetrics.map((metric) => {
+  const bubble = scriptJson(result.moduleMetrics.map((metric) => {
     const pathPart = metric.filePath.includes('/') ? metric.filePath.split('/').slice(-2).join('/') : metric.filePath;
     // r = file size (lineCount), centrality is passed through for per-point color
     return { x: metric.fanOut, y: metric.fanIn, r: Math.max(3, Math.min(20, metric.lineCount / 30)), centrality: metric.centrality, label: `${metric.moduleName} (${pathPart})` };
@@ -235,14 +236,14 @@ export function moduleMetricsSection(result: AnalysisResult): string {
 
 export function layerSection(result: AnalysisResult): string {
   if (!result.layerHeatmap?.layers?.length) return '';
-  const layers = JSON.stringify(result.layerHeatmap.layers.map((layer) => layer.name));
-  const matrix = JSON.stringify(result.layerHeatmap.matrix);
+  const layers = scriptJson(result.layerHeatmap.layers.map((layer) => escapeHtml(layer.name)));
+  const matrix = scriptJson(result.layerHeatmap.matrix);
   return `
   <section>
     <h2>アーキテクチャレイヤー分析</h2>
     <table>
       <thead><tr><th>レイヤー名</th><th>ファイル数</th><th>クラス数</th><th>平均複雑度</th><th>依存先</th></tr></thead>
-      <tbody>${result.layerHeatmap.layers.map((layer) => `<tr><td>${layer.name}</td><td>${layer.fileCount}</td><td>${layer.classCount}</td><td>${layer.avgComplexity}</td><td>${layer.dependencies.join(', ') || 'なし'}</td></tr>`).join('')}</tbody>
+      <tbody>${result.layerHeatmap.layers.map((layer) => `<tr><td>${escapeHtml(layer.name)}</td><td>${layer.fileCount}</td><td>${layer.classCount}</td><td>${layer.avgComplexity}</td><td>${escapeHtml(layer.dependencies.join(', ') || 'なし')}</td></tr>`).join('')}</tbody>
     </table>
     <div class="box"><h3>レイヤー依存ヒートマップ</h3><div id="layer-heatmap"></div></div>
     <script>
@@ -280,20 +281,20 @@ export function fileStatsSection(result: AnalysisResult): string {
   );
   if (files.length === 0) return '';
 
-  const chartData = JSON.stringify(files.map((fileInfo) => fileInfo.lineCount));
+  const chartData = scriptJson(files.map((fileInfo) => fileInfo.lineCount));
 
   return `
   <section>
     <h2>ファイル統計</h2>
     <table>
       <thead><tr><th>ファイル名</th><th>言語</th><th>クラス数</th><th>行数</th></tr></thead>
-      <tbody>${files.map((fileInfo) => `<tr><td>${fileInfo.name}</td><td>${fileInfo.lang}</td><td>${fileInfo.classes}</td><td>${fileInfo.lineCount}</td></tr>`).join('')}</tbody>
+      <tbody>${files.map((fileInfo) => `<tr><td>${escapeHtml(fileInfo.name)}</td><td>${fileInfo.lang}</td><td>${fileInfo.classes}</td><td>${fileInfo.lineCount}</td></tr>`).join('')}</tbody>
     </table>
     <div class="box"><h3>ファイルサイズ分布</h3><canvas id="fileSizeDistributionChart" height="120"></canvas></div>
     <script>
       (function(){
         const lines = ${chartData};
-        const binBounds = ${JSON.stringify(FILE_SIZE_HISTOGRAM_BINS)};
+        const binBounds = ${scriptJson(FILE_SIZE_HISTOGRAM_BINS)};
         const labels = binBounds.map((upper, i) => (i === 0 ? '0' : binBounds[i - 1] + 1) + '-' + upper).concat((binBounds[binBounds.length - 1] + 1) + '+');
         const bins = new Array(binBounds.length + 1).fill(0);
         lines.forEach(value => {
@@ -315,7 +316,7 @@ function renderModuleMetricRow(metric: AnalysisResult['moduleMetrics'][number]):
     ? '...' + metric.filePath.slice(-(MODULE_PATH_DISPLAY_MAX_LENGTH - 3))
     : metric.filePath;
   const badge = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:0.8em;font-weight:600;white-space:nowrap;background:${color.bg};color:${color.fg}">${label}</span>`;
-  return `<tr><td><strong>${metric.moduleName}</strong><br><code style="font-size:0.85em;color:#666">${displayPath}</code></td><td>${metric.fanIn}</td><td>${metric.fanOut}</td><td>${metric.centrality.toFixed(2)}</td><td>${metric.instability.toFixed(2)}</td><td>${metric.structuralScore.toFixed(1)}</td><td style="white-space:nowrap">${badge}</td></tr>`;
+  return `<tr><td><strong>${escapeHtml(metric.moduleName)}</strong><br><code style="font-size:0.85em;color:#666">${escapeHtml(displayPath)}</code></td><td>${metric.fanIn}</td><td>${metric.fanOut}</td><td>${metric.centrality.toFixed(2)}</td><td>${metric.instability.toFixed(2)}</td><td>${metric.structuralScore.toFixed(1)}</td><td style="white-space:nowrap">${badge}</td></tr>`;
 }
 
 function getInstabilityBadge(metric: AnalysisResult['moduleMetrics'][number]): { label: string; color: { bg: string; fg: string } } {
