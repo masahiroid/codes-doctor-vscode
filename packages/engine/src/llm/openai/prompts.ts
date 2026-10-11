@@ -1,7 +1,19 @@
 import { LlmContext, AstOnlyLlmContext } from '../context';
 
+/**
+ * Rules shared by every review system prompt, so each recommended action is
+ * concrete enough for a person or a coding agent to verify and carry out.
+ */
+const ACTION_RULES = [
+  'Keep the existing report sections and summary format.',
+  'Within each priority action or refactoring proposal, include the exact target, evidence, code inspection steps, conditional implementation instructions, and acceptance checks.',
+  'Write actions so a coding agent can execute them: inspect the actual code first, implement only confirmed issues, preserve public behavior and interfaces, run relevant tests, and report changes and remaining uncertainties.',
+  'Do not invent file names, symbols, test commands, or confirmed defects. If evidence is incomplete, state what must be verified before changing code.',
+  'When dependency extraction appears empty or unreliable, prioritize validating extraction and remeasurement before dependency-driven refactoring.',
+].join('\n');
+
 export function buildFullAnalysisSystemPrompt(): string {
-  return 'You are a senior software architect. Explain structural analysis results clearly and concisely.';
+  return 'You are a senior software architect. Explain structural analysis results clearly and concisely.' + '\n' + ACTION_RULES;
 }
 
 export function buildFullAnalysisPrompt(context: LlmContext, focus: string): string {
@@ -117,7 +129,7 @@ export function buildAstOnlySystemPrompt(): string {
     '- Such files are low-risk by default and MUST NOT be labeled as God Class.',
     '- complexity score = lineCount + (fanIn+fanOut)*2 for code files, and 0 for pure-type files.',
     '- complexity score is not cyclomatic complexity; use cyclomaticComplexity field when present.',
-  ].join('\n');
+  ].join('\n') + '\n' + ACTION_RULES;
 }
 
 /**

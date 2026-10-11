@@ -4,7 +4,6 @@ exports.patchEngineSource = patchEngineSource;
 const policy = require('./engine/policy');
 const { installJapaneseStrong } = require('./engine/support');
 const strategies = Object.freeze({
-    "llm/providers/openai.js": require('./engine/openaiResponses'),
     "report/htmlBuilder.js": require('./engine/reportHtml'),
     "report/liveUpdate.js": require('./engine/llmPersistence'),
     "report/sections/astSection.js": require('./engine/astSection'),
@@ -15,7 +14,6 @@ const strategies = Object.freeze({
     "report/sections/ast/lightweightStructure.js": require('./engine/astRendering').localizeAstLabels,
     "graph/d3/visualizationScript.js": require('./engine/graphVisualization'),
     "report/sections/graphSections.js": require('./engine/graphSection'),
-    "llm/openai/prompts.js": require('./engine/reviewPrompts'),
 });
 function patchEngineSource(source, relativePath) {
     const strategy = strategies[relativePath];

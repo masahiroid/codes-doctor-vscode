@@ -116,12 +116,32 @@ async function listModels(apiKey: string): Promise<LlmModelInfo[]> {
     .map((id) => ({ id }));
 }
 
+/**
+ * Reasoning models can spend the whole output budget on reasoning and return no text.
+ * Such a request is retried once with this much larger budget.
+ */
+const EMPTY_OUTPUT_RETRY = { tokenMultiplier: 2, minimumTokens: 16000 } as const;
+
+const DECLINED_MESSAGE = 'OpenAI declined the review request. Try a different review scope.';
+
+function retryBudget(options: LlmCallOptions): LlmCallOptions {
+  return { ...options, maxTokens: Math.max(options.maxTokens * EMPTY_OUTPUT_RETRY.tokenMultiplier, EMPTY_OUTPUT_RETRY.minimumTokens) };
+}
+
+function budgetExhaustedError(options: LlmCallOptions): Error {
+  return new Error(
+    `OpenAI review exhausted the token budget before producing text (model: ${options.model}, limit: ${options.maxTokens}). ` +
+    'Increase the maximum output tokens or choose another model.'
+  );
+}
+
 async function callChatCompletions(
   systemPrompt: string,
   userPrompt: string,
   options: LlmCallOptions,
   tokenParamName: 'max_tokens' | 'max_completion_tokens' = 'max_tokens',
-  includeTemperature = true
+  includeTemperature = true,
+  retriedEmpty = false
 ): Promise<string> {
   const payload = JSON.stringify({
     model: options.model,
@@ -142,24 +162,32 @@ async function callChatCompletions(
     // predictable from the model ID alone across providers' ongoing API changes, so probing
     // is more reliable than a hardcoded model-name list.
     if (tokenParamName === 'max_tokens' && isUnsupportedMaxTokensError(error)) {
-      return callChatCompletions(systemPrompt, userPrompt, options, 'max_completion_tokens', includeTemperature);
+      return callChatCompletions(systemPrompt, userPrompt, options, 'max_completion_tokens', includeTemperature, retriedEmpty);
     }
     if (includeTemperature && isUnsupportedTemperatureError(error)) {
-      return callChatCompletions(systemPrompt, userPrompt, options, tokenParamName, false);
+      return callChatCompletions(systemPrompt, userPrompt, options, tokenParamName, false, retriedEmpty);
     }
     throw error;
   }
 
-  if (!response.choices?.[0]?.message?.content) {
-    throw new Error('OpenAI Chat Completions response missing content');
+  const choice = response.choices?.[0];
+  const text = typeof choice?.message?.content === 'string' ? choice.message.content.trim() : '';
+  if (text) return text;
+  if (choice?.message?.refusal) throw new Error(DECLINED_MESSAGE);
+  if (choice?.finish_reason === 'length') {
+    if (!retriedEmpty) {
+      return callChatCompletions(systemPrompt, userPrompt, retryBudget(options), tokenParamName, includeTemperature, true);
+    }
+    throw budgetExhaustedError(options);
   }
-  return response.choices[0].message.content.trim();
+  throw new Error(`OpenAI Chat Completions response missing content (model: ${options.model}, finish_reason: ${choice?.finish_reason ?? 'unknown'})`);
 }
 
 async function callResponsesApi(
   systemPrompt: string,
   userPrompt: string,
-  options: LlmCallOptions
+  options: LlmCallOptions,
+  retriedEmpty = false
 ): Promise<string> {
   // GPT-5 Responses API: instructions = system role, input = user messages
   const payload = JSON.stringify({
@@ -169,12 +197,23 @@ async function callResponsesApi(
     max_output_tokens: options.maxTokens,
   });
   const response = await httpPostJson('/v1/responses', payload, options.apiKey);
-  // Responses API: { output: [{ content: [{ type: 'output_text', text: '...' }] }] }
-  const text = response.output?.[0]?.content?.[0]?.text;
-  if (!text) {
-    throw new Error('OpenAI Responses API: missing output text');
+  // Output mixes reasoning items and message items; only message text is the answer.
+  const content = (response.output ?? [])
+    .filter((item: any) => item.type === 'message')
+    .flatMap((item: any) => item.content ?? []);
+  const text = content
+    .filter((part: any) => part.type === 'output_text' && typeof part.text === 'string')
+    .map((part: any) => part.text)
+    .join('\n')
+    .trim();
+  if (text) return text;
+  if (content.some((part: any) => part.type === 'refusal')) throw new Error(DECLINED_MESSAGE);
+  if (response.incomplete_details?.reason === 'max_output_tokens') {
+    if (!retriedEmpty) return callResponsesApi(systemPrompt, userPrompt, retryBudget(options), true);
+    throw budgetExhaustedError(options);
   }
-  return text.trim();
+  const reason = response.incomplete_details?.reason ?? response.error?.code ?? 'unknown';
+  throw new Error(`OpenAI Responses API: missing output text (model: ${options.model}, status: ${response.status ?? 'unknown'}, reason: ${reason})`);
 }
 
 async function callLlm(

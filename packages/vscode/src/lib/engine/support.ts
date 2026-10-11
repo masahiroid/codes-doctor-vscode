@@ -2,7 +2,6 @@
 module.exports = {
   ...require('../reportCopy'),
   ...require('./markdown'),
-  ...require('./promptRules'),
   ...require('./astRendering'),
   ...require('./sourceReplacement'),
 };
