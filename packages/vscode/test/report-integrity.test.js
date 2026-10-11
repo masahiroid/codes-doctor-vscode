@@ -18,9 +18,10 @@ for (const folder of ['csap', 'csap-en']) {
       const files = [{ filePath: issue }, ...Array.from({ length: 200 }, () => ({ filePath: clean }))];
       const { calculateSecurityScore } = require(`../vendor/${folder}/analyzer/securityScore`);
       for (const [code, severity, cap, grade] of [
-        ['eval(input)', 'critical', 59, 'F'],
-        ['node.innerHTML = input', 'high', 79, 'C'],
-        ['document.write(input)', 'medium', 89, 'B'],
+        ['eval(req.query.input)', 'critical', 59, 'F'],
+        ['node.innerHTML = req.query.input', 'high', 79, 'C'],
+        ['const token = Math.random();', 'medium', 89, 'B'],
+        ['document.write(input)', 'low', 99, 'A'],
         ['const value = process.env.VALUE;', 'info', 99, 'A'],
       ]) {
         fs.writeFileSync(issue, code);
