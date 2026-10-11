@@ -1,7 +1,7 @@
 const ANALYSIS_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * analysisId is generated as a uuidv4 (see upload.ts) and used to build filesystem paths
+ * analysisId is generated as a random UUID (see services/pathAnalysis.ts) and used to build filesystem paths
  * throughout the app. Reject anything that doesn't match that shape before it reaches
  * path.join, to prevent path traversal via a crafted analysisId.
  */

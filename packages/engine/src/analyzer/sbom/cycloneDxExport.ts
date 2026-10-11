@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { SBOM } from '../../types';
 
 const CYCLONEDX_SPEC_VERSION = '1.4';
@@ -11,7 +11,7 @@ export function exportSBOMAsJson(sbom: SBOM): string {
   const cycloneDx = {
     bomFormat: 'CycloneDX',
     specVersion: CYCLONEDX_SPEC_VERSION,
-    serialNumber: `urn:uuid:${uuidv4()}`,
+    serialNumber: `urn:uuid:${randomUUID()}`,
     version: 1,
     metadata: {
       timestamp: sbom.metadata.timestamp,

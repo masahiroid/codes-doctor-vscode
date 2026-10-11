@@ -4,15 +4,8 @@
  * vendor/csap/, so the extension can call the analysis pipeline directly
  * (no HTTP server, no puppeteer/express/multer — see README for why).
  *
- * This extension lives in its own repo, separate from the CSAP (Code Doctor
- * server/engine) repo. Point CSAP_ROOT at a local checkout of that repo
- * (built with `npm run build` so dist/ exists):
- *
- *   CSAP_ROOT=/path/to/csap-main node scripts/vendor-csap.js
- *   # or: CSAP_ROOT=/path/to/csap-main npm run vendor:csap
- *
- * Defaults to a `csap-main` checkout next to this extension's repo root
- * (i.e. ../csap-main) if CSAP_ROOT is not set.
+ * The engine lives in this monorepo at packages/engine; `npm run vendor:csap`
+ * builds it first. CSAP_ROOT may point at another engine checkout instead.
  */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -20,7 +13,7 @@ const path = require('node:path');
 const EXTENSION_ROOT = path.join(__dirname, '..');
 const CSAP_ROOT = process.env.CSAP_ROOT
   ? path.resolve(process.env.CSAP_ROOT)
-  : path.join(EXTENSION_ROOT, '..', 'csap-main');
+  : path.join(EXTENSION_ROOT, '..', 'engine');
 const SOURCE_DIST = path.join(CSAP_ROOT, 'dist');
 const { localizeEngineSource } = require('../lib/localizeEngine');
 const { patchEngineSource } = require('../lib/enginePatches');
@@ -30,7 +23,7 @@ const DEST_VENDOR = path.join(EXTENSION_ROOT, 'vendor', 'csap');
 function assertCsapBuilt() {
   if (!fs.existsSync(SOURCE_DIST) || !fs.existsSync(path.join(SOURCE_DIST, 'services', 'pathAnalysis.js'))) {
     console.error(`[vendor-csap] CSAP dist/ not found or incomplete at: ${SOURCE_DIST}`);
-    console.error('[vendor-csap] Set CSAP_ROOT to your csap-main checkout and run "npm run build" there first.');
+    console.error('[vendor-csap] Run "npm run build" in packages/engine (or set CSAP_ROOT) first.');
     process.exit(1);
   }
 }

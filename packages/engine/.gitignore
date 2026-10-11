@@ -1,7 +1,6 @@
 # Dependencies
 node_modules/
 **/node_modules/
-package-lock.json
 yarn.lock
 
 # Generated SBOM/vulnerability scan scratch output
@@ -12,13 +11,8 @@ dist/
 *.js.map
 *.d.ts.map
 
-# Temporary files
-uploads/*
-!uploads/.gitkeep
-temp/*
-!temp/.gitkeep
-output/*
-!output/.gitkeep
+# Reports written by local runs
+output/
 
 # Environment
 .env

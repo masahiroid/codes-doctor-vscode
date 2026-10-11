@@ -32,9 +32,6 @@ export async function generateHTMLReport(result: AnalysisResult, outputPath: str
     .container { max-width: 1400px; margin: 0 auto; background: var(--white); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
     header { padding: 24px 28px; border-bottom: 1px solid var(--border); }
     .header-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-    .actions { display: flex; gap: 10px; }
-    .btn { display: inline-block; padding: 8px 14px; border-radius: 6px; text-decoration: none; color: #fff; background: var(--primary); font-weight: 600; font-size: 0.9rem; }
-    .btn.pdf { background: var(--success); }
     .meta { margin-top: 10px; color: var(--muted); font-size: 0.9rem; }
     /* ---- Tab Navigation ---- */
     .tab-nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 12px 28px 0; background: var(--bg); border-bottom: 2px solid var(--border); position: sticky; top: 0; z-index: 100; }
@@ -69,7 +66,7 @@ export async function generateHTMLReport(result: AnalysisResult, outputPath: str
     @media print {
       body { background: #fff; padding: 0; }
       .container { border: none; }
-      .btn, .tab-nav { display: none !important; }
+      .tab-nav { display: none !important; }
       .tab-panel { display: block !important; }
       h2, h3 { page-break-after: avoid; }
       .card, .box, table, .diagram, tr, li { page-break-inside: avoid; break-inside: avoid; }
@@ -85,10 +82,6 @@ export async function generateHTMLReport(result: AnalysisResult, outputPath: str
     <header>
       <div class="header-top">
         <h1>Code Doctor コード構造監査レポート</h1>
-        <div class="actions">
-          <a class="btn" href="/">新しい分析を開始</a>
-          <a class="btn pdf" href="/reports/${result.analysisId}/pdf">PDFダウンロード</a>
-        </div>
       </div>
       <div class="meta">
         <div><strong>リポジトリ:</strong> ${repoName}</div>

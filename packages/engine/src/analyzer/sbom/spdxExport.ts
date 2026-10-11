@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { SBOM } from '../../types';
 
 const SPDX_VERSION = 'SPDX-2.3';
@@ -16,7 +16,7 @@ export function exportSBOMAsSDPX(sbom: SBOM): string {
     `DataLicense: ${SPDX_DATA_LICENSE}`,
     'SPDXID: SPDXRef-DOCUMENT',
     `DocumentName: ${sbom.metadata.projectName || 'Project'}`,
-    `DocumentNamespace: https://csap/${uuidv4()}`,
+    `DocumentNamespace: https://csap/${randomUUID()}`,
     `Creator: Tool: ${SPDX_TOOL_NAME}`,
     `Created: ${sbom.metadata.timestamp}`,
     '',

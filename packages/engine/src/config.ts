@@ -1,8 +1,5 @@
 import path from 'path';
 
-const BYTES_PER_MEGABYTE = 1024 * 1024;
-const MAX_UPLOAD_MEGABYTES = 500;
-
 export interface AppConfig {
   features: {
     llm: boolean;
@@ -20,14 +17,11 @@ export interface AppConfig {
     temperature: number;
   };
   limits: {
-    maxFileSize: number;
     maxFilesPerRepo: number;
     maxClassesInReport: number;
     maxMermaidNodes: number;
   };
   paths: {
-    uploads: string;
-    temp: string;
     output: string;
   };
 }
@@ -48,14 +42,11 @@ export const defaultConfig: AppConfig = {
     temperature: 0.2,
   },
   limits: {
-    maxFileSize: MAX_UPLOAD_MEGABYTES * BYTES_PER_MEGABYTE,
     maxFilesPerRepo: 10000,
     maxClassesInReport: 50,
     maxMermaidNodes: 30,
   },
   paths: {
-    uploads: path.join(process.cwd(), 'uploads'),
-    temp: path.join(process.cwd(), 'temp'),
     output: path.join(process.cwd(), 'output'),
   },
 };
@@ -96,19 +87,9 @@ export function getConfig(): AppConfig {
   if (process.env.CSAP_LLM_TEMPERATURE && !isNaN(temperature)) {
     config.llm.temperature = temperature;
   }
-  const maxFileSize = parseInt(process.env.CSAP_MAX_FILE_SIZE ?? '', 10);
-  if (!isNaN(maxFileSize)) {
-    config.limits.maxFileSize = maxFileSize;
-  }
 
   if (process.env.CSAP_OUTPUT_DIR) {
     config.paths.output = process.env.CSAP_OUTPUT_DIR;
-  }
-  if (process.env.CSAP_UPLOADS_DIR) {
-    config.paths.uploads = process.env.CSAP_UPLOADS_DIR;
-  }
-  if (process.env.CSAP_TEMP_DIR) {
-    config.paths.temp = process.env.CSAP_TEMP_DIR;
   }
 
   return config;

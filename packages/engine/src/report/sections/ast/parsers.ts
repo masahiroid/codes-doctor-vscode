@@ -1,4 +1,4 @@
-import { parse } from '@typescript-eslint/typescript-estree';
+import { parse, type TSESTree } from '@typescript-eslint/typescript-estree';
 import phpParser from 'php-parser';
 
 const TYPESCRIPT_PARSE_OPTIONS = {
@@ -9,7 +9,7 @@ const TYPESCRIPT_PARSE_OPTIONS = {
   sourceType: 'module',
 } as const;
 
-export function parseTypeScriptAst(content: string) {
+export function parseTypeScriptAst(content: string): TSESTree.Program {
   return parse(content, TYPESCRIPT_PARSE_OPTIONS);
 }
 

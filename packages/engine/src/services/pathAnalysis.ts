@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { runAnalysis } from '../analyzer';
 import { generateHTMLReport } from '../report/htmlBuilder';
 import { getReportPath } from '../report/output';
@@ -18,7 +18,6 @@ export async function analyzePathRequest(
 ): Promise<{
   analysisId: string;
   repoPath: string;
-  reportUrl: string;
   reportPath: string;
 }> {
   if (!repoPath || typeof repoPath !== 'string') {
@@ -37,7 +36,7 @@ export async function analyzePathRequest(
   }
 
   const targetLanguage = toAnalysisLanguage(language);
-  const analysisId = uuidv4();
+  const analysisId = randomUUID();
   const reportPath = outputDir ? getReportPath(analysisId, outputDir) : getReportPath(analysisId);
 
   console.log('\n[PATH ANALYSIS] Starting analysis:');
@@ -51,7 +50,6 @@ export async function analyzePathRequest(
   return {
     analysisId,
     repoPath: normalizedPath,
-    reportUrl: `/reports/${analysisId}`,
     reportPath,
   };
 }

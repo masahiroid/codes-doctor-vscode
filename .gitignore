@@ -5,4 +5,4 @@ vendor/
 test-results/
 playwright-report/
 
-media/report-libraries/
+packages/vscode/media/report-libraries/
