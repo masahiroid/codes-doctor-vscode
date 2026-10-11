@@ -3,7 +3,7 @@
 **
 !dist/**
 !media/icon.png
-!media/honami-activity.svg
+!media/doctor.svg
 !package.json
 !package.nls.json
 !package.nls.ja.json
