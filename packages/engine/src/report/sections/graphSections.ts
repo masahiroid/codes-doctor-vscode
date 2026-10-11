@@ -3,6 +3,9 @@ import type { AnalysisResult } from '../../types';
 import { escapeHtml } from '../../html';
 import { CYCLE_LENGTH_THRESHOLDS } from '../../analyzer/technicalDebt';
 
+/** Shown when classes exist but none depends on another: the graph has nodes only. */
+const NO_CLASS_LINKS_NOTE = '<p>クラスは検出されましたが、クラス間の内部依存は検出されませんでした。ノードのみ表示します。</p>';
+
 /** Cycle edges drawn in the circular-dependency diagram before it is truncated. */
 const MAX_CYCLE_EDGES = 80;
 /** djb2 string hash, used for stable Mermaid node IDs of non-word labels. */
@@ -145,7 +148,7 @@ export function generateD3DependencyGraphSection(result: AnalysisResult): string
   return `
   <section>
     <h2>クラス依存グラフ (D3.js)</h2>
-    <div class="box">${generateD3VisualizationScript(graph)}</div>
+    <div class="box">${graph.links.length === 0 ? NO_CLASS_LINKS_NOTE : ''}${generateD3VisualizationScript(graph)}</div>
   </section>`;
 }
 

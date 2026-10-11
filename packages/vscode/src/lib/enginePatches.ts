@@ -11,7 +11,6 @@ const strategies: Readonly<Record<string, (source: string) => string>> = Object.
   "report/sections/ast/phpStructure.js": require('./engine/astRendering').localizeAstLabels,
   "report/sections/ast/lightweightStructure.js": require('./engine/astRendering').localizeAstLabels,
   "graph/d3/visualizationScript.js": require('./engine/graphVisualization'),
-  "report/sections/graphSections.js": require('./engine/graphSection'),
 });
 
 export function patchEngineSource(source: string, relativePath: string) {

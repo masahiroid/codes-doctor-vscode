@@ -13,7 +13,6 @@ const strategies = Object.freeze({
     "report/sections/ast/phpStructure.js": require('./engine/astRendering').localizeAstLabels,
     "report/sections/ast/lightweightStructure.js": require('./engine/astRendering').localizeAstLabels,
     "graph/d3/visualizationScript.js": require('./engine/graphVisualization'),
-    "report/sections/graphSections.js": require('./engine/graphSection'),
 });
 function patchEngineSource(source, relativePath) {
     const strategy = strategies[relativePath];

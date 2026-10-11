@@ -1,4 +1,5 @@
 import { D3Graph, D3_GRAPH_GROUPS } from './buildDependencyGraph';
+import { scriptJson } from '../../html';
 
 const GRAPH_HEIGHT_PX = 600;
 /** Force-layout and legend tuning for the in-browser graph (embedded into the script as `layout`). */
@@ -10,6 +11,7 @@ const D3_LAYOUT = {
   collisionPadding: 5,
   arrowOffset: 20,
   dragAlphaTarget: 0.3,
+  resizeAlpha: 0.3,
   legendWidth: 150,
   legendTop: 20,
   legendRowHeight: 20,
@@ -31,11 +33,18 @@ export function generateD3VisualizationScript(graph: D3Graph): string {
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
 (function() {
-  const graphData = ${JSON.stringify(graph)};
+  const graphData = ${scriptJson(graph)};
   const groups = ${JSON.stringify(D3_GRAPH_GROUPS)};
   const layout = ${JSON.stringify(D3_LAYOUT)};
 
-  const width = document.getElementById('d3-graph').clientWidth;
+  const container = document.getElementById('d3-graph');
+  if (typeof d3 === 'undefined') {
+    container.textContent = 'グラフ描画ライブラリを読み込めませんでした。ネットワーク接続を確認してレポートを開き直してください。';
+    return;
+  }
+  // A graph in a hidden tab has zero width; render once it becomes visible and follow resizes.
+  let resizeGraph;
+  function renderGraph(width) {
   const height = ${GRAPH_HEIGHT_PX};
 
   const colorScale = d3.scaleOrdinal()
@@ -48,6 +57,11 @@ export function generateD3VisualizationScript(graph: D3Graph): string {
     .attr('height', height)
     .attr('viewBox', [0, 0, width, height]);
 
+  resizeGraph = function(nextWidth) {
+    svg.attr('width', nextWidth).attr('viewBox', [0, 0, nextWidth, height]);
+    simulation.force('center', d3.forceCenter(nextWidth / 2, height / 2));
+    simulation.alpha(layout.resizeAlpha).restart();
+  };
   const g = svg.append('g');
 
   svg.call(d3.zoom()
@@ -168,6 +182,15 @@ export function generateD3VisualizationScript(graph: D3Graph): string {
     .attr('y', (d, i) => i * layout.legendRowHeight + layout.legendTextBaseline)
     .text(d => d)
     .attr('font-size', 12);
+  }
+  const resize = function() {
+    const width = container.clientWidth;
+    if (width <= 0) return;
+    if (resizeGraph) resizeGraph(width);
+    else renderGraph(width);
+  };
+  new ResizeObserver(resize).observe(container);
+  resize();
 })();
 </script>
 `;
