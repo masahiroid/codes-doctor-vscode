@@ -8,9 +8,7 @@ const webviewSecurity_1 = require("./webviewSecurity");
 const libraries_1 = require("./reports/libraries");
 const branding_1 = require("./reports/branding");
 const integrity_1 = require("./reports/integrity");
-const reportTabs_1 = require("./reportTabs");
-const reportCopy_1 = require("./reportCopy");
-const reviewTargets_1 = require("./reviewTargets");
+const reportScripts_1 = require("./reportScripts");
 const i18n_1 = require("./i18n");
 const node_fs_1 = __importDefault(require("node:fs"));
 const config_1 = require("./config");
@@ -25,7 +23,7 @@ async function openReport(vscode, reportPath, analysisId) {
         vscode.window.showErrorMessage((0, i18n_1.translator)(vscode)('This saved report has incomplete AST markup. Run "Analyze Current Workspace" to regenerate it. The original report and saved reviews have been kept.'));
         return;
     }
-    const enhancedHtml = (0, branding_1.injectReportBranding)((0, reportTabs_1.injectReportTabs)((0, reportCopy_1.injectReviewCopy)((0, libraries_1.upgradeReportLibraries)(originalHtml))));
+    const enhancedHtml = (0, branding_1.injectReportBranding)((0, reportScripts_1.injectReportTabs)((0, reportScripts_1.injectReviewCopy)((0, libraries_1.upgradeReportLibraries)(originalHtml))));
     const reportUri = vscode.Uri.file(reportPath);
     const mode = (0, config_1.getReportOpenMode)(vscode);
     if (mode === 'vscode') {
@@ -48,7 +46,7 @@ async function openReport(vscode, reportPath, analysisId) {
         if (!input || typeof input !== 'object')
             return;
         const message = input;
-        if (message?.type !== 'copyReview' || !(0, reviewTargets_1.isReviewTargetId)(message.id) || typeof message.text !== 'string')
+        if (message?.type !== 'copyReview' || !(0, reportScripts_1.isReviewTargetId)(message.id) || typeof message.text !== 'string')
             return;
         let ok = true;
         try {

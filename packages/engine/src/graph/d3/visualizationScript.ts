@@ -1,5 +1,6 @@
 import { D3Graph, D3_GRAPH_GROUPS } from './buildDependencyGraph';
 import { scriptJson } from '../../html';
+import { reportLibraryScript } from '../../report/browser/libraries';
 
 const GRAPH_HEIGHT_PX = 600;
 /** Force-layout and legend tuning for the in-browser graph (embedded into the script as `layout`). */
@@ -30,7 +31,7 @@ export function generateD3VisualizationScript(graph: D3Graph): string {
   return `
 <div id="d3-graph" style="width: 100%; height: ${GRAPH_HEIGHT_PX}px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fafafa;"></div>
 
-<script src="https://d3js.org/d3.v7.min.js"></script>
+${reportLibraryScript('d3')}
 <script>
 (function() {
   const graphData = ${scriptJson(graph)};

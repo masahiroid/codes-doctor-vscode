@@ -1,6 +1,6 @@
 import type { LlmReviewRequest } from './types';
 import { getReportLanguage, getDefaultOutputDir, listLlmResults, listReports } from './reports/repository';
-import { LLM_DEFAULTS } from './settingsSchema';
+import { EXTENSION_VERSION, LLM_DEFAULTS } from './settingsSchema';
 
 /**
  * Thin wrapper around the vendored CSAP engine (vendor/csap/, copied from the
@@ -10,7 +10,7 @@ import { LLM_DEFAULTS } from './settingsSchema';
 function loadCsapEngine(displayLanguage: 'en' | 'ja' = 'en') {
   // eslint-disable-next-line import/no-dynamic-require, global-require
   return require(`../vendor/${displayLanguage === 'ja' ? 'csap' : 'csap-en'}/services/pathAnalysis`) as {
-    analyzePathRequest(repoPath: string, language: string, outputDir: string): Promise<{ analysisId: string; repoPath: string; reportPath: string }>;
+    analyzePathRequest(repoPath: string, language: string, outputDir: string, reportOptions?: { generatorVersion?: string }): Promise<{ analysisId: string; repoPath: string; reportPath: string }>;
   };
 }
 
@@ -25,7 +25,7 @@ function loadCsapEngine(displayLanguage: 'en' | 'ja' = 'en') {
  */
 export async function analyzeWorkspace(repoPath: string, language: string, outputDir: string, displayLanguage: 'en' | 'ja' = 'en') {
   const { analyzePathRequest } = loadCsapEngine(displayLanguage);
-  return analyzePathRequest(repoPath, language, outputDir);
+  return analyzePathRequest(repoPath, language, outputDir, { generatorVersion: EXTENSION_VERSION });
 }
 
 /**

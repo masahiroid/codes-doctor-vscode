@@ -1,4 +1,14 @@
-import { REVIEW_TARGET_IDS, AGENT_PROMPT_TARGET_ID } from './reviewTargets';
+import { REVIEW_ELEMENT_IDS } from '../reviewElements';
+
+/** Report elements whose Markdown can be copied for an AI agent. */
+export const REVIEW_TARGET_IDS: readonly string[] = Object.freeze(Object.values(REVIEW_ELEMENT_IDS));
+/** The agent prompt is already an instruction, so it is copied without the generic preamble. */
+export const AGENT_PROMPT_TARGET_ID = REVIEW_ELEMENT_IDS['agent-prompt'];
+
+export function isReviewTargetId(value: unknown): value is string {
+  return typeof value === 'string' && REVIEW_TARGET_IDS.includes(value);
+}
+
 declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
 // Placeholders inside installReviewCopy, substituted when the function is serialized into a report.
 declare const REVIEW_TARGET_IDS_PLACEHOLDER: readonly string[];
@@ -94,4 +104,3 @@ export function injectReviewCopy(html: string) {
   return insertion >= 0 ? html.slice(0, insertion) + reviewCopyScript + html.slice(insertion) : html;
 }
 
-module.exports = { installReviewCopy, injectReviewCopy, reviewCopySource };

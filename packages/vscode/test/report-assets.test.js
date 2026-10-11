@@ -13,13 +13,6 @@ test('saved report branding updates titles without changing repository names or 
   }
 });
 
-test('source patches preserve literal replacement sequences in embedded libraries', () => {
-  const { replaceRequired, replaceAllRequired } = require('../lib/engine/sourceReplacement');
-  const literal = '$& $1 $` $\' <script>library</script>';
-  assert.equal(replaceRequired('before MARKER after', 'MARKER', literal), `before ${literal} after`);
-  assert.equal(replaceAllRequired('MARKER MARKER', 'MARKER', literal), `${literal} ${literal}`);
-});
-
 test('saved reports upgrade recognized libraries while preserving escaped source and other URLs', () => {
   const { upgradeReportLibraries } = require('../lib/reports/libraries');
   const source = '&lt;script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"&gt;&lt;/script&gt;';

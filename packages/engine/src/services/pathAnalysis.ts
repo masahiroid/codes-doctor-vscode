@@ -2,19 +2,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { runAnalysis } from '../analyzer';
-import { generateHTMLReport } from '../report/htmlBuilder';
+import { generateHTMLReport, ReportOptions } from '../report/htmlBuilder';
 import { getReportPath } from '../report/output';
 import { toAnalysisLanguage } from '../analyzer/languages/catalog';
 
 /**
- * @param outputDir Base output directory for the generated report. Defaults to
- * `<cwd>/output` for the server; callers embedding CSAP elsewhere (e.g. the
- * VS Code extension) can point this at their own storage location.
+ * Analyze a directory and write its HTML report.
+ * @param outputDir Base output directory for the report. Defaults to `<cwd>/output`.
+ * @param reportOptions Presentation options, e.g. the calling tool's version.
  */
 export async function analyzePathRequest(
   repoPath: unknown,
   language: unknown,
-  outputDir?: string
+  outputDir?: string,
+  reportOptions: ReportOptions = {}
 ): Promise<{
   analysisId: string;
   repoPath: string;
@@ -45,7 +46,7 @@ export async function analyzePathRequest(
   console.log(`   Language mode: ${targetLanguage}`);
 
   const result = await runAnalysis(normalizedPath, analysisId, targetLanguage);
-  await generateHTMLReport(result, reportPath);
+  await generateHTMLReport(result, reportPath, reportOptions);
 
   return {
     analysisId,

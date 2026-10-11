@@ -1,4 +1,3 @@
-import { AST_SECTION_LIMITS } from './limits';
 import { parseTypeScriptAst } from './parsers';
 import { OutlineType, renderOutline } from './structureOutline';
 
@@ -22,9 +21,9 @@ export function buildTypeScriptStructure(content: string): string {
   }
 
   return renderOutline([
-    { kind: 'names', heading: 'Imports', items: imports, limit: AST_SECTION_LIMITS.listItems },
-    { kind: 'types', heading: 'Classes', types: classes, limit: AST_SECTION_LIMITS.classes },
-    { kind: 'names', heading: 'Functions', items: functions, limit: AST_SECTION_LIMITS.listItems, suffix: '()' },
+    { kind: 'names', heading: 'インポート', items: imports },
+    { kind: 'types', heading: 'クラス', types: classes },
+    { kind: 'names', heading: '関数', items: functions, suffix: '()' },
   ]);
 }
 
@@ -39,5 +38,5 @@ function describeClass(node: any): OutlineType {
       fields += 1;
     }
   }
-  return { name: node.id.name, counts: [{ label: 'fields', value: fields }], methods };
+  return { name: node.id.name, counts: [{ label: 'フィールド', value: fields }], methods };
 }

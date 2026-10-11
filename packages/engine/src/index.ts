@@ -6,6 +6,7 @@ export { analyzePathRequest } from './services/pathAnalysis';
 export { analyzeLlmRequest, getSavedLlmResult, listLlmModels } from './services/llmService';
 export { runAnalysis } from './analyzer';
 export { generateHTMLReport } from './report/htmlBuilder';
+export type { ReportOptions } from './report/htmlBuilder';
 export { getConfig, defaultConfig } from './config';
 export type { AppConfig } from './config';
 export { LLM_FOCUS } from './llm/focus';

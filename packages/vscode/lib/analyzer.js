@@ -30,7 +30,7 @@ function loadCsapEngine(displayLanguage = 'en') {
  */
 async function analyzeWorkspace(repoPath, language, outputDir, displayLanguage = 'en') {
     const { analyzePathRequest } = loadCsapEngine(displayLanguage);
-    return analyzePathRequest(repoPath, language, outputDir);
+    return analyzePathRequest(repoPath, language, outputDir, { generatorVersion: settingsSchema_1.EXTENSION_VERSION });
 }
 /**
  * Fetch the live list of models available for a provider, using the given API key.

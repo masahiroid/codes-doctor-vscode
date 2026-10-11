@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { Marked } = require('marked');
-const { installJapaneseStrong } = require('../lib/enginePatches');
+const { installJapaneseStrong } = require('../vendor/csap/report/browser/markdown');
 
 test('Japanese bold adjacent to prose and punctuation renders with nested inline code', () => {
   const marked = new Marked();

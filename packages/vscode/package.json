@@ -185,19 +185,19 @@
   },
   "scripts": {
     "lint": "npm run typecheck",
-    "vendor:csap": "npm run build --prefix ../engine && npm run build && node scripts/vendor-csap.js",
-    "prepackage": "npm run vendor:csap",
+    "vendor:csap": "npm run build --prefix ../engine && node scripts/vendor-engine.mjs",
+    "prepackage": "npm run vendor:csap && npm run build",
     "package": "npm run prepackage && npx @vscode/vsce package",
     "package:release": "npm run prepackage && mkdir -p releases && VERSION=$(node -p \"require('./package.json').version\") && npx @vscode/vsce package -o releases/codes-doctor-$VERSION.vsix && cp releases/codes-doctor-$VERSION.vsix releases/codes-doctor-latest.vsix",
-    "prepublish:marketplace": "npm run vendor:csap",
+    "prepublish:marketplace": "npm run vendor:csap && npm run build",
     "publish:marketplace": "npx @vscode/vsce publish",
-    "publish:patch": "npm run vendor:csap && npx @vscode/vsce publish patch",
-    "publish:minor": "npm run vendor:csap && npx @vscode/vsce publish minor",
-    "publish:major": "npm run vendor:csap && npx @vscode/vsce publish major",
+    "publish:patch": "npm run vendor:csap && npm run build && npx @vscode/vsce publish patch",
+    "publish:minor": "npm run vendor:csap && npm run build && npx @vscode/vsce publish minor",
+    "publish:major": "npm run vendor:csap && npm run build && npx @vscode/vsce publish major",
     "test": "npm run build && node --test test/*.test.js",
-    "build": "node node_modules/typescript-compiler/bin/tsc -p tsconfig.json && node scripts/build-browser-libraries.js",
+    "build": "node node_modules/typescript-compiler/bin/tsc -p tsconfig.json",
     "typecheck": "node node_modules/typescript-compiler/bin/tsc -p tsconfig.json --noEmit",
-    "test:browser": "npm run vendor:csap && playwright test"
+    "test:browser": "npm run vendor:csap && npm run build && playwright test"
   },
   "dependencies": {
     "@typescript-eslint/typescript-estree": "^8.71.1",
@@ -209,17 +209,6 @@
     "@types/node": "^26.6.4",
     "@types/vscode": "~1.90.0",
     "@vscode/vsce": "^4.0.0",
-    "chart.js": "^4.5.1",
-    "d3": "^7.9.0",
-    "dompurify": "^3.4.16",
-    "esbuild": "^0.28.2",
-    "marked": "^18.1.0",
-    "mermaid": "^12.1.0",
     "typescript-compiler": "npm:typescript@^7.0.2"
-  },
-  "overrides": {
-    "mermaid": {
-      "katex": "0.19.0"
-    }
   }
 }

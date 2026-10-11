@@ -18,7 +18,9 @@ export function updateReportReview(analysisId: string, mode: LlmMode, content: s
   const html = fs.readFileSync(htmlPath, 'utf-8');
   const pattern = new RegExp(`(<div id="${divId}"[^>]*?)\\s*data-md="[^"]*"([^>]*>)[\\s\\S]*?(<\\/div>)`, '');
   // A replacer function keeps `$` sequences in the content from being read as group references.
-  const patched = html.replace(pattern, (_match, before: string, after: string, close: string) => `${before} data-md="${escaped}"${after}${escaped}${close}`);
+  let patched = html.replace(pattern, (_match, before: string, after: string, close: string) => `${before} data-md="${escaped}"${after}${escaped}${close}`);
+  // The AST review box is hidden until its first review is saved.
+  if (mode === 'ast-only') patched = patched.replace('<div id="astReview" hidden>', '<div id="astReview">');
   if (patched !== html) {
     fs.writeFileSync(htmlPath, patched, 'utf-8');
   }

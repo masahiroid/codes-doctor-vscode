@@ -5,8 +5,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const { analyzeWorkspace } = require('../lib/analyzer');
-const { injectReviewCopy } = require('../lib/reportCopy');
-const { injectReportTabs } = require('../lib/reportTabs');
+const { injectReviewCopy } = require('../vendor/csap/report/browser/reviewCopy');
+const { injectReportTabs } = require('../vendor/csap/report/browser/reportTabs');
 
 for (const language of ['en', 'ja'] as const) {
   test(`${language}: real report retains all tabs after copy upgrade of AST source examples`, async ({ page }) => {
@@ -23,7 +23,7 @@ for (const language of ['en', 'ja'] as const) {
     try {
       const report = await analyzeWorkspace(repo, 'javascript', output, language);
       const original = fs.readFileSync(report.reportPath, 'utf8');
-      const legacyCorrupted = original.replace(/\(function installReviewCopy\(\) \{[\s\S]*?\n\}\)\(\);/, () => '(' + require('../lib/reportCopy').installReviewCopy.toString() + ')();');
+      const legacyCorrupted = original.replace(/\(function installReviewCopy\(\) \{[\s\S]*?\n\}\)\(\);/, () => '(' + require('../vendor/csap/report/browser/reviewCopy').installReviewCopy.toString() + ')();');
       const opens = legacyCorrupted.match(/<template data-ast-pending>/g)?.length ?? 0;
       const closes = legacyCorrupted.match(/<\/template>/g)?.length ?? 0;
       expect(opens).toBeGreaterThan(closes); // Prove the original upgrade damages real generated HTML.

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { installReportTabs, injectReportTabs, TAB_SCRIPT_ID } = require('../lib/reportTabs');
+const { installReportTabs, injectReportTabs, TAB_SCRIPT_ID } = require('../vendor/csap/report/browser/reportTabs');
 
 function environment(storage, mermaid) {
   const ids = ['overview', 'graphs', 'llm', 'ast', 'risk', 'supply'];

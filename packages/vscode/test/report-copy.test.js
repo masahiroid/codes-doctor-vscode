@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { reviewCopySource, injectReviewCopy } = require('../lib/reportCopy');
+const { reviewCopySource, injectReviewCopy } = require('../vendor/csap/report/browser/reviewCopy');
 
 test('copy includes the requested instruction and preserves Japanese Markdown in browser and webview', async () => {
   const markdown = '## 改善結果\n```js\nconst 値 = "$& $1 $` $\'";\n```\n😀';

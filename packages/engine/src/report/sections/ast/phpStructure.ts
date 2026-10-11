@@ -1,4 +1,3 @@
-import { AST_SECTION_LIMITS } from './limits';
 import { parsePhpAst } from './parsers';
 import { OutlineType, renderOutline } from './structureOutline';
 
@@ -60,14 +59,14 @@ export function buildPhpStructure(content: string, filePath: string): string {
 
   const types: OutlineType[] = classes.map((cls) => ({
     name: cls.name,
-    counts: [{ label: 'properties', value: cls.properties }],
+    counts: [{ label: 'プロパティ', value: cls.properties }],
     methods: cls.methods,
   }));
   return renderOutline([
-    { kind: 'names', heading: 'Namespaces', items: Array.from(namespaces), limit: AST_SECTION_LIMITS.namespaces, truncate: false },
-    { kind: 'names', heading: 'Uses', items: uses, limit: AST_SECTION_LIMITS.listItems },
-    { kind: 'types', heading: 'Classes', types, limit: AST_SECTION_LIMITS.classes },
-    { kind: 'names', heading: 'Functions', items: functions, limit: AST_SECTION_LIMITS.listItems, suffix: '()' },
+    { kind: 'names', heading: '名前空間', items: Array.from(namespaces) },
+    { kind: 'names', heading: '使用宣言', items: uses },
+    { kind: 'types', heading: 'クラス', types },
+    { kind: 'names', heading: '関数', items: functions, suffix: '()' },
   ]);
 }
 

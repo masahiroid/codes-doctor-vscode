@@ -48,4 +48,3 @@ export function injectReportTabs(html: string) {
     ? upgraded.slice(0, closingBody) + script + '\n' + upgraded.slice(closingBody)
     : upgraded;
 }
-module.exports = { installReportTabs, injectReportTabs, TAB_SCRIPT_ID, legacyTabScript };

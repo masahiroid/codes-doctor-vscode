@@ -13,4 +13,4 @@ test-results/**
 playwright-report/**
 tsconfig*.json
 
-media/report-libraries/*.meta.json
+vendor/assets/report-libraries/*.meta.json

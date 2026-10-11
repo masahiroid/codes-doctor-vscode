@@ -5,9 +5,9 @@ const os = require('node:os');
 const path = require('node:path');
 const vm = require('node:vm');
 const { analyzeWorkspace, getReportLanguage, runLlmAnalysis } = require('../lib/analyzer');
-const { localizeEngineSource } = require('../lib/localizeEngine');
 
-test('literal localization preserves comments, identifiers, and interpolated data', () => {
+test('literal localization preserves comments, identifiers, and interpolated data', async () => {
+  const { localize: localizeEngineSource } = await import('../../engine/scripts/localize-en.mjs');
   const source = '// 概要\nconst 日本語 = repoName; const html = `<html lang="ja">概要${日本語}</html>`;';
   const result = localizeEngineSource(source, 'fixture.js');
   assert.match(result, /\/\/ 概要/);

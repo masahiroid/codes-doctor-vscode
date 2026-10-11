@@ -12,5 +12,3 @@ export function installJapaneseStrong(marked: Pick<typeof import('marked', { wit
     },
   }] });
 }
-
-module.exports = { installJapaneseStrong };
