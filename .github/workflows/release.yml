@@ -103,6 +103,7 @@ jobs:
 
       - name: Publish to the Visual Studio Marketplace
         if: steps.vsix.outputs.version
-        run: npx --prefix packages/vscode @vscode/vsce publish --packagePath "${{ steps.vsix.outputs.path }}"
+        working-directory: packages/vscode
+        run: npx vsce publish --packagePath "codes-doctor-${{ steps.vsix.outputs.version }}.vsix"
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
