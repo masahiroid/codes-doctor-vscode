@@ -7,16 +7,13 @@
 
 ## 概要
 
-Code Doctor（パッケージ名 `csap`）は、コードベースを分析し自己完結型の HTML 監査レポートを生成する Node.js/TypeScript アプリケーションです。Express サーバー（ZIP アップロードまたはローカルパス分析）として動作するほか、埋め込んで使うこともできます — VS Code 拡張 [codes-doctor-vscode](https://github.com/masahiroid/codes-doctor-vscode)（別リポジトリ）は、本リポジトリのコンパイル済み `dist/` 出力を同梱し、サーバーを起動せずに解析パイプラインをプロセス内で直接呼び出します。
+Codes Doctor エンジン（`packages/engine`）は、コードベースを解析して自己完結型の HTML 監査レポートを生成する Node.js/TypeScript のライブラリです。同じリポジトリの VS Code 拡張機能（`packages/vscode`）と CLI（`packages/cli`）は、エンジンのビルド結果を `vendor/` にコピーし（`scripts/vendor-engine.mjs`）、プロセス内で呼び出します。エンジンはビルドされたまま使われ、利用側で書き換えることはありません。
 
 ## システム構成
 
 ```
 src/
-├── server.ts                Express のエントリーポイント
-├── app/                     アプリの組み立て（ミドルウェア、ルート、起動、HTTP ステータス名）
-├── upload.ts                ZIP アップロード（multer）
-├── zipExtractor.ts          ZIP 展開（unzipper）
+├── index.ts                 公開 API
 ├── fileWalker.ts            拡張子ごとにまとめる 1 回走査のファイル一覧
 ├── config.ts                実行時設定（環境変数、機能フラグ）
 ├── types.ts                 共有の型定義
@@ -46,7 +43,8 @@ src/
 │   ├── htmlBuilder.ts       ページのレイアウトのみ
 │   ├── sections/index.ts    タブ定義: 各タブに表示するセクション
 │   ├── sections/            レポートのセクションごとのモジュール
-│   ├── sections/ast/        AST セクション: 表示上限、アウトライン描画、パーサー別の構造抽出
+│   ├── sections/ast/        AST セクション: アウトライン描画、パーサー別の構造抽出、表示件数
+│   ├── browser/             レポートのページ内で動くスクリプトとライブラリー
 │   ├── reviewElements.ts    LLM モードごとの表示要素 ID
 │   └── liveUpdate.ts        保存済みレポートへ新しい LLM 結果を書き込む
 ├── llm/
@@ -54,7 +52,11 @@ src/
 │   ├── artifacts.ts         LLM コンテキストと結果ファイルの読み書き
 │   ├── context/             LLM コンテキストの組み立て
 │   └── openai/ providers/   プロンプトとプロバイダー（OpenAI、Anthropic）
-└── services/                リクエスト単位の処理（パス解析、LLM リクエスト）
+└── services/                入口: リポジトリ解析、LLM リクエスト
+
+scripts/
+├── build-report-libraries.mjs  Chart.js、Mermaid、marked+DOMPurify、D3 を assets/ にバンドル
+└── localize-en.mjs             dist/ から英語版（dist-en/）を生成
 ```
 
 ## 言語カタログ
@@ -75,20 +77,19 @@ src/
 4. セキュリティパターンがあれば `analyzer/security/patterns.ts` に追加します。
 5. コンパイルエラーに従い、AST セクションと LLM サンプラーの表にも追加します。
 
-## リクエストの流れ（サーバーモード）
+## 解析の流れ
 
-1. クライアントが `POST /api/upload` に ZIP をアップロードするか、`POST /api/analyze-path` にローカルのディレクトリパスを渡します。`language` オプションは `toAnalysisLanguage()` で検証します。
-2. `zipExtractor.ts` が ZIP を一時ディレクトリに展開します（ZIP の場合）。
-3. `analyzer/languageDetector.ts` がディレクトリを 1 回走査し、ソース言語ごとにファイルをまとめます。
-4. `analyzer/pipeline/languageAnalysis.ts` が `LANGUAGES` を順に回して各言語のアナライザーを実行し、解析済みファイル（`AnalysisResult.files`、言語 ID ごと）、God Class 候補、呼び出しグラフを集めます。
-5. `analyzer/pipeline/globalAnalysis.ts` が全ファイルを対象に言語に依存しない解析を行います: 依存グラフ、モジュールメトリクス、循環依存、技術的負債、セキュリティスコア、レイヤーヒートマップ。
-6. `analyzer/pipeline/supplyChainAnalysis.ts` が SBOM を生成し、脆弱性スキャンを実行します。
-7. `report/htmlBuilder.ts` がページを組み立て、`report/sections/index.ts` が各タブに表示するセクションを決めます。
-8. レポートは `output/<analysisId>.html` に書き出され、LLM 用のコンテキストファイルが隣に保存されます。
+1. `analyzeRepository(path, language, outputDir)`（`services/pathAnalysis.ts`）がフォルダーと `language` オプション（`toAnalysisLanguage()`）を検証します。
+2. `analyzer/languageDetector.ts` がフォルダーを 1 回走査し、ソース言語ごとにファイルをまとめます。
+3. `analyzer/pipeline/languageAnalysis.ts` が `LANGUAGES` を順に回して各言語のアナライザーを実行し、解析済みファイル（`AnalysisResult.files`、言語 ID ごと）、God Class 候補、呼び出しグラフを集めます。
+4. `analyzer/pipeline/globalAnalysis.ts` が全ファイルを対象に言語に依存しない解析を行います: 依存グラフ、モジュールメトリクス、循環依存、技術的負債、セキュリティスコア、レイヤーヒートマップ。
+5. `analyzer/pipeline/supplyChainAnalysis.ts` が SBOM を生成し、脆弱性スキャンを実行します。
+6. `report/htmlBuilder.ts` がページを組み立て、`report/sections/index.ts` が各タブに表示するセクションを決めます。
+7. レポートは `<outputDir>/<analysisId>.html` に書き出され、LLM 用のコンテキストファイルが隣に保存されます。結果は呼び出し元に返されます。
 
-## サーバーなしでの組み込み（VS Code 拡張）
+## ビルド成果物と英語化
 
-`services/pathAnalysis.ts` は `analyzePathRequest(repoPath, language, outputDir)` を、Express に依存しない普通の async 関数として公開しています。VS Code 拡張はこの関数のコンパイル済み版（パッケージ時に本リポジトリの `dist/` からコピーされる `vendor/csap/services/pathAnalysis.js`）を直接読み込み、自身の出力ディレクトリを渡して呼び出します。PDF 生成（大きな依存である `puppeteer` を使う）は別モジュール（`report/pdfOutput.ts`）にあるため、PDF 出力が不要な組み込み側は Chromium を同梱せずに済みます。
+`npm run build` で `dist/`（レポートの文言は日本語）、`dist-en/`、`assets/report-libraries/` ができます。レポートの文言はソース上は日本語で書き、`scripts/localize-en.mjs` がすべての文字列リテラルの日本語部分を `locales/report-en.json` で翻訳します。翻訳のない断片があるとビルドは失敗します。リポジトリ名、パス、ソースのサンプル、LLM の出力はリテラルではなくデータなので翻訳されません。`report/browser/` のスクリプトは両言語の文言を持ち、実行時に `<html lang>` で選ぶため、翻訳せずにコピーします。`report/browser/libraries.ts` は自身の場所から上にたどって `assets/` を探すので、エンジン単体でも拡張機能や CLI の `vendor/` 内でも動きます。
 
 ## 言語ごとの実装
 
@@ -153,7 +154,7 @@ rank: critical (>=75) / high (>=50) / medium (>=25) / low (<25)
 3. プロバイダー（`llm/providers/`）がレビューまたはエージェント用プロンプトを生成します。
 4. `llm/artifacts.ts` が `<analysisId>.llm-<focus>.json` を保存し、`report/liveUpdate.ts` が保存済みレポートの該当要素（`report/reviewElements.ts`）に結果を書き込みます。
 
-`POST /api/llm/analyze` がこの流れを実行し、`GET /api/llm/result/:analysisId/:focus` は LLM を呼ばずに保存済みの結果を返します。
+`analyzeLlmRequest` がこの流れを実行し、`getSavedLlmResult` は LLM を呼ばずに保存済みの結果を返します。
 
 ## レポート生成
 
@@ -161,8 +162,8 @@ rank: critical (>=75) / high (>=50) / medium (>=25) / low (<25)
 
 - `overviewSections.ts` — サマリーカード、God Class ランキング、モジュールメトリクス、レイヤー分析、ファイル統計。
 - `graphSections.ts` — Mermaid のラッパー、D3 のクラス依存グラフ、循環依存、LLM 結果の表示欄。
-- `astSection.ts` — カタログの全言語の AST 構造。TS/JS と PHP は完全な AST から（`sections/ast/typescriptStructure.ts`、`phpStructure.ts`）、その他の言語はスコア計算と同じ `SimpleFileInfo` から（`lightweightStructure.ts`）構造を作ります。表示上限は `AST_SECTION_LIMITS`（`sections/ast/limits.ts`）にまとめています。
+- `astSection.ts` — カタログの全言語の AST 構造。TS/JS と PHP は完全な AST から（`sections/ast/typescriptStructure.ts`、`phpStructure.ts`）、その他の言語はスコア計算と同じ `SimpleFileInfo` から（`lightweightStructure.ts`）構造を作ります。全ファイル・全項目を表示し、長いファイル一覧は一定数（`AST_FILES_PER_BATCH`、`sections/ast/limits.ts`）ずつ表示します。
 - `riskSections.ts` — 技術的負債とセキュリティスコア。
 - `supplyChainSections.ts` — SBOM と脆弱性スキャン。
 
-レポートは 1 つの HTML ファイルです。サーバーモードではグラフ（Chart.js）、図（Mermaid.js、D3.js）、Markdown 表示（marked）を CDN から読み込みます。VS Code 拡張はこれらを同梱版に置き換えるため、オフラインでも表示できます。
+レポートは 1 つの HTML ファイルです。Chart.js、Mermaid、marked（DOMPurify 付き）、D3 を `assets/` から埋め込むため、オフラインでも開け、CDN からコードを読み込むことはありません。`report/browser/` はタブ切り替え、「AI向けにコピー」ボタン、日本語に対応した Markdown の強調表示も提供し、拡張機能は古いバージョンで保存したレポートの更新にもこれらを使います。AST のファイル一覧は全ファイルを表示し、`AST_FILES_PER_BATCH` 件ずつ表示を増やします。

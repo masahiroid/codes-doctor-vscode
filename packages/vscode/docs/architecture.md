@@ -100,3 +100,24 @@ Codes Doctor's own scores after the refactor:
 | Engine (`src/`) | 86 A | 99 A (was 59 F) | No unstable modules (was 2); no cycles. |
 
 The engine's security grade rose because AST structure is now built from parsed data instead of `RegExp.exec()` loops, and `trivy`/`npm audit` are started with `execFile` (the old `exec` calls interpolated the repository path into a shell command). Engine maintainability is 53, which is the average structural score; that metric favors fewer, larger modules, so it was not optimized at the expense of single-responsibility modules.
+
+## Monorepo, no vendor patches, and a CLI (2.0.1)
+
+The extension now lives in `packages/vscode` of a monorepo with the engine (`packages/engine`, imported from `csap-main` with its history) and a new CLI (`packages/cli`). The engine's web server, ZIP upload, PDF export and Docker files were removed; the last server version is tagged `engine-server-final`.
+
+Every string-marker patch described in the sections above is gone. Each one was either a general fix, now part of the engine source, or extension presentation that became the engine's default:
+
+| Former patch | Now |
+| --- | --- |
+| staticImports, moduleMetrics, moduleClassification, dependencyContext | `analyzer/dependencies/`, a single module graph in `moduleMetrics.ts`, `isAtOrAbove` in the module context |
+| securityScore, securityExplanation, securitySyntax | Severity caps, the explanation text and `security/ignoredRanges.ts` |
+| reportEscaping | `escapeHtml`/`scriptJson` at each interpolation |
+| openaiResponses, reviewPrompts | Empty-output retry in `providers/openai.ts`; `ACTION_RULES` in `prompts.ts` |
+| graphSection, graphVisualization | No-links note and ResizeObserver rendering in the engine |
+| reportHtml, browserLibraries, reportTabs, reportCopy, markdown | `report/branding.ts`, `report/browser/` and `scripts/build-report-libraries.mjs` |
+| astSection, astLimits, astRendering, llmPersistence | Full AST listing with pagination, hidden review box, reveal in `liveUpdate.ts` |
+| localizeEngine | `scripts/localize-en.mjs` in the engine build |
+
+`scripts/vendor-engine.mjs` (repository root) only copies `dist/`, `dist-en/` and `assets/` into `vendor/`. `src/lib/reportScripts.ts` re-exports the engine's browser modules, which `reportViewer.ts` uses to upgrade reports saved by older versions. The extension passes its version to the engine (`generatorVersion`) for the report's `codes-doctor-version` tag.
+
+Every step was checked against the golden master: analysis results stayed identical, and report HTML changed only in whitespace, in pretty-printed raw AST JSON (the old escaping patch had dropped the indentation), and in the removed links to the former server's "new analysis" and PDF pages.

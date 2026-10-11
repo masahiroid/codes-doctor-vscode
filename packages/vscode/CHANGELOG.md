@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.1
+
+- Repository: the extension, its analysis engine and a new CLI now live in one monorepo (`packages/vscode`, `packages/engine`, `packages/cli`). The engine's former web server was removed.
+- The extension uses the engine exactly as built: all vendor-time patches were moved into the engine or became its defaults. Report behavior is unchanged.
+- Reports: removed the "Start New Analysis" and "PDF Download" buttons, which pointed at the former server and did nothing; raw AST previews are indented again.
+- New `codes-doctor` CLI for terminals and CI, with `--min-security`/`--min-debt` thresholds as exit codes. See [packages/cli](https://github.com/masahiroid/codes-doctor-vscode/tree/main/packages/cli).
+- GitHub automation: weekly Dependabot updates, CI (audit, tests, browser tests, self-analysis), auto-merge of minor/patch updates, and a weekly release that bumps the version, attaches the VSIX to a GitHub release and can publish to the Marketplace.
+- The VSIX is smaller (about 7 MB instead of 10 MB): report libraries are no longer shipped twice.
+
 ## 2.0.0
 
 ### New

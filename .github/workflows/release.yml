@@ -1,0 +1,88 @@
+name: Release
+
+# Weekly: if dependencies changed since the last release, bump the patch version,
+# record the updates in the CHANGELOG, build the VSIX, attach it to a GitHub release
+# and (when enabled) publish it to the Visual Studio Marketplace.
+on:
+  schedule:
+    - cron: "0 1 * * 5" # Friday 10:00 JST
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Release even if no dependency changed
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency: release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/*/package-lock.json
+
+      - name: Find dependency changes since the last release
+        id: changes
+        run: |
+          last=$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -1)
+          git log "$last"..HEAD --format='%s' -- 'packages/*/package.json' 'packages/*/package-lock.json' \
+            | grep -iE '^(bump|build\(deps)' | sed 's/ (#[0-9]*)$//' | sort -u > changes.txt || true
+          echo "count=$(wc -l < changes.txt | tr -d ' ')" >> "$GITHUB_OUTPUT"
+          cat changes.txt
+
+      - name: Install
+        if: steps.changes.outputs.count != '0' || inputs.force
+        run: npm run install:all
+
+      - name: Test
+        if: steps.changes.outputs.count != '0' || inputs.force
+        run: |
+          npm run build --prefix packages/engine
+          npm test --prefix packages/cli
+          npm run vendor:csap --prefix packages/vscode
+          npm test --prefix packages/vscode
+
+      - name: Bump version
+        id: version
+        if: steps.changes.outputs.count != '0' || inputs.force
+        run: |
+          mapfile -t lines < <(sed 's/^/Dependency update: /' changes.txt)
+          [ ${#lines[@]} -eq 0 ] && lines=("Maintenance release.")
+          version=$(node scripts/bump-version.mjs "${lines[@]}")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Release $version"
+          git tag "v$version"
+          git push origin HEAD "v$version"
+
+      - name: Build VSIX
+        if: steps.version.outputs.version
+        run: npm run package --prefix packages/vscode -- -o "codes-doctor-${{ steps.version.outputs.version }}.vsix"
+
+      - name: GitHub release
+        if: steps.version.outputs.version
+        run: |
+          gh release create "v${{ steps.version.outputs.version }}" \
+            "packages/vscode/codes-doctor-${{ steps.version.outputs.version }}.vsix" \
+            --title "v${{ steps.version.outputs.version }}" --notes-file changes.txt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to the Marketplace
+        # Turn on by setting the repository variable AUTO_PUBLISH to "true".
+        if: steps.version.outputs.version && vars.AUTO_PUBLISH == 'true'
+        run: npx --prefix packages/vscode @vscode/vsce publish --packagePath "packages/vscode/codes-doctor-${{ steps.version.outputs.version }}.vsix"
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}

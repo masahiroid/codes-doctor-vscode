@@ -3,20 +3,17 @@
 - English: this document
 - 日本語: [ARCHITECTURE.ja.md](ARCHITECTURE.ja.md)
 
-Last updated: 2026-10-11
+Last updated: 2026-10-11 (monorepo)
 
 ## Overview
 
-Code Doctor (package name `csap`) is a Node.js/TypeScript application that analyzes a codebase and generates a self-contained HTML audit report. It can run as an Express server (ZIP upload or local-path analysis) or be embedded directly — the [codes-doctor-vscode](https://github.com/masahiroid/codes-doctor-vscode) VS Code extension (a separate repository) vendors this repo's compiled `dist/` output and calls the analysis pipeline in-process, without starting a server.
+The Codes Doctor engine (`packages/engine`) is a Node.js/TypeScript library that analyzes a codebase and generates a self-contained HTML audit report. The VS Code extension (`packages/vscode`) and the CLI (`packages/cli`) in the same repository copy its build output into their `vendor/` folders (`scripts/vendor-engine.mjs`) and call it in-process. The engine is used exactly as built; consumers do not patch it.
 
 ## System Components
 
 ```
 src/
-├── server.ts                Express entry point
-├── app/                     App wiring (middleware, routes, startup, HTTP status names)
-├── upload.ts                ZIP upload endpoint (multer)
-├── zipExtractor.ts          ZIP extraction (unzipper)
+├── index.ts                 Public API
 ├── fileWalker.ts            Single-pass file listing grouped by extension
 ├── config.ts                Runtime configuration (env vars, feature flags)
 ├── types.ts                 Shared type definitions
@@ -46,7 +43,8 @@ src/
 │   ├── htmlBuilder.ts       Page layout only
 │   ├── sections/index.ts    Tab registry: which sections each report tab shows
 │   ├── sections/            One module per report section
-│   ├── sections/ast/        AST section: limits, outline renderer, per-parser structure builders
+│   ├── sections/ast/        AST section: outline renderer, per-parser structure builders, batch size
+│   ├── browser/             Scripts and libraries that run in the report page
 │   ├── reviewElements.ts    Report element ID for each LLM mode
 │   └── liveUpdate.ts        Writes a new LLM result into an already-saved report
 ├── llm/
@@ -54,7 +52,11 @@ src/
 │   ├── artifacts.ts         Reads/writes LLM context and result files
 │   ├── context/             LLM context builders
 │   └── openai/ providers/   Prompts and provider adapters (OpenAI, Anthropic)
-└── services/                Request-level orchestration (path analysis, LLM requests)
+└── services/                Entry points: repository analysis, LLM requests
+
+scripts/
+├── build-report-libraries.mjs  Bundles Chart.js, Mermaid, marked+DOMPurify and D3 into assets/
+└── localize-en.mjs             Generates the English build (dist-en/) from dist/
 ```
 
 ## The Language Catalog
@@ -75,20 +77,19 @@ Everything else is derived from the catalog: detection, the per-language analysi
 4. Add a security pattern family in `analyzer/security/patterns.ts` if the language has one.
 5. Follow the compiler errors: the AST section and LLM sampler tables need an entry.
 
-## Request Flow (server mode)
+## Analysis Flow
 
-1. Client uploads a ZIP to `POST /api/upload`, or calls `POST /api/analyze-path` with a local directory path. The `language` option is validated with `toAnalysisLanguage()`.
-2. `zipExtractor.ts` extracts the ZIP (if applicable) into a temp directory.
-3. `analyzer/languageDetector.ts` walks the directory once and groups files by source language.
-4. `analyzer/pipeline/languageAnalysis.ts` loops over `LANGUAGES` and runs each language's analyzer, collecting parsed files (`AnalysisResult.files`, keyed by language ID), God Class candidates, and the call graph.
-5. `analyzer/pipeline/globalAnalysis.ts` runs language-agnostic analysis across every file: dependency graph, module metrics, circular dependencies, technical debt, security score, layer heatmap.
-6. `analyzer/pipeline/supplyChainAnalysis.ts` generates the SBOM and runs a vulnerability scan.
-7. `report/htmlBuilder.ts` lays out the page; `report/sections/index.ts` decides which sections each tab shows.
-8. The report is written to `output/<analysisId>.html`, with the LLM context files next to it.
+1. `analyzeRepository(path, language, outputDir)` (`services/pathAnalysis.ts`) validates the folder and the `language` option (`toAnalysisLanguage()`).
+2. `analyzer/languageDetector.ts` walks the folder once and groups files by source language.
+3. `analyzer/pipeline/languageAnalysis.ts` loops over `LANGUAGES` and runs each language's analyzer, collecting parsed files (`AnalysisResult.files`, keyed by language ID), God Class candidates, and the call graph.
+4. `analyzer/pipeline/globalAnalysis.ts` runs language-agnostic analysis across every file: dependency graph, module metrics, circular dependencies, technical debt, security score, layer heatmap.
+5. `analyzer/pipeline/supplyChainAnalysis.ts` generates the SBOM and runs a vulnerability scan.
+6. `report/htmlBuilder.ts` lays out the page; `report/sections/index.ts` decides which sections each tab shows.
+7. The report is written to `<outputDir>/<analysisId>.html`, with the LLM context files next to it, and the result is returned to the caller.
 
-## Embedding Without a Server (VS Code extension)
+## Build Output and Localization
 
-`services/pathAnalysis.ts` exposes `analyzePathRequest(repoPath, language, outputDir)` as a plain async function with no Express dependency in its call chain. The VS Code extension imports the compiled version of this function directly (via `vendor/csap/services/pathAnalysis.js`, copied from this repo's `dist/` at package time) and calls it with its own output directory. PDF generation (which depends on `puppeteer`, a large dependency) lives in a separate module (`report/pdfOutput.ts`) so that embedding callers that don't need PDF export don't have to bundle Chromium.
+`npm run build` produces `dist/` (Japanese report text), `dist-en/` and `assets/report-libraries/`. Report text is written in Japanese in the source; `scripts/localize-en.mjs` translates every Japanese fragment of every string literal from `locales/report-en.json` and fails on a missing fragment. Repository names, paths, source samples and LLM output are data, not literals, so they are never translated. Scripts in `report/browser/` carry both languages and choose one from `<html lang>` at runtime, so they are copied untranslated. `report/browser/libraries.ts` finds `assets/` by searching upward from its own location, which works in the engine package and in the extension's and CLI's `vendor/` folders.
 
 ## Per-Language Implementation
 
@@ -153,7 +154,7 @@ Two context documents are written next to each report:
 3. The provider (`llm/providers/`) generates the review or agent prompt.
 4. `llm/artifacts.ts` saves `<analysisId>.llm-<focus>.json`; `report/liveUpdate.ts` writes the result into the saved report's element for that mode (`report/reviewElements.ts`).
 
-`POST /api/llm/analyze` runs this flow; `GET /api/llm/result/:analysisId/:focus` returns a saved result without calling the LLM.
+`analyzeLlmRequest` runs this flow; `getSavedLlmResult` returns a saved result without calling the LLM.
 
 ## Report Generation
 
@@ -161,8 +162,8 @@ Two context documents are written next to each report:
 
 - `overviewSections.ts` — summary cards, God Class ranking, module metrics, layer analysis, file statistics.
 - `graphSections.ts` — Mermaid wrappers, the D3 class dependency graph, circular dependencies, and the LLM result boxes.
-- `astSection.ts` — the AST structure for every catalog language. TS/JS and PHP structures come from their full ASTs (`sections/ast/typescriptStructure.ts`, `phpStructure.ts`); the other languages' structures come from the same `SimpleFileInfo` the scores use (`lightweightStructure.ts`). Display caps live in `AST_SECTION_LIMITS` (`sections/ast/limits.ts`).
+- `astSection.ts` — the AST structure for every catalog language. TS/JS and PHP structures come from their full ASTs (`sections/ast/typescriptStructure.ts`, `phpStructure.ts`); the other languages' structures come from the same `SimpleFileInfo` the scores use (`lightweightStructure.ts`). Every file and every structure item is listed; long file lists are revealed in batches (`AST_FILES_PER_BATCH`, `sections/ast/limits.ts`).
 - `riskSections.ts` — technical debt and security score sections.
 - `supplyChainSections.ts` — SBOM and vulnerability scan sections.
 
-The report is a single HTML file. In server mode, charts (Chart.js), diagrams (Mermaid.js, D3.js), and Markdown rendering (marked) load from a CDN; the VS Code extension replaces them with bundled copies so its reports work offline.
+The report is a single HTML file. Chart.js, Mermaid, marked (wrapped with DOMPurify) and D3 are embedded from `assets/`, so a report opens offline and never loads code from a CDN. `report/browser/` also provides the tab navigation, the "Copy for AI" buttons and the Japanese-aware Markdown emphasis; the extension reuses them to upgrade reports saved by older versions. AST file lists show every file, revealing them in batches of `AST_FILES_PER_BATCH`.

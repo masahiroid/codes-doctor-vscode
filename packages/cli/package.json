@@ -1,6 +1,6 @@
 {
   "name": "codes-doctor",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "description": "Codes Doctor command line: structural, security and dependency analysis with an HTML report",
   "license": "Apache-2.0",

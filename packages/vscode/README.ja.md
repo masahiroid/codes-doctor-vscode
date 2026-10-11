@@ -5,7 +5,7 @@
 
 Codes Doctor は、現在開いているワークスペースフォルダーを分析し、God Class・技術的負債・セキュリティ問題・依存グラフ・SBOM を含む構造診断レポートを VS Code 内で直接生成します。解析エンジンはプロセス内で実行されるため、外部サーバーは不要です。
 
-📘 **はじめての方は [利用マニュアル](https://github.com/masahiroid/codes-doctor-vscode/blob/main/docs/USER_GUIDE.ja.md) をご覧ください** — 導入、レポートの各タブの読み方、AI 機能、設定、トラブルシューティングをまとめています。
+📘 **はじめての方は [利用マニュアル](https://github.com/masahiroid/codes-doctor-vscode/blob/main/packages/vscode/docs/USER_GUIDE.ja.md) をご覧ください** — 導入、レポートの各タブの読み方、AI 機能、設定、トラブルシューティングをまとめています。
 
 ## 2.0 の新機能
 
@@ -22,19 +22,19 @@ Codes Doctor は、現在開いているワークスペースフォルダーを�
 
 **Overview & Quality** — 技術的負債スコアとセキュリティスコアが一目でわかり、God Class ランキングも表示されます。
 
-![Overview tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/media/screenshots/overview.png)
+![Overview tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/packages/vscode/media/screenshots/overview.png)
 
 **Risk & Security** — 複雑度・保守性・循環依存をスコア化して内訳表示します。
 
-![Risk & Security tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/media/screenshots/risk-security.png)
+![Risk & Security tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/packages/vscode/media/screenshots/risk-security.png)
 
 **Dependency Graphs** — 実際の import 関係から生成されたインタラクティブなモジュール依存グラフです。
 
-![Dependency graph tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/media/screenshots/dependency-graph.png)
+![Dependency graph tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/packages/vscode/media/screenshots/dependency-graph.png)
 
 **SBOM & Vulnerabilities** — 直接・推移・開発依存の内訳を含む完全なソフトウェア部品表と、依存関係の脆弱性スキャン（Trivy があれば Trivy、なければ `npm audit`）です。
 
-![SBOM tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/media/screenshots/sbom.png)
+![SBOM tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/packages/vscode/media/screenshots/sbom.png)
 
 ## コマンド
 
@@ -109,18 +109,17 @@ C++の解析対象は `.cpp` / `.cc` / `.cxx` / `.hpp` / `.hh` です。`.h` / `
 
 ## 開発
 
-この拡張は、[Code Doctor](https://github.com/masahiroid/code-doctor) 解析エンジンのビルド済み出力を同梱しており、実行時にそれへ依存する構成ではありません。ローカルでビルドするには:
+この拡張機能は、解析エンジン（`packages/engine`）と CLI（`packages/cli`）と同じ [codes-doctor-vscode](https://github.com/masahiroid/codes-doctor-vscode) モノレポで管理しています。Node.js 22 以降を使ってください。
 
 ```bash
-# 1. 兄弟ディレクトリに解析エンジンをクローン・ビルド（CSAP_ROOT で別の場所も指定可）
-git clone https://github.com/masahiroid/code-doctor.git ../csap-main
-cd ../csap-main && npm install && npm run build && cd -
-
-# 2. この拡張に同梱してパッケージ化
+cd packages/vscode
 npm install
-npm run vendor:csap   # CSAP_ROOT 環境変数を参照、未設定なら ../csap-main を使用
-npm run package        # codes-doctor-<version>.vsix を生成
+npm run vendor:csap   # packages/engine をビルドして vendor/ にコピー
+npm test              # 画面の二言語対応、レポート、レビュー用プロンプトを検証
+npm run package       # codes-doctor-<version>.vsix を生成
 ```
+
+エンジンのビルドで、日本語版（`vendor/csap`）、英語版（`vendor/csap-en`）、レポート用ブラウザーライブラリー（`vendor/assets`）ができます。拡張機能はそれらをそのまま使います。
 
 ## ライセンス
 

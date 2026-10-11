@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly, so a newly published advisory fails the audit even without code changes.
+    - cron: "0 0 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/*/package-lock.json
+
+      - name: Install
+        run: npm run install:all
+
+      - name: Audit production dependencies
+        run: |
+          for dir in packages/engine packages/cli packages/vscode; do
+            (cd "$dir" && npm audit --omit=dev --audit-level=high)
+          done
+
+      - name: Engine
+        run: npm run build --prefix packages/engine
+
+      - name: CLI tests
+        run: npm test --prefix packages/cli
+
+      - name: Extension tests
+        run: |
+          npm run vendor:csap --prefix packages/vscode
+          npm test --prefix packages/vscode
+
+      - name: Browser tests
+        run: |
+          npx --prefix packages/vscode playwright install --with-deps chromium
+          npm run test:browser --prefix packages/vscode
+
+      - name: Analyze this repository with Codes Doctor
+        run: |
+          node packages/cli/bin/codes-doctor.js analyze packages/engine/src --out codes-doctor-report/engine --min-security 80
+          node packages/cli/bin/codes-doctor.js analyze packages/vscode/src --out codes-doctor-report/vscode --min-security 80
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: codes-doctor-report
+          path: codes-doctor-report
+          if-no-files-found: ignore

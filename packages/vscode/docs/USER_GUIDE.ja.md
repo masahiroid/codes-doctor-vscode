@@ -1,7 +1,7 @@
 # Codes Doctor 利用マニュアル
 
-- English: [USER_GUIDE.md](https://github.com/masahiroid/codes-doctor-vscode/blob/main/docs/USER_GUIDE.md)
-- 日本語: [USER_GUIDE.ja.md](https://github.com/masahiroid/codes-doctor-vscode/blob/main/docs/USER_GUIDE.ja.md)
+- English: [USER_GUIDE.md](https://github.com/masahiroid/codes-doctor-vscode/blob/main/packages/vscode/docs/USER_GUIDE.md)
+- 日本語: [USER_GUIDE.ja.md](https://github.com/masahiroid/codes-doctor-vscode/blob/main/packages/vscode/docs/USER_GUIDE.ja.md)
 
 Codes Doctor の実行方法、レポートの読み方、AI 機能（任意）の使い方を説明します。
 
@@ -177,4 +177,4 @@ Claude Code、Cursor、GitHub Copilot、Codex にそのまま貼り付けられ�
 | 保存済みレポートに「AST表示が破損しています」と表示される | **現在のワークスペースを解析** をもう一度実行して作り直してください。元のレポートと AI の結果は残ります。 |
 | 脆弱性スキャンで依存関係が未インストールと表示される | プロジェクトで `npm install` を実行するか、`node_modules` がなくてもスキャンできる Trivy をインストールしてください。 |
 
-バージョン履歴は [CHANGELOG](https://github.com/masahiroid/codes-doctor-vscode/blob/main/CHANGELOG.md) を参照してください。
+バージョン履歴は [CHANGELOG](https://github.com/masahiroid/codes-doctor-vscode/blob/main/packages/vscode/CHANGELOG.md) を参照してください。

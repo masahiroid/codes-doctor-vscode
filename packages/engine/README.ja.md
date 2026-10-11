@@ -1,237 +1,77 @@
-# 🩺 Code Doctor
+# Codes Doctor エンジン
 
 - English: [README.md](README.md)
-- 日本語: [README.ja.md](README.ja.md)
+- 日本語: この文書
 
-コードベースの構造を自動的に診断し、HTML レポートとして可視化するプラットフォームです。God Class・技術的負債・セキュリティ・依存関係の問題を、言語を問わず一貫した指標で見つけます。
+[Codes Doctor VS Code 拡張機能](../vscode) と [`codes-doctor` CLI](../cli) が使う解析エンジンです。フォルダーを解析し、God Class、技術的負債、セキュリティの指摘、依存・呼び出しグラフ、アーキテクチャレイヤー、AST 表示、SBOM と依存関係の脆弱性スキャンを含む自己完結型の HTML レポートを出力します。プロセス内で動作し、サーバーは不要です。
 
-## 特徴
+対応言語: TypeScript/JavaScript と PHP（完全な AST）、Python、Go、Swift、C#、Java、Kotlin、Rust、C++、Dart（簡易的な構造抽出）。詳しくは [docs/ARCHITECTURE.ja.md](docs/ARCHITECTURE.ja.md) を参照してください。
 
-### 基本機能
-- ✅ **自動言語検出** — TypeScript/JavaScript, PHP, Dart, Python を自動判別
-- ✅ **God Class 検出** — メソッド数・行数・結合度・複雑度から 0–100 点でスコアリング
-- ✅ **依存グラフ可視化** — Mermaid.js / D3.js によるインタラクティブな図生成
-- ✅ **コールグラフ分析** — 関数・メソッド呼び出しの追跡（TypeScript/JavaScript, PHP）
-- ✅ **自己完結型 HTML レポート** — 配布・保存しやすい単一ファイル
-- ✅ **Web UI** — ZIP アップロードまたはローカルフォルダー指定で即座に分析
+## ビルド
 
-### 高度な分析機能
-- ✅ **モジュールメトリクス** — Fan-in/Fan-out、Instability、構造スコア
-- ✅ **循環依存検出** — DFS アルゴリズムによる依存サイクル検出
-- ✅ **技術的負債スコア** — 複雑度・保守性・循環依存を統合（A–F グレード）
-- ✅ **セキュリティスコア** — 言語別パターンで eval/exec・コマンドインジェクション・ハードコード認証情報などを検出
-- ✅ **アーキテクチャレイヤー分析** — ディレクトリ構成からレイヤーを自動検出しヒートマップ化
-- ✅ **SBOM 生成** — CycloneDX / SPDX 形式のソフトウェア部品表
-- ✅ **脆弱性スキャン** — Trivy（利用可能な場合）または npm audit による依存関係スキャン
-- ✅ **LLM 分析（任意）** — OpenAI API を使った構造レビューの自動生成
-
-## 対応言語
-
-| 言語 | 拡張子 | God Class | 技術的負債 | セキュリティ | コールグラフ |
-|------|--------|-----------|-----------|-------------|-------------|
-| TypeScript / JavaScript | `.ts` `.tsx` `.js` `.jsx` | ✅ | ✅ | ✅ | ✅ |
-| PHP | `.php` | ✅ | ✅ | ✅ | ✅ |
-| Python | `.py` | ✅ | ✅ | ✅ | — |
-| Dart | `.dart` | ✅ | ✅ | — | — |
-
-依存グラフ・循環依存検出・レイヤー分析・SBOM/脆弱性スキャンは**言語に依存せず**、対応する全言語のファイルを横断して行われます。
-
-## 前提条件
-
-- Node.js 18+
-- npm
-
-## クイックスタート
-
-```bash
-git clone <このリポジトリのURL>
-cd csap-main
-
-npm install
-npm run build
-npm run dev
-# http://localhost:3000 を開く
-```
-
-## 使い方
-
-### Web UI
-1. `npm run dev` でサーバーを起動
-2. ブラウザで `http://localhost:3000` を開く
-3. 解析言語（通常は自動検出で十分）を選択
-4. ZIP ファイルをアップロード、またはサーバーから参照可能なローカルフォルダーのパスを入力
-5. 生成された HTML レポートを確認
-
-### Docker
-
-```bash
-docker build -t code-doctor:latest .
-docker run -p 3000:3000 \
-  -e CSAP_LLM_ENABLED=true \
-  -e OPENAI_API_KEY=sk-proj-xxx... \
-  -v $(pwd)/uploads:/app/uploads \
-  -v $(pwd)/output:/app/output \
-  code-doctor:latest
-```
-
-### docker-compose（本番向け）
-
-```bash
-cp .env.example .env   # OPENAI_API_KEY を編集
-docker-compose up -d
-docker-compose logs -f csap
-docker-compose down
-```
-
-### CLI
-
-```bash
-npx ts-node scripts/test-run.ts /path/to/your/repo
-# レポート: ./output/<analysisId>.html
-```
-
-### API
-
-```bash
-# ZIP ファイルをアップロードして分析
-curl -X POST http://localhost:3000/api/upload \
-  -F "file=@/path/to/repo.zip"
-
-# ローカルフォルダを直接分析
-curl -X POST http://localhost:3000/api/analyze-path \
-  -H "Content-Type: application/json" \
-  -d '{"repoPath":"/absolute/path/to/repo","language":"auto"}'
-
-# ヘルスチェック
-curl http://localhost:3000/api/health
-
-# レポート取得
-curl http://localhost:3000/reports/<analysisId>
-```
-
-## API エンドポイント
-
-| メソッド | パス | 説明 |
-|---------|------|------|
-| GET | `/` | Web UI |
-| POST | `/api/upload` | ZIP ファイルアップロード & 分析開始 |
-| POST | `/api/analyze-path` | サーバーから参照可能なローカルフォルダーを直接分析 |
-| GET | `/api/health` | ヘルスチェック |
-| GET | `/reports/:analysisId` | HTML レポート取得 |
-| GET | `/reports/:analysisId/pdf` | PDF レポート取得（Puppeteer 使用） |
-| POST | `/api/llm/analyze` | LLM による構造レビューを実行（`CSAP_LLM_ENABLED=true` 時） |
-| GET | `/api/llm/result/:analysisId/:focus` | 保存済み LLM 結果を取得 |
-| POST | `/api/llm/models` | プロバイダと API キーを渡すと、ライブのモデル一覧を取得（`{ "provider": "openai"\|"anthropic", "apiKey": "..." }`） |
-
-言語パラメータ（`?language=` またはリクエストボディの `language`）は `auto` / `typescript` / `javascript` / `php` / `dart` / `python` を受け付けます。
-
-## 環境変数
-
-| 変数 | デフォルト | 説明 |
-|------|-----------|------|
-| `PORT` | `3000` | サーバーリッスンポート |
-| `NODE_ENV` | `development` | 実行環境 |
-| `CSAP_LLM_ENABLED` | `false` | LLM 分析の有効化 |
-| `CSAP_LLM_PROVIDER` | `openai` | LLM プロバイダ: `openai` または `anthropic` |
-| `CSAP_LLM_MODEL` | `gpt-5.4` | フル分析に使うモデル ID（下記「モデルの選び方」参照） |
-| `CSAP_LLM_AST_MODEL` | `gpt-5.3-chat` | AST-only 分析に使うモデル ID |
-| `CSAP_LLM_MAX_TOKENS` | `3000` | フル分析の最大出力トークン数 |
-| `CSAP_LLM_AST_MAX_TOKENS` | `4000` | AST-only 分析の最大出力トークン数 |
-| `CSAP_LLM_TEMPERATURE` | `0.2` | LLM の temperature |
-| `OPENAI_API_KEY` | — | OpenAI API キー（`CSAP_LLM_PROVIDER=openai` 時は必須） |
-| `ANTHROPIC_API_KEY` | — | Anthropic API キー（`CSAP_LLM_PROVIDER=anthropic` 時は必須） |
-| `CSAP_PHP_ENABLED` | `true` | PHP 解析の有効化 |
-| `CSAP_MAX_FILE_SIZE` | `524288000` | アップロード最大サイズ（バイト） |
-| `CSAP_UPLOADS_DIR` | `<cwd>/uploads` | アップロード ZIP の保存先 |
-| `CSAP_TEMP_DIR` | `<cwd>/temp` | 展開済みリポジトリの保存先 |
-| `CSAP_OUTPUT_DIR` | `<cwd>/output` | 生成レポートの保存先 |
-
-### モデルの選び方
-
-モデル名は日々変わるため、モデル ID を推測して直接指定するのではなく、`POST /api/llm/models` にプロバイダと API キーを渡して、そのキーで実際にアクセスできるライブのモデル一覧を取得し、返ってきた ID のいずれかを `CSAP_LLM_MODEL`/`CSAP_LLM_AST_MODEL` に設定することを推奨します。
-
-```bash
-curl -X POST http://localhost:3000/api/llm/models \
-  -H "Content-Type: application/json" \
-  -d '{"provider":"openai","apiKey":"sk-proj-xxx..."}'
-```
-
-VS Code 拡張のダッシュボードでは、モデル選択の横にある「Fetch」ボタンがこれを代行します。
-
-## レポートの見方
-
-生成される HTML レポートは、上から順に以下のセクションで構成されています。
-
-1. **概要** — 総ファイル数・総クラス数・平均 God スコア・技術的負債/セキュリティスコアのサマリーカード
-2. **God Class ランキング** — 最もスコアが高いクラス上位（スコア分布のヒストグラム付き）。`critical`/`high`/`medium`/`low` の4段階でランク付け
-3. **モジュール結合度メトリクス** — Fan-in/Fan-out の散布図と構造スコア。`軽量入口`（起動点など）は不安定でも自然な状態として区別表示
-4. **技術的負債 / セキュリティスコア** — A–F グレードと、スコアの根拠となった問題の内訳
-5. **依存グラフ・コールグラフ** — モジュール間の参照関係・呼び出し関係を図示。循環依存があれば個別にハイライト
-6. **アーキテクチャレイヤー分析** — ディレクトリ構成から推定したレイヤー間の依存ヒートマップ
-7. **SBOM / 脆弱性スキャン** — 依存パッケージの一覧と既知の脆弱性
-8. **AST Structure** — サンプリングされたファイルの構造（import/クラス/関数）をツリー表示。`CSAP_LLM_ENABLED=true` の場合はこのセクションから LLM にコード設計レビューを依頼できる
-
-スコアの指標は以下のように読みます。
-
-- **God スコア（0–100）**: メソッド数・行数・インポート数・プロパティ数の加重合計。75 以上は `critical`（優先的に分割を検討）、50–74 は `high`、25–49 は `medium`、それ未満は `low`
-- **Instability（0–1）**: `fan-out / (fan-in + fan-out)`。1 に近いほど「多くに依存し、依存されていない」モジュール。起動点やエントリーポイントは本質的に不安定だが、それ自体は設計上の問題ではない
-- **技術的負債 / セキュリティスコア（0–100, A–F）**: 90 以上が A、80 以上が B、70 以上が C、60 以上が D、それ未満が F。各スコアの内訳（何件の critical/high 問題があったか）はレポート内の説明文で確認できる
-
-## VS Code 拡張「Codes Doctor」
-
-ワークスペースを直接解析する VS Code 拡張は、別リポジトリ [codes-doctor-vscode](https://github.com/masahiroid/codes-doctor-vscode) として管理しています。このリポジトリのビルド済み解析エンジンを同梱しているため、拡張自体はこのリポジトリのサーバーを起動せずに動作しますが、ビルド時にはこのリポジトリを `npm run build` しておく必要があります。
-
-```bash
-npm run build   # このリポジトリのルートで、dist/ を生成
-git clone https://github.com/masahiroid/codes-doctor-vscode.git ../codes-doctor-vscode
-cd ../codes-doctor-vscode
-npm install
-npm run package  # ../csap-main の dist/ を同梱し、codes-doctor-<version>.vsix を生成
-```
-
-詳細はそのリポジトリの README を参照してください。
-
-## ドキュメント
-
-| ドキュメント | 内容 |
-|-----------|------|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | システム構成・分析パイプライン・言語別実装の詳細 |
-| [docs/API_REFERENCE.md](docs/API_REFERENCE.md) | 全 API エンドポイントのリクエスト/レスポンス仕様 |
-
-## トラブルシューティング
-
-**`Cannot find module '@typescript-eslint/typescript-estree'`**
 ```bash
 npm install
 npm run build
 ```
 
-**Docker: ポートが使用中**
-```bash
-docker run -p 3001:3000 code-doctor:latest
+ビルドで次のものができます。
+
+| 出力 | 内容 |
+| --- | --- |
+| `dist/` | エンジン（レポートは日本語） |
+| `dist-en/` | レポートが英語の同じエンジン。`dist/` から `locales/report-en.json` を使って生成します。翻訳のない日本語の断片があるとビルドは失敗します。 |
+| `assets/report-libraries/` | Chart.js、Mermaid、marked（DOMPurify 付き）、D3。すべてのレポートに埋め込まれるため、オフラインでも開けます。 |
+
+## API
+
+```ts
+import { analyzeRepository } from './dist'; // 英語のレポートなら './dist-en'
+
+const { reportPath, result } = await analyzeRepository('/path/to/repo', 'auto', '/path/to/output', {
+  generatorVersion: 'my-tool 1.0.0',
+});
+console.log(result.technicalDebt?.overallScore, result.securityScore?.overallScore);
 ```
 
-**アップロードが 413 エラーで失敗する**
-`CSAP_MAX_FILE_SIZE`（デフォルト 500MB）を超えています。環境変数で上限を変更してください。
+| エクスポート | 用途 |
+| --- | --- |
+| `analyzeRepository(path, language, outputDir?, reportOptions?)` | フォルダーを解析し、`<analysisId>.html` と LLM 用コンテキストを書き出して結果を返す |
+| `analyzePathRequest(...)` | 同上。レポートの場所だけを返す |
+| `analyzeLlmRequest(config, body)` | 保存済みの解析に対して LLM レビューまたは AI コーディング用プロンプトを生成し、レポートに書き込む |
+| `listLlmModels(provider, apiKey)` / `getSavedLlmResult(...)` | 使えるモデルの一覧、保存済みの LLM 結果 |
+| `ANALYSIS_LANGUAGES`、`toAnalysisLanguage(value)` | `language` に指定できる値（`auto`、`typescript`、`javascript`、`php` など）とその検証 |
+| `LLM_FOCUS` | 3 つの LLM モードのフォーカス ID |
 
-**レポートが表示されない**
-```bash
-ls -la output/
-curl http://localhost:3000/reports/<analysisId>
-```
+## 設定
+
+`getConfig()` は次の環境変数を読みます。`analyzeLlmRequest` には設定オブジェクトを直接渡すこともできます。
+
+| 変数 | 既定値 | 内容 |
+| --- | --- | --- |
+| `CSAP_LLM_ENABLED` | `false` | サーバー側の API キーでの LLM 呼び出しを許可（リクエストでキーを渡す場合は常に可） |
+| `CSAP_LLM_PROVIDER` | `openai` | `openai` または `anthropic` |
+| `CSAP_LLM_MODEL` / `CSAP_LLM_AST_MODEL` | `gpt-5.4` / `gpt-5.3-chat` | 通常レビュー / AST のみのレビューのモデル |
+| `CSAP_LLM_MAX_TOKENS` / `CSAP_LLM_AST_MAX_TOKENS` | `3000` / `4000` | 出力トークン上限 |
+| `CSAP_LLM_TEMPERATURE` | `0.2` | 温度 |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | — | サーバー側の API キー |
+| `CSAP_PHP_ENABLED` | `true` | PHP を解析する |
+| `CSAP_OUTPUT_DIR` | `<cwd>/output` | レポートの既定の出力先 |
+
+モデル名は変わっていくため、`listLlmModels` でそのキーが実際に使えるモデルを取得してください。
+
+## レポートの読み方
+
+- **God スコア（0〜100）:** メソッド数・行数・インポート数・プロパティ数の加重和。75 以上が `critical`、50〜74 が `high`、25〜49 が `medium`、それ未満が `low`。
+- **不安定度（0〜1）:** `ファンアウト ÷（ファンイン＋ファンアウト）`。エントリーポイントは本来不安定になりやすく、それだけで設計上の問題とは限りません。
+- **技術的負債スコア（0〜100）:** 83 以上が A、70 以上が B、55 以上が C、40 以上が D、それ未満が F。
+- **セキュリティスコア（0〜100）:** 90 以上が A、80 以上が B、70 以上が C、60 以上が D、それ未満が F。Critical の指摘があると 59 点、High は 79 点、Medium は 89 点が上限です。
+
+レポートの各タブの説明は [利用マニュアル](../vscode/docs/USER_GUIDE.ja.md) を参照してください。
+
+## 経緯
+
+このエンジンは `csap` という Web サーバー（ZIP アップロード、Web 画面、PDF 出力、Docker）として始まりました。このリポジトリに移した際にサーバー機能は削除しています。最後のサーバー版は `engine-server-final` タグに残っています。
 
 ## ライセンス
 
-Apache License 2.0 — 詳細は [LICENSE](LICENSE) を参照してください。
-
-## 貢献
-
-改善提案は Issue または PR でお願いします。
-
-## 参考資料
-
-- [TypeScript ESTree](https://github.com/typescript-eslint/typescript-eslint/tree/main/packages/typescript-estree)
-- [php-parser](https://github.com/glayzzle/php-parser)
-- [Mermaid.js](https://mermaid.js.org/)
-- [D3.js](https://d3js.org/)
-- [Express.js](https://expressjs.com/)
+Apache License 2.0 — [LICENSE](LICENSE) を参照してください。

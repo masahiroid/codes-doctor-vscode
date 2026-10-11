@@ -1,7 +1,7 @@
 # Codes Doctor User Guide
 
-- English: [USER_GUIDE.md](https://github.com/masahiroid/codes-doctor-vscode/blob/main/docs/USER_GUIDE.md)
-- 日本語: [USER_GUIDE.ja.md](https://github.com/masahiroid/codes-doctor-vscode/blob/main/docs/USER_GUIDE.ja.md)
+- English: [USER_GUIDE.md](https://github.com/masahiroid/codes-doctor-vscode/blob/main/packages/vscode/docs/USER_GUIDE.md)
+- 日本語: [USER_GUIDE.ja.md](https://github.com/masahiroid/codes-doctor-vscode/blob/main/packages/vscode/docs/USER_GUIDE.ja.md)
 
 This guide explains how to run Codes Doctor, how to read its report, and how to use the optional AI features.
 
@@ -177,4 +177,4 @@ The default is 16,000. Typical starting points are 4,000–8,000 for non-reasoni
 | A saved report says its AST display is broken | Run **Analyze Current Workspace** again to regenerate it. The earlier report and AI results are kept. |
 | The vulnerability scan says dependencies are not installed | Run `npm install` in the project, or install Trivy so the scan does not depend on `node_modules`. |
 
-See the [CHANGELOG](https://github.com/masahiroid/codes-doctor-vscode/blob/main/CHANGELOG.md) for version history.
+See the [CHANGELOG](https://github.com/masahiroid/codes-doctor-vscode/blob/main/packages/vscode/CHANGELOG.md) for version history.

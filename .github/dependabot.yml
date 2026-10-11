@@ -1,0 +1,36 @@
+# Weekly dependency updates. Minor and patch updates are grouped into one PR per
+# package and merged automatically once CI passes (see dependabot-automerge.yml).
+# Major updates are left for manual review. Security updates are opened as soon as
+# an advisory is published, independent of this schedule.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories:
+      - /packages/engine
+      - /packages/cli
+      - /packages/vscode
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 10
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # @types/vscode tracks the oldest supported VS Code (engines.vscode); never raise it automatically.
+      - dependency-name: "@types/vscode"
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: Asia/Tokyo
+    groups:
+      actions:
+        patterns: ["*"]
