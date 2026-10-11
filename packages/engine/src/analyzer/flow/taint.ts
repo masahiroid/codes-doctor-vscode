@@ -16,6 +16,8 @@ export interface DataFlow {
   /** Assignments between the source and the sink, in order. */
   steps: FlowStep[];
   sink: FlowStep;
+  /** Name of the function the flow is in; absent at the top level and in anonymous functions. */
+  function?: string;
 }
 
 interface Taint {
@@ -26,8 +28,24 @@ interface Taint {
 /** Longest code excerpt kept for a flow step. */
 const STEP_CODE_LIMIT = 160;
 
+/** Name of a function node: its `name` field, the C/C++ declarator, or the variable it is assigned to. */
+function functionName(scope: Node): string | undefined {
+  const name = scope.childForFieldName('name');
+  if (name) return name.text;
+  let declarator = scope.childForFieldName('declarator');
+  while (declarator?.childForFieldName('declarator')) declarator = declarator.childForFieldName('declarator');
+  if (declarator) return declarator.text.split(/::|\./).at(-1);
+  const parent = scope.parent;
+  if (parent?.type === 'variable_declarator') return parent.childForFieldName('name')?.text;
+  if (parent?.type === 'assignment_expression' || parent?.type === 'pair') {
+    return (parent.childForFieldName('left') ?? parent.childForFieldName('key'))?.text.split('.').at(-1);
+  }
+  return undefined;
+}
+
 class FlowAnalysis {
   private readonly lines: string[];
+  private currentFunction: string | undefined;
   readonly flows = new Map<string, DataFlow>();
 
   constructor(private readonly spec: FlowSpec, content: string) {
@@ -98,11 +116,15 @@ class FlowAnalysis {
     const key = `${category}:${sink.line}`;
     // Steps on the source or sink line add nothing to the path.
     const steps = taint.steps.filter((step) => step.line !== taint.source.line && step.line !== sink.line);
-    if (!this.flows.has(key)) this.flows.set(key, { category, source: taint.source, steps, sink });
+    if (this.flows.has(key)) return;
+    const flow: DataFlow = { category, source: taint.source, steps, sink };
+    if (this.currentFunction) flow.function = this.currentFunction;
+    this.flows.set(key, flow);
   }
 
   /** Analyze one function (or the module's top level), not descending into nested functions. */
   analyzeScope(scope: Node): void {
+    this.currentFunction = scope.parent ? functionName(scope) : undefined;
     const tainted = new Map<string, Taint>();
     walk(scope, (node) => {
       if (node !== scope && this.spec.functionTypes.has(node.type)) return false;

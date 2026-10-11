@@ -9,6 +9,7 @@ import { buildCircularDependencyContext, CircularDependencyContext } from './con
 import { buildGodClassContext, GodClassContext } from './context/godClassContext';
 import { buildLayerHeatmapContext, LayerHeatmapContext } from './context/layerHeatmapContext';
 import { buildAstOnlyLlmContext, AstOnlyLlmContext } from './context/astOnlyContext';
+import { buildSecurityContext, SecurityContext } from './context/securityContext';
 
 export type { AstOnlyLlmContext };
 
@@ -23,6 +24,7 @@ export interface LlmContext {
   circularDependencies: CircularDependencyContext;
   layerHeatmap?: LayerHeatmapContext;
   godClasses: GodClassContext;
+  security?: SecurityContext;
 }
 
 /**
@@ -42,6 +44,7 @@ export function buildLlmContext(result: AnalysisResult): LlmContext {
     circularDependencies: buildCircularDependencyContext(result.circularDependencies || []),
     layerHeatmap: buildLayerHeatmapContext(result.layerHeatmap),
     godClasses: buildGodClassContext(result.godClasses || []),
+    security: buildSecurityContext(result.securityScore, result.callGraph, result.repoPath),
   };
 }
 

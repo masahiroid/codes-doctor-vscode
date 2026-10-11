@@ -12,6 +12,19 @@ const ACTION_RULES = [
   'When dependency extraction appears empty or unreliable, prioritize validating extraction and remeasurement before dependency-driven refactoring.',
 ].join('\n');
 
+/**
+ * How to weigh the security section: traced flows are evidence, untraced pattern matches
+ * are leads, and nothing else about security may be asserted.
+ */
+const SECURITY_RULES = [
+  'Security evidence (security in the JSON) has three levels; never present a lower level as a higher one:',
+  '- security.tracedFlows: untrusted input was traced within one function to a dangerous call. path lists the input, the assignments it passed through and the sink, with line numbers and code. Treat these as likely vulnerabilities: name the file, function and lines, and give the concrete fix for the category (argument arrays instead of a shell, parameterized queries, escaping on output, an allow list for paths or URLs).',
+  '- callers lists functions that call the flow\'s function. Use them only to say where else the input may enter; the flow through callers was not analyzed.',
+  '- security.untracedPatterns: a risky call matched a pattern but no input was traced to it. Describe them only as items to inspect, never as confirmed vulnerabilities.',
+  '- security.otherFindings: categories outside flow analysis (secrets, weak cryptography, deserialization, ...), pattern-based. Ask to verify before changing code.',
+  '- Test-code findings are excluded (security.testFindings is only a count). If security is missing or all lists are empty, say no security findings were reported, not that the code is secure.',
+].join('\n');
+
 export function buildFullAnalysisSystemPrompt(): string {
   return 'You are a senior software architect. Explain structural analysis results clearly and concisely.' + '\n' + ACTION_RULES;
 }
@@ -45,7 +58,11 @@ export function buildFullAnalysisPrompt(context: LlmContext, focus: string): str
     '   - 何がまずいのか',
     '   - どう直すと良いか',
     '   - 放置してもよい項目は「現状維持」と明記',
-    '6) 保存用要約:',
+    '6) セキュリティ所見:',
+    '   - 入力から到達した経路（tracedFlows）を、ファイル・関数・行番号と修正方法つきで挙げる',
+    '   - パターン一致のみの指摘（untracedPatterns, otherFindings）は「要確認」として、確認手順を示す',
+    '   - 優先アクションにも、入力から到達した経路を優先度順に含める',
+    '7) 保存用要約:',
     '   - レポートを後で見返しても分かるように、3-6行で結論を要約',
     '',
     'Rules:',
@@ -59,6 +76,8 @@ export function buildFullAnalysisPrompt(context: LlmContext, focus: string): str
     '- 少なくとも5件の具体名を挙げる',
     '- 可能なら、モジュールとGod Classの関係も述べる',
     '- 推測は避け、根拠がなければ「不明」と書く',
+    '',
+    SECURITY_RULES,
     '',
     `Analysis focus: ${focus}`,
     '',
@@ -107,7 +126,10 @@ export function buildAgentPromptUserPrompt(context: LlmContext): string {
     '- A module with instability=1.00 but fanIn=0, lineCount<=80, and fanOut<=3 is a lightweight entry point, not a refactoring target.',
     '- Treat moduleMetrics.naturalEntrypoints as false-positive exclusions and moduleMetrics.reviewTargets as the main candidates.',
     '- If dependency data looks empty or unreliable, make the first task "verify dependency extraction and re-run the analysis" instead of dependency-driven refactoring.',
+    '- Fixing security.tracedFlows comes before refactoring; give each its own task with the lines of its path as evidence. For untraced patterns and other findings, write an inspection task that changes code only if the risk is confirmed.',
     '- If nothing warrants change, say so in the Goal and produce only the Leave as-is and Final report sections.',
+    '',
+    SECURITY_RULES,
     '',
     'JSON:',
     JSON.stringify(context),

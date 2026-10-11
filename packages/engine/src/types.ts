@@ -232,6 +232,8 @@ export interface SecurityIssue {
     source: { line: number; code: string };
     steps: Array<{ line: number; code: string }>;
     sink: { line: number; code: string };
+    /** Function the flow is in, when it has a name. */
+    function?: string;
   };
 }
 

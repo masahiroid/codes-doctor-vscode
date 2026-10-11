@@ -72,3 +72,29 @@ function b(dir) { child_process.exec('ls ' + dir); }
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('llm context: traced flows carry their path and callers, pattern matches are grouped, test code is left out', () => {
+  const { buildSecurityContext } = require('../dist/llm/context/securityContext');
+  const repo = path.join(os.tmpdir(), 'repo');
+  const flow = { source: { line: 2, code: 'a = req.query.a' }, steps: [], sink: { line: 3, code: 'exec(a)' }, function: 'run' };
+  const issue = (fields) => ({ type: 'low', description: '', recommendation: '', filePath: path.join(repo, 'src/app.js'), lineNumber: 1, ...fields });
+  const context = buildSecurityContext({
+    overallScore: 59, grade: 'F', categoryBreakdown: [], explanation: '', topRisks: [],
+    summary: { critical: 1, high: 0, medium: 0, low: 2, info: 0 },
+    issues: [
+      issue({ type: 'critical', category: 'Command Injection', lineNumber: 3, confidence: 'flow', flow }),
+      issue({ category: 'Command Injection', lineNumber: 8, confidence: 'pattern' }),
+      issue({ category: 'Command Injection', lineNumber: 9, confidence: 'pattern' }),
+      issue({ type: 'medium', category: 'Weak Cryptography', lineNumber: 4 }),
+      issue({ type: 'high', category: 'Hardcoded Secrets', inTest: true }),
+    ],
+  }, { nodes: [], edges: [{ from: 'main', to: 'run', filePath: '' }, { from: 'run', to: 'run', filePath: '' }] }, repo);
+
+  assert.equal(context.testFindings, 1);
+  assert.deepEqual(context.tracedFlows, [{
+    category: 'Command Injection', severity: 'critical', file: path.join('src', 'app.js'), function: 'run', callers: ['main'],
+    path: [{ role: 'input', line: 2, code: 'a = req.query.a' }, { role: 'sink', line: 3, code: 'exec(a)' }],
+  }]);
+  assert.deepEqual(context.untracedPatterns, [{ category: 'Command Injection', count: 2, examples: [path.join('src', 'app.js') + ':8', path.join('src', 'app.js') + ':9'] }]);
+  assert.deepEqual(context.otherFindings.map((finding) => finding.category), ['Weak Cryptography']);
+});

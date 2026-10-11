@@ -156,7 +156,7 @@ These stages operate on all parsed files regardless of language:
 
 Two context documents are written next to each report:
 
-- `<analysisId>.llm-context.json` — metrics-driven context (module hotspots, call graph stats, dependency stats, circular dependency samples, God Class ranking).
+- `<analysisId>.llm-context.json` — metrics-driven context (module hotspots, call graph stats, dependency stats, circular dependency samples, God Class ranking) and security evidence by level: traced input-to-sink flows with their path lines, enclosing function and its callers; untraced pattern matches grouped by category; and other findings. Test-code findings are only counted.
 - `<analysisId>.llm-ast-only.json` — structure-driven context: for every catalog language, the most complex files' structure.
 
 `llm/focus.ts` defines the three modes and their focus IDs: `full` (`graph-metrics`), `ast-only` (`ast-structure-only`), and `agent-prompt` (`agent-prompt`). A request flows through:

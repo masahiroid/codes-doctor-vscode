@@ -156,7 +156,7 @@ rank: critical (>=75) / high (>=50) / medium (>=25) / low (<25)
 
 各レポートの隣に 2 つのコンテキストを書き出します。
 
-- `<analysisId>.llm-context.json` — メトリクス中心のコンテキスト（モジュールのホットスポット、呼び出しグラフの統計、依存の統計、循環依存のサンプル、God Class ランキング）。
+- `<analysisId>.llm-context.json` — メトリクス中心のコンテキスト（モジュールのホットスポット、呼び出しグラフの統計、依存の統計、循環依存のサンプル、God Class ランキング）と、確度別のセキュリティ情報（入力から到達した経路とその行・所属する関数・その呼び出し元、経路を確認できないパターン一致のカテゴリ別集計、その他の指摘）。テストコードの指摘は件数のみです。
 - `<analysisId>.llm-ast-only.json` — 構造中心のコンテキスト。カタログの全言語について、複雑なファイルの構造を収めます。
 
 `llm/focus.ts` が 3 つのモードとフォーカス ID を定義します: `full`（`graph-metrics`）、`ast-only`（`ast-structure-only`）、`agent-prompt`（`agent-prompt`）。リクエストは次の順に処理されます。

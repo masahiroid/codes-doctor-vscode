@@ -49,7 +49,7 @@ export function flowIssues(flows: readonly DataFlow[], filePath: string): Securi
     filePath,
     lineNumber: flow.sink.line,
     confidence: 'flow',
-    flow: { source: flow.source, steps: flow.steps, sink: flow.sink },
+    flow: { source: flow.source, steps: flow.steps, sink: flow.sink, ...(flow.function ? { function: flow.function } : {}) },
   }));
 }
 
