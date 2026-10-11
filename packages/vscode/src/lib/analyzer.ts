@@ -1,18 +1,7 @@
 import type { LlmReviewRequest } from './types';
 import { getReportLanguage, getDefaultOutputDir, listLlmResults, listReports } from './reports/repository';
 import { EXTENSION_VERSION, LLM_DEFAULTS } from './settingsSchema';
-
-/**
- * Thin wrapper around the vendored CSAP engine (vendor/csap/, copied from the
- * CSAP repo's dist/ at build time — see scripts/vendor-csap.js). Keeping this
- * as the only module that knows the vendor path makes it easy to swap later.
- */
-function loadCsapEngine(displayLanguage: 'en' | 'ja' = 'en') {
-  // eslint-disable-next-line import/no-dynamic-require, global-require
-  return require(`../vendor/${displayLanguage === 'ja' ? 'csap' : 'csap-en'}/services/pathAnalysis`) as {
-    analyzePathRequest(repoPath: string, language: string, outputDir: string, reportOptions?: { generatorVersion?: string }): Promise<{ analysisId: string; repoPath: string; reportPath: string }>;
-  };
-}
+import { Engine, loadEngine } from './engine';
 
 /**
  * Analyze a workspace folder and write the HTML report under outputDir.
@@ -24,7 +13,7 @@ function loadCsapEngine(displayLanguage: 'en' | 'ja' = 'en') {
  * @returns {Promise<{ analysisId: string, repoPath: string, reportPath: string }>}
  */
 export async function analyzeWorkspace(repoPath: string, language: string, outputDir: string, displayLanguage: 'en' | 'ja' = 'en') {
-  const { analyzePathRequest } = loadCsapEngine(displayLanguage);
+  const { analyzePathRequest } = loadEngine(displayLanguage);
   return analyzePathRequest(repoPath, language, outputDir, { generatorVersion: EXTENSION_VERSION });
 }
 
@@ -36,9 +25,7 @@ export async function analyzeWorkspace(repoPath: string, language: string, outpu
  * @returns {Promise<Array<{ id: string, label?: string }>>}
  */
 export async function listModels(providerId: 'openai' | 'anthropic', apiKey: string) {
-  // eslint-disable-next-line global-require
-  const { listLlmModels }: { listLlmModels(provider: 'openai' | 'anthropic', key: string): Promise<Array<{ id: string; label?: string }>> } = require('../vendor/csap/services/llmService');
-  return listLlmModels(providerId, apiKey);
+  return loadEngine('ja').listLlmModels(providerId, apiKey);
 }
 
 /**
@@ -57,8 +44,7 @@ export async function listModels(providerId: 'openai' | 'anthropic', apiKey: str
  * @returns {Promise<{ cached: boolean, result: string }>}
  */
 export async function runLlmAnalysis(params: import('./types').LlmReviewRequest) {
-  // eslint-disable-next-line global-require
-  const { analyzeLlmRequest }: { analyzeLlmRequest(config: unknown, request: Omit<LlmReviewRequest, 'outputDir'> & { useCache: boolean }): Promise<{ cached: boolean; result: string }> } = require(`../vendor/${params.displayLanguage === 'ja' ? 'csap' : 'csap-en'}/services/llmService`);
+  const { analyzeLlmRequest } = loadEngine(params.displayLanguage === 'ja' ? 'ja' : 'en');
   const config = {
     features: { llm: true },
     paths: { output: params.outputDir },
@@ -72,7 +58,8 @@ export async function runLlmAnalysis(params: import('./types').LlmReviewRequest)
     },
   };
 
-  return analyzeLlmRequest(config, {
+  // The extension supplies only the settings the review uses; the rest keep the engine's defaults.
+  return analyzeLlmRequest(config as unknown as Parameters<Engine['analyzeLlmRequest']>[0], {
     analysisId: params.analysisId,
     focus: params.focus,
     useCache: false,
@@ -87,8 +74,7 @@ export async function runLlmAnalysis(params: import('./types').LlmReviewRequest)
 
 
 /** Analysis focus IDs, owned by the engine (identical in both locale builds). */
-// eslint-disable-next-line global-require
-export const LLM_FOCUS: Readonly<{ review: string; astOnly: string; agentPrompt: string }> = require('../vendor/csap/llm/focus').LLM_FOCUS;
+export const LLM_FOCUS: Engine['LLM_FOCUS'] = loadEngine('ja').LLM_FOCUS;
 
 module.exports = {
   LLM_FOCUS,

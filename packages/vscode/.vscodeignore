@@ -1,16 +1,13 @@
-.vscode/**
-.git/**
-.gitignore
-**/*.map
-**/*.ts
-node_modules/.cache/**
-
-test/**
-
-src/**
-browser-tests/**
-test-results/**
-playwright-report/**
-tsconfig*.json
-
-vendor/assets/report-libraries/*.meta.json
+# The VSIX ships only the bundle (dist/), the icons and the manifest files.
+# Everything else is source, development output or tests.
+**
+!dist/**
+!media/icon.png
+!media/csap.svg
+!package.json
+!package.nls.json
+!package.nls.ja.json
+!README.md
+!README.ja.md
+!CHANGELOG.md
+!LICENSE*

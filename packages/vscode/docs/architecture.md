@@ -6,7 +6,12 @@ The extension is a thin VS Code layer over the analysis engine in `packages/engi
 
 - `npm run vendor:csap` builds the engine and runs `scripts/vendor-engine.mjs` (repository root), which copies `dist/` to `vendor/csap` (Japanese report), `dist-en/` to `vendor/csap-en` (English report) and `assets/` to `vendor/assets` (report browser libraries). Nothing is patched.
 - `analyzer.ts` is the only module that loads the engine's analysis and LLM entry points. It passes the extension version (`generatorVersion`) for the report's `codes-doctor-version` tag and re-exports the engine's `LLM_FOCUS` IDs.
+- `engine.ts` loads the engine for a report language: from `vendor/` during development and tests, or from the bundle in the VSIX.
 - `reportScripts.ts` re-exports the engine's report browser modules (tabs, copy-for-AI, libraries). `reportViewer.ts` uses them to upgrade reports saved by older versions when they are reopened.
+
+## Packaging
+
+`npm run bundle` (`scripts/bundle.mjs`) builds `dist/` with esbuild: `extension.js` (the extension, `vscode` external), `engine-ja.js` and `engine-en.js` (each report language's engine with its parsers), a single shared copy of the `typescript` compiler, the report libraries and the dashboard stylesheet. The VSIX contains only `dist/`, the icons and the manifest files (`.vscodeignore`), and is packaged with `--no-dependencies`. `test/bundle.test.js` loads the bundled extension and runs both bundled engines.
 
 ## Responsibilities
 

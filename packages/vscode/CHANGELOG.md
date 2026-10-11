@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.1
+
+- The extension is now bundled with esbuild: the VSIX contains 23 files instead of 645 and is about half the size (3.6 MB), so it installs and starts faster.
+- The VSIX now includes the license file.
+
 ## 3.0.0
 
 - Documentation: results for languages other than TypeScript/JavaScript and PHP come from a lightweight scan and can include more false positives (for example in Go); the READMEs and User Guide now say so.

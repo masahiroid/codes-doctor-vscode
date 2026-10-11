@@ -2,7 +2,7 @@
   "name": "codes-doctor",
   "displayName": "Codes Doctor",
   "description": "%extension.description%",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "publisher": "masahirocom",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -31,7 +31,7 @@
     "Other",
     "Linters"
   ],
-  "main": "./extension.js",
+  "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -187,18 +187,19 @@
   "scripts": {
     "lint": "npm run typecheck",
     "vendor:csap": "npm run build --prefix ../engine && node ../../scripts/vendor-engine.mjs .",
-    "prepackage": "npm run vendor:csap && npm run build",
-    "package": "npx @vscode/vsce package",
-    "package:release": "npm run prepackage && mkdir -p releases && VERSION=$(node -p \"require('./package.json').version\") && npx @vscode/vsce package -o releases/codes-doctor-$VERSION.vsix && cp releases/codes-doctor-$VERSION.vsix releases/codes-doctor-latest.vsix",
-    "prepublish:marketplace": "npm run vendor:csap && npm run build",
-    "publish:marketplace": "npx @vscode/vsce publish",
-    "publish:patch": "npm run vendor:csap && npm run build && npx @vscode/vsce publish patch",
-    "publish:minor": "npm run vendor:csap && npm run build && npx @vscode/vsce publish minor",
-    "publish:major": "npm run vendor:csap && npm run build && npx @vscode/vsce publish major",
-    "test": "npm run build && node --test test/*.test.js",
+    "prepackage": "npm run vendor:csap && npm run build && npm run bundle",
+    "package": "npx @vscode/vsce package --no-dependencies",
+    "package:release": "npm run prepackage && mkdir -p releases && VERSION=$(node -p \"require('./package.json').version\") && npx @vscode/vsce package --no-dependencies -o releases/codes-doctor-$VERSION.vsix && cp releases/codes-doctor-$VERSION.vsix releases/codes-doctor-latest.vsix",
+    "prepublish:marketplace": "npm run vendor:csap && npm run build && npm run bundle",
+    "publish:marketplace": "npx @vscode/vsce publish --no-dependencies",
+    "publish:patch": "npm run vendor:csap && npm run build && npm run bundle && npx @vscode/vsce publish --no-dependencies patch",
+    "publish:minor": "npm run vendor:csap && npm run build && npm run bundle && npx @vscode/vsce publish --no-dependencies minor",
+    "publish:major": "npm run vendor:csap && npm run build && npm run bundle && npx @vscode/vsce publish --no-dependencies major",
+    "test": "npm run build && npm run bundle && node --test test/*.test.js",
     "build": "node node_modules/typescript-compiler/bin/tsc -p tsconfig.json",
     "typecheck": "node node_modules/typescript-compiler/bin/tsc -p tsconfig.json --noEmit",
-    "test:browser": "npm run vendor:csap && npm run build && playwright test"
+    "test:browser": "npm run vendor:csap && npm run build && playwright test",
+    "bundle": "node scripts/bundle.mjs"
   },
   "dependencies": {
     "@typescript-eslint/typescript-estree": "^8.71.1",
@@ -210,6 +211,7 @@
     "@types/node": "^26.6.4",
     "@types/vscode": "~1.90.0",
     "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
     "typescript-compiler": "npm:typescript@^7.0.2"
   }
 }

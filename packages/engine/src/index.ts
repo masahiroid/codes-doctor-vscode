@@ -15,3 +15,7 @@ export type { LlmMode } from './llm/focus';
 export { ANALYSIS_LANGUAGES, AUTO_LANGUAGE, LANGUAGES, toAnalysisLanguage } from './analyzer/languages/catalog';
 export type { AnalysisLanguage, LanguageId } from './analyzer/languages/catalog';
 export type { AnalysisResult } from './types';
+export { injectReviewCopy, isReviewTargetId, reviewCopySource } from './report/browser/reviewCopy';
+export { injectReportTabs } from './report/browser/reportTabs';
+export { reportLibraryScript } from './report/browser/libraries';
+export type { ReportLibrary } from './report/browser/libraries';
