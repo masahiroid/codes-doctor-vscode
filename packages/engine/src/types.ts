@@ -225,6 +225,14 @@ export interface SecurityIssue {
   codeSnippet?: string;
   /** Found in test code: listed, but not counted in the score. */
   inTest?: boolean;
+  /** `flow`: untrusted input was traced to this line; `pattern`: only the code pattern matched. */
+  confidence?: 'flow' | 'pattern';
+  /** The traced path, for `flow` findings. */
+  flow?: {
+    source: { line: number; code: string };
+    steps: Array<{ line: number; code: string }>;
+    sink: { line: number; code: string };
+  };
 }
 
 export interface SecurityCategoryDetail {

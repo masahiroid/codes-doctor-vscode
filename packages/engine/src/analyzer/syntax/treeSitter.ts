@@ -11,6 +11,11 @@ export const GRAMMARS = {
   csharp: 'tree-sitter-c-sharp.wasm',
   rust: 'tree-sitter-rust.wasm',
   cpp: 'tree-sitter-cpp.wasm',
+  // Used by the data-flow analysis only; structure extraction for these has dedicated parsers.
+  javascript: 'tree-sitter-javascript.wasm',
+  typescript: 'tree-sitter-typescript.wasm',
+  tsx: 'tree-sitter-tsx.wasm',
+  php: 'tree-sitter-php.wasm',
 } as const;
 
 export type GrammarId = keyof typeof GRAMMARS;

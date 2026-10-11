@@ -10,6 +10,11 @@ const SECURITY_ISSUE_TABLE_ROW_LIMIT = 40;
 /** Marks findings in test code, which are listed but do not count toward the score. */
 const TEST_CODE_BADGE = badge('テストコード', 'lavender', { title: 'スコアには含めません' });
 
+/** Shown on findings whose input was traced to the call, and on pattern matches that were not. */
+const FLOW_BADGE = badge('入力から到達', 'rose', { title: '外部入力がこの呼び出しに届く経路を確認しました' });
+const UNTRACED_BADGE = badge('要確認', 'lavender', { title: 'パターンには一致しましたが、外部入力の到達は確認できていません' });
+const FLOW_CODE_LENGTH = 120;
+
 interface MetricRow {
   label: string;
   score: number;
@@ -86,13 +91,33 @@ export function technicalDebtSection(result: AnalysisResult): string {
     <p class="muted">未実装のメトリクスは表示のみ行い、総合点には含めていません。</p>`);
 }
 
+function flowStep(label: string, step: { line: number; code: string }): string {
+  const code = step.code.length > FLOW_CODE_LENGTH ? step.code.slice(0, FLOW_CODE_LENGTH) + '…' : step.code;
+  return `<li><span class="k">${label}</span>L${step.line} <code>${escapeHtml(code)}</code></li>`;
+}
+
+/** The traced path of a flow finding: where the input enters, how it is passed on, and the call. */
+function flowPath(flow: NonNullable<SecurityIssue['flow']>): string {
+  if (flow.source.line === flow.sink.line && !flow.steps.length) return `<ol class="flow-path">${flowStep('入力→到達', flow.sink)}</ol>`;
+  return `<ol class="flow-path">${[
+    flowStep('入力', flow.source),
+    ...flow.steps.map((step) => flowStep('経由', step)),
+    flowStep('到達', flow.sink),
+  ].join('')}</ol>`;
+}
+
+function confidenceBadge(issue: SecurityIssue): string {
+  if (issue.confidence === 'flow') return ` ${FLOW_BADGE}`;
+  return issue.confidence === 'pattern' ? ` ${UNTRACED_BADGE}` : '';
+}
+
 function renderSecurityIssueRow(issue: SecurityIssue): string {
   const line = issue.lineNumber ? ':' + issue.lineNumber : '';
   const location = escapeHtml(path.basename(issue.filePath)) + line;
   return `<tr>
     <td>${badge(issue.type, severityTone(issue.type), { upper: true })}</td>
-    <td class="cell-main">${issue.category}${issue.inTest ? ` ${TEST_CODE_BADGE}` : ''}</td>
-    <td>${issue.description}</td>
+    <td class="cell-main">${issue.category}${confidenceBadge(issue)}${issue.inTest ? ` ${TEST_CODE_BADGE}` : ''}</td>
+    <td>${issue.description}${issue.flow ? flowPath(issue.flow) : ''}</td>
     <td><code>${location}</code></td>
     <td class="muted">${issue.recommendation}</td>
   </tr>`;

@@ -146,6 +146,10 @@ export const REPORT_STYLES = `
     background: color-mix(in srgb, var(--tone, var(--lavender)) 34%, transparent); color: var(--tone-ink, var(--lavender-ink)); }
   .badge.upper { text-transform: uppercase; letter-spacing: 0.03em; }
   .meter { display: flex; align-items: center; gap: 10px; }
+  .flow-path { list-style: none; margin: 8px 0 0; padding: 0 0 0 10px; border-left: 2px solid var(--hairline); font-size: 0.78rem; }
+  .flow-path li { margin: 3px 0; color: var(--ink-soft); }
+  .flow-path .k { display: inline-block; min-width: 3.2em; color: var(--muted); }
+  .flow-path code { white-space: pre-wrap; word-break: break-all; }
   .meter .track { display: block; width: 88px; height: 6px; border-radius: 999px; background: var(--hairline); overflow: hidden; flex: none; }
   .meter i { display: block; height: 100%; border-radius: 999px; background: var(--tone); }
   .meter b { font-weight: 600; min-width: 26px; text-align: right; }

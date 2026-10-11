@@ -4,6 +4,8 @@ import { SECURITY_PATTERNS } from './security/patterns';
 import { securityIgnoredRanges } from './security/ignoredRanges';
 import { securityEvidence, SecurityEvidence } from './security/syntaxEvidence';
 import { isTestPath } from './security/testCode';
+import { flowIssues, reconcilePatternIssue } from './security/flowFindings';
+import { analyzeFlows, DataFlow, flowGrammarFor } from './flow/taint';
 import { SYNTAX_SPECS, LanguageSyntaxSpec } from './syntax';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -282,6 +284,7 @@ async function scanFileForIssues(
   const patterns = SECURITY_PATTERNS[language];
   const lines = content.split('\n');
   const evidence = await evidenceFor(content, language);
+  const flows = await flowsFor(content, language, filePath);
   // TypeScript ranges come from the compiler: a match starting inside one is text. Tree-sitter
   // ranges must contain the whole match, so patterns spanning a string boundary still count.
   const isText = (start: number, end: number) => language === 'typescript'
@@ -304,18 +307,32 @@ async function scanFileForIssues(
         continue;
       }
 
-      issues.push({
+      const finding: SecurityIssue = {
         type: patternDef.type,
         category: patternDef.category,
         description: patternDef.description,
         filePath,
         lineNumber,
         recommendation: patternDef.recommendation,
-      });
+      };
+      // Without flow analysis (unsupported language or a parse failure) the pattern stands as is.
+      const issue = flows === null ? finding : reconcilePatternIssue(finding, flows);
+      if (issue) issues.push(issue);
     }
   }
 
-  return issues;
+  return [...flowIssues(flows ?? [], filePath), ...issues];
+}
+
+/** Data flows from untrusted input to dangerous calls, or null when flows are not analyzed. */
+async function flowsFor(content: string, language: SecurityLanguage, filePath: string): Promise<DataFlow[] | null> {
+  const grammar = flowGrammarFor(language, filePath);
+  if (!grammar) return null;
+  try {
+    return await analyzeFlows(grammar, content);
+  } catch {
+    return null;
+  }
 }
 
 /**

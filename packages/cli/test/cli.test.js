@@ -14,7 +14,7 @@ function fixture() {
   const repo = path.join(root, 'repo');
   fs.mkdirSync(repo);
   fs.writeFileSync(path.join(repo, 'a.ts'), "import { b } from './b';\nexport class A { run() { return b(); } }\n");
-  fs.writeFileSync(path.join(repo, 'b.ts'), "export function b() { return eval('1'); }\n");
+  fs.writeFileSync(path.join(repo, 'b.ts'), "export function b(req: any) { return eval(req.query.code); }\n");
   return { root, repo, out: path.join(root, 'out') };
 }
 
@@ -50,7 +50,7 @@ test('analyzes a folder end to end and reports through the exit code', () => {
   try {
     const summary = JSON.parse(execFileSync('node', [BIN, 'analyze', repo, '--out', out, '--json'], { encoding: 'utf8' }));
     assert.equal(summary.analyzedFiles, 2);
-    assert.ok(summary.security.critical > 0, 'eval should be reported');
+    assert.ok(summary.security.critical > 0, 'eval of request input should be reported');
     const html = fs.readFileSync(summary.reportPath, 'utf8');
     assert.match(html, /<html lang="en">/);
     assert.match(html, /data-report-library="chart"/);
