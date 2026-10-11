@@ -3,7 +3,7 @@
 **
 !dist/**
 !media/icon.png
-!media/csap.svg
+!media/honami-activity.svg
 !package.json
 !package.nls.json
 !package.nls.ja.json

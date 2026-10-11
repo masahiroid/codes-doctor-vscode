@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.2
+
+- New icon: Honami (保奈美), for the Marketplace and the Activity Bar.
+
 ## 3.0.1
 
 - The extension is now bundled with esbuild: the VSIX contains 23 files instead of 645 and is about half the size (3.6 MB), so it installs and starts faster.

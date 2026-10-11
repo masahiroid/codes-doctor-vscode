@@ -2,7 +2,7 @@
   "name": "codes-doctor",
   "displayName": "Codes Doctor",
   "description": "%extension.description%",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "publisher": "masahirocom",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -38,7 +38,7 @@
         {
           "id": "codeDoctor",
           "title": "Codes Doctor",
-          "icon": "media/csap.svg"
+          "icon": "media/honami-activity.svg"
         }
       ]
     },
