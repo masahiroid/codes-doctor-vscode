@@ -1,6 +1,7 @@
 import { parse } from '@typescript-eslint/typescript-estree';
 import { ClassInfo, FileInfo, FunctionInfo } from '../../types';
 import { readFileContent } from '../../fileWalker';
+import { collectStaticImports } from '../dependencies/staticImports';
 import path from 'path';
 import fs from 'fs';
 
@@ -41,27 +42,14 @@ export async function parseFile(filePath: string): Promise<FileInfo> {
       sourceType: 'module',
     });
 
-    // Extract imports
-    const importMap = new Map<string, number>();
-    if (ast.body) {
-      for (const node of ast.body) {
-        if (node.type === 'ImportDeclaration' && node.source) {
-          const importPath = (node.source as any).value;
-          imports.push(importPath);
-          importMap.set(importPath, (importMap.get(importPath) || 0) + 1);
-        } else if (node.type === 'ExportNamedDeclaration' && (node as any).declaration) {
-          const decl = (node as any).declaration;
-          if (decl.type === 'ImportDeclaration' && decl.source) {
-            const importPath = decl.source.value;
-            imports.push(importPath);
-          }
-        }
-      }
-    }
+    imports.push(...collectStaticImports(ast));
 
     // Extract classes
     if (ast.body) {
-      for (const node of ast.body) {
+      for (const entry of ast.body) {
+        // Exported classes are measured like any other class.
+        const node = entry.type === 'ExportNamedDeclaration' || entry.type === 'ExportDefaultDeclaration' ? entry.declaration : entry;
+        if (!node) continue;
         if (node.type === 'ClassDeclaration' && node.id) {
           const className = (node.id as any).name;
           const methods: string[] = [];

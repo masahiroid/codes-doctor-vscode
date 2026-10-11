@@ -1,4 +1,5 @@
 import { ParsedFile, ModuleMetrics, CircularDependency } from '../types';
+import { resolveInternalImport } from './dependencies/resolveImport';
 import path from 'node:path';
 
 /** Percentile used to cap fan-in normalization, so a single outlier module doesn't
@@ -27,45 +28,48 @@ const SIZE_SCORE_BUCKETS: Array<{ maxLines: number; score: number }> = [
 const SIZE_SCORE_OVERSIZED = 0.3;
 const SIZE_SCORE_EMPTY = 0.5;
 
+/** Display name of a module: its file name without extension. */
+function moduleDisplayName(filePath: string): string {
+  return path.basename(filePath, path.extname(filePath));
+}
+
 /**
- * Build adjacency graph from dependencies
+ * Directed module graph keyed by file path: an edge A -> B means A imports B.
+ * TS/JS imports are resolved like the runtime would (relative path, extension,
+ * directory index); other languages' dependencies are matched by file name.
+ * Only edges between analyzed files are kept.
  */
-function buildGraph(files: ParsedFile[]): Map<string, Set<string>> {
+function buildModuleGraph(files: readonly ParsedFile[]): Map<string, Set<string>> {
   const graph = new Map<string, Set<string>>();
-  
-  const getModuleName = (filePath: string): string => {
-    return path.basename(filePath, path.extname(filePath));
-  };
-  
-  // Initialize graph
   for (const file of files) {
-    const moduleName = getModuleName(file.filePath);
-    if (!graph.has(moduleName)) {
-      graph.set(moduleName, new Set());
-    }
+    graph.set(file.filePath, new Set());
   }
-  
-  // Build edges (bidirectional for centrality calculation)
   for (const file of files) {
-    const moduleName = getModuleName(file.filePath);
-    let imports: string[] = [];
-    
-    if ('imports' in file) {
-      imports = file.imports;
-    } else {
-      imports = file.classes.flatMap(c => c.dependencies || []);
-    }
-    
+    const imports = 'imports' in file ? file.imports : file.classes.flatMap((c) => c.dependencies || []);
     for (const importPath of imports) {
-      const importedModule = path.basename(importPath, path.extname(importPath));
-      if (graph.has(importedModule) && importedModule !== moduleName) {
-        graph.get(moduleName)?.add(importedModule);
-        graph.get(importedModule)?.add(moduleName); // Bidirectional
+      const imported = 'imports' in file
+        ? resolveInternalImport(file.filePath, importPath, files)
+        : files.find((f) => moduleDisplayName(f.filePath) === moduleDisplayName(importPath))?.filePath;
+      if (imported && graph.has(imported) && imported !== file.filePath) {
+        graph.get(file.filePath)?.add(imported);
       }
     }
   }
-  
   return graph;
+}
+
+/** The same graph with every edge in both directions, for centrality. */
+function toUndirected(graph: Map<string, Set<string>>): Map<string, Set<string>> {
+  const undirected = new Map<string, Set<string>>();
+  for (const [node, targets] of graph) {
+    if (!undirected.has(node)) undirected.set(node, new Set());
+    for (const target of targets) {
+      undirected.get(node)!.add(target);
+      if (!undirected.has(target)) undirected.set(target, new Set());
+      undirected.get(target)!.add(node);
+    }
+  }
+  return undirected;
 }
 
 /**
@@ -112,8 +116,8 @@ function calculateBetweennessCentrality(
       
       const neighbors = graph.get(v) || new Set();
       for (const w of neighbors) {
-        const newDist = (dist.get(v) || Infinity) + 1;
-        const wDist = dist.get(w) || Infinity;
+        const newDist = (dist.get(v) ?? Infinity) + 1;
+        const wDist = dist.get(w) ?? Infinity;
         
         if (newDist < wDist) {
           dist.set(w, newDist);
@@ -170,58 +174,21 @@ export function calculateModuleMetrics(
 ): ModuleMetrics[] {
   const metrics: ModuleMetrics[] = [];
   
-  // Build dependency map: module -> list of modules it imports
-  const dependencyMap = new Map<string, Set<string>>();
-  const reverseDependencyMap = new Map<string, Set<string>>();
-  
-  // Normalize file paths to module names
-  const getModuleName = (filePath: string): string => {
-    return path.basename(filePath, path.extname(filePath));
-  };
-  
-  // Initialize maps
-  for (const file of files) {
-    const moduleName = getModuleName(file.filePath);
-    dependencyMap.set(moduleName, new Set());
-    reverseDependencyMap.set(moduleName, new Set());
+  const graph = buildModuleGraph(files);
+  const fanInCounts = new Map<string, number>();
+  for (const targets of graph.values()) {
+    for (const target of targets) fanInCounts.set(target, (fanInCounts.get(target) ?? 0) + 1);
   }
-  
-  // Build dependency relationships
-  for (const file of files) {
-    const moduleName = getModuleName(file.filePath);
-    let imports: string[] = [];
-    
-    if ('imports' in file) {
-      // TypeScript/JavaScript file
-      imports = file.imports;
-    } else {
-      // PHP file - collect dependencies from classes
-      imports = file.classes.flatMap(c => c.dependencies || []);
-    }
-    
-    for (const importPath of imports) {
-      // Extract module name from import path
-      // Handle relative imports like './config', '../utils/helper'
-      const importedModule = path.basename(importPath, path.extname(importPath));
-      
-      // Only count if the imported module exists in our files
-      if (reverseDependencyMap.has(importedModule) && importedModule !== moduleName) {
-        dependencyMap.get(moduleName)?.add(importedModule);
-        reverseDependencyMap.get(importedModule)?.add(moduleName);
-      }
-    }
-  }
-  
+
   // Calculate base metrics for each module
   for (const file of files) {
-    const moduleName = getModuleName(file.filePath);
-    const fanOut = dependencyMap.get(moduleName)?.size || 0;
-    const fanIn = reverseDependencyMap.get(moduleName)?.size || 0;
+    const fanOut = graph.get(file.filePath)?.size ?? 0;
+    const fanIn = fanInCounts.get(file.filePath) ?? 0;
     const total = fanIn + fanOut;
     const instability = total === 0 ? 0 : fanOut / total;
     
     metrics.push({
-      moduleName,
+      moduleName: moduleDisplayName(file.filePath),
       filePath: file.filePath,
       lineCount: file.lineCount || 0,
       fanIn,
@@ -242,8 +209,7 @@ export function calculateModuleMetrics(
   const fanInP90 = Math.max(1, sortedFanIns[p90Index] ?? 1);
 
   // Build graph and calculate Betweenness Centrality
-  const graph = buildGraph(files);
-  const betweennessCentrality = calculateBetweennessCentrality(graph);
+  const betweennessCentrality = calculateBetweennessCentrality(toUndirected(graph));
 
   // Calculate centrality and structural score (combined with betweenness)
   for (const metric of metrics) {
@@ -252,7 +218,7 @@ export function calculateModuleMetrics(
     
     // Combine Degree Centrality and Betweenness Centrality
     // Betweenness shows bottleneck role, Degree shows direct connections
-    const betweennessScore = betweennessCentrality.get(metric.moduleName) || 0;
+    const betweennessScore = betweennessCentrality.get(metric.filePath) || 0;
     const combinedCentrality =
       CENTRALITY_COMPONENT_WEIGHT * degreeCentrality + CENTRALITY_COMPONENT_WEIGHT * betweennessScore;
 
@@ -292,86 +258,38 @@ export function detectCircularDependencies(
 ): CircularDependency[] {
   const cycles: CircularDependency[] = [];
   
-  // Build adjacency list
-  const graph = new Map<string, Set<string>>();
-  
-  const getModuleName = (filePath: string): string => {
-    return path.basename(filePath, path.extname(filePath));
-  };
-  
-  // Initialize graph
-  for (const file of files) {
-    const moduleName = getModuleName(file.filePath);
-    graph.set(moduleName, new Set());
-  }
-  
-  // Build edges
-  for (const file of files) {
-    const moduleName = getModuleName(file.filePath);
-    let imports: string[] = [];
-    
-    if ('imports' in file) {
-      // TypeScript/JavaScript file
-      imports = file.imports;
-    } else {
-      // PHP file - collect dependencies from classes
-      imports = file.classes.flatMap(c => c.dependencies || []);
-    }
-    
-    for (const importPath of imports) {
-      const importedModule = path.basename(importPath, path.extname(importPath));
-      
-      if (graph.has(importedModule) && importedModule !== moduleName) {
-        graph.get(moduleName)?.add(importedModule);
-      }
-    }
-  }
-  
+  const graph = buildModuleGraph(files);
+
   // DFS to detect cycles
   const visited = new Set<string>();
   const recursionStack = new Set<string>();
   const currentPath: string[] = [];
-  
-  function dfs(node: string): boolean {
+  /** Cycles already recorded, keyed by their sorted file paths so rotations count once. */
+  const seenCycles = new Set<string>();
+
+  function recordCycle(entry: string): void {
+    const cycle = [...currentPath.slice(currentPath.indexOf(entry)), entry];
+    const key = [...cycle].sort().join('->');
+    if (seenCycles.has(key)) return;
+    seenCycles.add(key);
+    cycles.push({ cycle: cycle.map(moduleDisplayName), length: cycle.length - 1 });
+  }
+
+  function dfs(node: string): void {
     visited.add(node);
     recursionStack.add(node);
     currentPath.push(node);
-    
-    const neighbors = graph.get(node) || new Set();
-    for (const neighbor of neighbors) {
-      if (!visited.has(neighbor)) {
-        if (dfs(neighbor)) {
-          return true;
-        }
-      } else if (recursionStack.has(neighbor)) {
-        // Found a cycle
-        const cycleStartIndex = currentPath.indexOf(neighbor);
-        const cycle = currentPath.slice(cycleStartIndex);
-        cycle.push(neighbor); // Complete the cycle
-        
-        // Check if this cycle is already detected (avoid duplicates)
-        const cycleKey = [...cycle].sort().join('->');
-        const isDuplicate = cycles.some(c => {
-          const existingKey = [...c.cycle].sort().join('->');
-          return existingKey === cycleKey;
-        });
-        
-        if (!isDuplicate) {
-          cycles.push({
-            cycle,
-            length: cycle.length - 1,
-          });
-        }
-        
-        return true;
-      }
+
+    for (const neighbor of graph.get(node) ?? []) {
+      // Keep exploring after a cycle so every cycle reachable from here is found.
+      if (!visited.has(neighbor)) dfs(neighbor);
+      else if (recursionStack.has(neighbor)) recordCycle(neighbor);
     }
-    
+
     currentPath.pop();
     recursionStack.delete(node);
-    return false;
   }
-  
+
   // Run DFS from each unvisited node
   for (const node of graph.keys()) {
     if (!visited.has(node)) {

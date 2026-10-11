@@ -1,4 +1,5 @@
 import type { ParsedFile } from '../../types';
+import { resolveInternalImport } from '../../analyzer/dependencies/resolveImport';
 
 const TOP_DEPENDENTS_LIST_SIZE = 10;
 
@@ -10,7 +11,8 @@ export interface DependencyGraphContext {
 
 export function buildDependencyGraphContext(allFiles: readonly ParsedFile[]): DependencyGraphContext {
   const depCounts = allFiles.map((f) => {
-    const deps = 'dependencies' in f ? f.dependencies : f.imports;
+    // Only imports that resolve to an analyzed file are internal dependencies.
+    const deps = 'dependencies' in f ? f.dependencies : f.imports.filter((specifier) => resolveInternalImport(f.filePath, specifier, allFiles));
     return { filePath: f.filePath, depCount: deps.length };
   });
 

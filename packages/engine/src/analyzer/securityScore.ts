@@ -1,12 +1,19 @@
 import { SecurityScore, SecurityIssue } from '../types';
 import type { SecurityLanguage } from './languages/catalog';
 import { SECURITY_PATTERNS } from './security/patterns';
+import { securityIgnoredRanges } from './security/ignoredRanges';
 import fs from 'node:fs';
 import path from 'node:path';
 import { scoreToGrade, GradeThresholds } from './grading';
 
 /** Score of a codebase with no detected issues. */
 const PERFECT_SCORE = 100;
+
+/**
+ * Highest score allowed while findings of a severity exist. The density-based score
+ * alone would let a large codebase hide a critical finding behind many clean files.
+ */
+const SEVERITY_SCORE_CAPS = { critical: 59, high: 79, medium: 89, other: 99 } as const;
 
 const SECURITY_GRADE_THRESHOLDS: GradeThresholds = { a: 90, b: 80, c: 70, d: 60 };
 
@@ -137,25 +144,18 @@ function generateExplanation(
   summary: SecurityScore['summary'],
   totalFiles: number
 ): string {
-  const totalIssues = summary.critical + summary.high + summary.medium + summary.low + summary.info;
-
-  if (totalIssues === 0) {
-    return `セキュリティスコア${score}点（グレード${grade}）: セキュリティ上の深刻な問題は検出されませんでした。`;
-  }
-
-  const criticalAndHigh = summary.critical + summary.high;
-
-  if (score >= SECURITY_GRADE_THRESHOLDS.a) {
-    return `セキュリティスコア${score}点（グレード${grade}）: ${totalIssues}件の軽微な指摘がありました。`;
-  } else if (score >= SECURITY_GRADE_THRESHOLDS.b) {
-    return `セキュリティスコア${score}点（グレード${grade}）: ${totalIssues}件の問題を検出しました。そのうち${criticalAndHigh}件（Critical: ${summary.critical}件、High: ${summary.high}件）は優先的な対処を推奨します。`;
-  } else if (score >= SECURITY_GRADE_THRESHOLDS.c) {
-    return `セキュリティスコア${score}点（グレード${grade}）: ${totalIssues}件のセキュリティ問題が検出されました。特にCritical（${summary.critical}件）とHigh（${summary.high}件）レベルの問題には早急な対応が必要です。`;
-  } else if (score >= SECURITY_GRADE_THRESHOLDS.d) {
-    return `セキュリティスコア${score}点（グレード${grade}）: 重大な問題です。${summary.critical}件のクリティカルな脆弱性を含む${totalIssues}件の問題が検出されました。セキュリティレビューを実施してください。`;
-  } else {
-    return `セキュリティスコア${score}点（グレード${grade}）: 深刻な状態です。${summary.critical}件のクリティカルな脆弱性を含む${totalIssues}件もの問題が検出されました。早急なセキュリティ監査と修正が必要です。`;
-  }
+  const total = summary.critical + summary.high + summary.medium + summary.low + summary.info;
+  const title = `セキュリティスコア${score}点（グレード${grade}）: `;
+  if (totalFiles === 0) return title + '解析対象ファイルがありません。安全性は評価できません。';
+  if (total === 0) return title + '検出ルールに該当する指摘はありません。安全性を保証するものではありません。';
+  const counts = `指摘${total}件（Critical: ${summary.critical}件、High: ${summary.high}件、Medium: ${summary.medium}件、Low: ${summary.low}件、Info: ${summary.info}件）。`;
+  const action = summary.critical > 0
+    ? 'Criticalの指摘を優先して確認してください。'
+    : summary.high > 0
+      ? 'Highの指摘を優先して確認してください。'
+      : '各指摘の影響と対応の必要性を確認してください。';
+  const verifyAndCaps = `静的検出による候補のため、実コードで確認が必要です。採点上限はCriticalあり${SEVERITY_SCORE_CAPS.critical}点、Highあり${SEVERITY_SCORE_CAPS.high}点、Mediumあり${SEVERITY_SCORE_CAPS.medium}点、その他の指摘あり${SEVERITY_SCORE_CAPS.other}点です。`;
+  return title + counts + action + verifyAndCaps;
 }
 
 /**
@@ -259,11 +259,13 @@ function scanFileForIssues(
   const issues: SecurityIssue[] = [];
   const patterns = SECURITY_PATTERNS[language];
   const lines = content.split('\n');
+  const ignored = language === 'typescript' ? securityIgnoredRanges(content) : [];
 
   for (const patternDef of patterns) {
     const matches = content.matchAll(patternDef.pattern);
     
     for (const match of matches) {
+      if (ignored.some(([start, end]) => match.index >= start && match.index < end)) continue;
       // Find line number
       const beforeMatch = content.substring(0, match.index);
       const lineNumber = beforeMatch.split('\n').length;
@@ -332,5 +334,12 @@ function calculateScore(
   const normalizedPenalty = Math.min(PERFECT_SCORE, (penalty * Math.log(issueIntensity + 1)) / PENALTY_LOG_SCALE_DIVISOR);
   const score = Math.max(0, PERFECT_SCORE - normalizedPenalty);
 
-  return Math.round(score);
+  return Math.min(Math.round(score), severityScoreCap(summary));
+}
+
+function severityScoreCap(summary: SecurityScore['summary']): number {
+  if (summary.critical > 0) return SEVERITY_SCORE_CAPS.critical;
+  if (summary.high > 0) return SEVERITY_SCORE_CAPS.high;
+  if (summary.medium > 0) return SEVERITY_SCORE_CAPS.medium;
+  return SEVERITY_SCORE_CAPS.other;
 }

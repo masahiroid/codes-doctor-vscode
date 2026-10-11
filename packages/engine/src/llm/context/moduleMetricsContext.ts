@@ -1,4 +1,12 @@
 import { ModuleMetrics } from '../../types';
+
+/**
+ * Whether a metric is in the top percentile. A zero value never qualifies: in sparse
+ * graphs the percentile itself is 0, which would otherwise flag every module.
+ */
+function isAtOrAbove(value: number, percentileValue: number): boolean {
+  return value > 0 && value >= percentileValue;
+}
 import { P50, P90, percentile } from './percentile';
 
 /** Instability above this is reported as "unstable" in the LLM context summary */
@@ -38,7 +46,7 @@ function isSharedFoundationModule(
   fanOutP50: number,
   structuralP50: number
 ): boolean {
-  return metric.fanIn >= fanInP90 && metric.fanOut <= fanOutP50 && metric.structuralScore >= structuralP50;
+  return isAtOrAbove(metric.fanIn, fanInP90) && metric.fanOut <= fanOutP50 && metric.structuralScore >= structuralP50;
 }
 
 export interface ModuleMetricsContext {
@@ -143,9 +151,9 @@ export function buildModuleMetricsContext(moduleMetrics: ModuleMetrics[]): Modul
   const hotspots = moduleMetrics
     .map((m) => {
       const reasons: string[] = [];
-      if (m.fanOut >= fanOutP90) reasons.push('高fan-out');
-      if (m.fanIn >= fanInP90) reasons.push('高fan-in');
-      if (m.instability >= instabilityP90) reasons.push('高不安定');
+      if (isAtOrAbove(m.fanOut, fanOutP90)) reasons.push('高fan-out');
+      if (isAtOrAbove(m.fanIn, fanInP90)) reasons.push('高fan-in');
+      if (isAtOrAbove(m.instability, instabilityP90)) reasons.push('高不安定');
       if (m.structuralScore <= structuralP10) reasons.push('低構造スコア');
       return {
         moduleName: m.moduleName,
@@ -184,7 +192,7 @@ export function buildModuleMetricsContext(moduleMetrics: ModuleMetrics[]): Modul
     )
     .map((metric) => ({
       ...metric,
-      reviewPriority: metric.fanOut >= fanOutP90 || metric.structuralScore <= structuralP10 ? 'high' as const : 'medium' as const,
+      reviewPriority: isAtOrAbove(metric.fanOut, fanOutP90) || metric.structuralScore <= structuralP10 ? 'high' as const : 'medium' as const,
     }))
     .sort((left, right) => {
       if (left.reviewPriority !== right.reviewPriority) {

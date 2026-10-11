@@ -5,5 +5,4 @@ module.exports = {
   ...require('./promptRules'),
   ...require('./astRendering'),
   ...require('./sourceReplacement'),
-  ...require('./securityExplanation'),
 };
