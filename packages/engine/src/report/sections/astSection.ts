@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { AnalysisResult, LanguageFileMap, ParsedFile } from '../../types';
 import { escapeHtml } from '../../html';
+import { panel } from '../ui';
 import { LANGUAGES, LanguageId } from '../../analyzer/languages/catalog';
 import { AST_FILES_PER_BATCH } from './ast/limits';
 import { parsePhpAst, parseTypeScriptAst } from './ast/parsers';
@@ -32,9 +33,6 @@ const RAW_AST_PARSERS: Record<AstLanguageId, (content: string, filePath: string)
   php: parsePhpAst,
 };
 
-const DETAILS_PRE_STYLE =
-  'white-space: pre-wrap; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; margin-top: 8px; overflow-x: auto; font-size: 0.95em;';
-
 interface LanguageBlocks {
   label: string;
   lightweight: boolean;
@@ -63,8 +61,10 @@ export function astSection(result: AnalysisResult, savedAstResult?: string): str
     ${renderAstReviewBox(savedAstResult)}
     ${languages.map(renderStructureHeading).join('\n    ')}
 
-    <h2 style="margin-top: 28px;">AST生データ</h2>
-    ${languages.map((language) => `<h3>${language.label}</h3>${language.raw}`).join('\n    ')}
+  </section>
+  <section>
+    <h2>AST生データ</h2>
+    ${languages.map((language) => panel(language.raw, { title: language.label })).join('\n    ')}
     ${AST_PAGINATION_SCRIPT}
   </section>`;
 }
@@ -78,7 +78,7 @@ function joinAstBlocks(blocks: string[]): string {
   const visible = blocks.slice(0, AST_FILES_PER_BATCH).join('');
   const remaining = blocks.slice(AST_FILES_PER_BATCH).join('');
   const more = remaining
-    ? `<template data-ast-pending>${remaining}</template><button type="button" data-ast-more>さらに表示（残り${blocks.length - AST_FILES_PER_BATCH}ファイル）</button>`
+    ? `<template data-ast-pending>${remaining}</template><button type="button" class="btn" data-ast-more>さらに表示（残り${blocks.length - AST_FILES_PER_BATCH}ファイル）</button>`
     : '';
   return `<div data-ast-file-list><div data-ast-visible>${visible}</div>${more}</div>`;
 }
@@ -101,8 +101,8 @@ const AST_PAGINATION_SCRIPT = `<script>
 </script>`;
 
 function renderStructureHeading(language: LanguageBlocks): string {
-  const note = language.lightweight ? `<p>${language.label}の構造表示は簡易抽出です。完全なAST解析ではありません。</p>` : '';
-  return `<h3>${language.label}</h3>${note}${language.structure}`;
+  const note = language.lightweight ? `<p class="muted gap-bottom">${language.label}の構造表示は簡易抽出です。完全なAST解析ではありません。</p>` : '';
+  return panel(note + language.structure, { title: language.label });
 }
 
 /**
@@ -111,10 +111,10 @@ function renderStructureHeading(language: LanguageBlocks): string {
  */
 function renderAstReviewBox(savedAstResult?: string): string {
   if (!savedAstResult) {
-    return '<div id="astReview" hidden><h3>AST専用LLMレビュー</h3><div id="astResult" data-md=""></div></div>';
+    return '<div id="astReview" hidden><div class="panel glass"><h3>AST専用LLMレビュー</h3><div id="astResult" class="llm-result" data-md=""></div></div></div>';
   }
   const escaped = escapeHtml(savedAstResult);
-  return `<div class="box"><h3>AST専用LLMレビュー</h3><div id="astResult" class="llm-result" data-md="${escaped}">${escaped}</div></div>`;
+  return `<div id="astReview"><div class="panel glass"><h3>AST専用LLMレビュー</h3><div id="astResult" class="llm-result" data-md="${escaped}">${escaped}</div></div></div>`;
 }
 
 function renderStructureBlock(file: ParsedFile, buildStructure: (file: ParsedFile) => string): string {
@@ -145,9 +145,9 @@ function renderRawBlock(filePath: string, language: LanguageId, label: string): 
 
 function renderDetails(filePath: string, body: string): string {
   return `
-  <details style="margin: 10px 0;">
-    <summary style="cursor: pointer; font-weight: 600;">${escapeHtml(path.basename(filePath))}</summary>
-    <pre style="${DETAILS_PRE_STYLE}">${escapeHtml(body)}</pre>
+  <details class="file">
+    <summary>${escapeHtml(path.basename(filePath))}</summary>
+    <pre>${escapeHtml(body)}</pre>
   </details>`;
 }
 

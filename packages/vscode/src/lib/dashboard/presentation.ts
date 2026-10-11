@@ -9,6 +9,10 @@ const styles = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
 import { getLlmModel, getLlmMaxOutputTokens, getLlmOutputMode, getDisplayLanguage } from '../config';
 import { SETTINGS_FIELDS } from './settings';
 import { TOKEN_LIMITS, COMMANDS } from '../settingsSchema';
+import { loadEngine } from '../engine';
+
+/** Honami's emblem, shared with the report header. */
+const { BRAND_MARK_SVG } = loadEngine('ja');
 
 export function buildHtml(view: DashboardHost) {
     const escapedError = view.modelFetchError
@@ -26,9 +30,15 @@ export function buildHtml(view: DashboardHost) {
   <style>${styles}</style>
 </head>
 <body>
-  <div class="card">
+  <div class="brand">
+    <div class="brand-mark">${BRAND_MARK_SVG}</div>
+    <div>
+      <div class="brand-name">Codes Doctor</div>
+      ${view.extensionVersion ? `<div class="brand-version">v${escapeHtmlAttr(view.extensionVersion)}</div>` : ''}
+    </div>
+  </div>
+  <div class="card intro">
     <p>${view.t("Codes Doctor analyzes the currently opened workspace folder and generates a structural diagnosis report (God Classes, technical debt, security score, dependency graphs, SBOM).")}</p>
-    ${view.extensionVersion ? `<p style="margin-top:6px; opacity:0.55; font-size:11px;">v${escapeHtmlAttr(view.extensionVersion)}</p>` : ''}
   </div>
 
   <div class="card">
@@ -48,14 +58,14 @@ export function buildHtml(view: DashboardHost) {
 
   <button data-command="${COMMANDS.analyzeCurrentWorkspace}">${view.t("Analyze Current Workspace")}</button>
 
-  <div class="card" style="margin-top: 12px;">
+  <div class="card">
     <div class="field">
       <label class="field-label">${view.t("Report History")}</label>
       ${buildReportHistory(view)}
     </div>
   </div>
 
-  <div class="card" style="margin-top: 12px;">
+  <div class="card">
     <div class="field">
       <label class="field-label" for="llmProvider">${view.t("LLM Provider")}</label>
       ${buildSelectField(view, SETTINGS_FIELDS.find((field) => field.settingKey === 'llmProvider'))}

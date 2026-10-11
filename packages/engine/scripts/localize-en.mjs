@@ -15,6 +15,19 @@ const japanese = /[　-ヿ㐀-鿿！-￯]+/g;
 /** Scripts that run in the report page and pick their language from <html lang>. */
 const SELF_LOCALIZED_DIRS = [path.join('report', 'browser')];
 
+/**
+ * Translations are inserted into JavaScript literals, so they must be escaped for the
+ * literal they land in: quotes for '…' and "…" strings, backticks and `${` for templates.
+ */
+function escaperFor(node, text) {
+  const backslashes = (value) => value.replace(/\\/g, '\\\\');
+  if (ts.isStringLiteral(node)) {
+    const quote = text[0];
+    return (value) => backslashes(value).replace(new RegExp(quote, 'g'), '\\' + quote);
+  }
+  return (value) => backslashes(value).replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
+}
+
 export function localize(code, filename) {
   const tree = ts.createSourceFile(filename, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
   const edits = [];
@@ -24,9 +37,10 @@ export function localize(code, filename) {
         node.kind === ts.SyntaxKind.TemplateTail) {
       const start = node.getStart(tree);
       const original = code.slice(start, node.end);
+      const escape = escaperFor(node, original);
       const translated = original.replace(japanese, (phrase) => {
         if (!(phrase in translations)) throw new Error(`Missing English report translation in ${filename}: ${phrase}`);
-        return translations[phrase];
+        return escape(translations[phrase]);
       }).replace(/lang="ja"/g, 'lang="en"').replace(/ja-JP/g, 'en-US').replace(/in Japanese/g, 'in English');
       if (translated !== original) edits.push({ start, end: node.end, translated });
     }

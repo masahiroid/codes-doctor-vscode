@@ -19,3 +19,4 @@ export { injectReviewCopy, isReviewTargetId, reviewCopySource } from './report/b
 export { injectReportTabs } from './report/browser/reportTabs';
 export { reportLibraryScript } from './report/browser/libraries';
 export type { ReportLibrary } from './report/browser/libraries';
+export { BRAND_MARK_SVG, PRODUCT_NAME } from './report/branding';

@@ -1,10 +1,14 @@
 import { buildD3DependencyGraph, generateD3VisualizationScript } from '../../graph/d3Graph';
 import type { AnalysisResult } from '../../types';
 import { escapeHtml } from '../../html';
+import { badge, bulletList, notice, panel, section, table, Tone } from '../ui';
 import { CYCLE_LENGTH_THRESHOLDS } from '../../analyzer/technicalDebt';
 
 /** Shown when classes exist but none depends on another: the graph has nodes only. */
-const NO_CLASS_LINKS_NOTE = '<p>クラスは検出されましたが、クラス間の内部依存は検出されませんでした。ノードのみ表示します。</p>';
+const NO_CLASS_LINKS_NOTE = '<p class="muted gap-bottom">クラスは検出されましたが、クラス間の内部依存は検出されませんでした。ノードのみ表示します。</p>';
+
+/** Zoom steps and bounds for the circular-dependency diagram. */
+const ZOOM = { step: 0.1, min: 0.3, max: 3 } as const;
 
 /** Cycle edges drawn in the circular-dependency diagram before it is truncated. */
 const MAX_CYCLE_EDGES = 80;
@@ -17,11 +21,7 @@ const LONGEST_CYCLES_DISPLAY_LIMIT = 2;
 const CYCLE_PATH_PREVIEW_LENGTH = 3;
 
 export function mermaidSection(title: string, graphText: string): string {
-  return `
-  <section>
-    <h2>${title}</h2>
-    <div class="diagram"><div class="mermaid">${graphText}</div></div>
-  </section>`;
+  return section(title, `<div class="diagram panel glass"><div class="mermaid">${graphText}</div></div>`);
 }
 
 /**
@@ -35,26 +35,17 @@ export function llmSection(result: AnalysisResult, savedResult?: string): string
     ? escapeHtml(savedResult)
     : '未実行。VS Code拡張のダッシュボードパネルから「Run LLM Review」を実行してください。';
   const initialDataMd = savedResult ? escapeHtml(savedResult) : '';
-  const initialStatus = savedResult ? 'レポート生成時の保存済み結果' : '';
+  const initialStatus = savedResult ? `<p class="muted gap-bottom">レポート生成時の保存済み結果</p>` : '';
 
-  return `
-  <section id="sec-llm">
-    <h2>LLM 構造解析</h2>
-    <div class="box">
-      <div style="margin: 0 0 10px 0; color:#6b7280; font-size:0.88em;">
-        構造レビューは、モジュール依存グラフ・関数呼び出しグラフ・God Class分布をまとめて解釈し、このままで良いのか、優先改善が必要かを判断します。設定と再実行は VS Code拡張のダッシュボードパネルから行います。
-      </div>
-      ${initialStatus ? `<div style="color:#6b7280; font-size:0.9em; margin-bottom:8px;">${initialStatus}</div>` : ''}
-      <div id="llmResult" class="llm-result" data-md="${initialDataMd}">${initialContent}</div>
-    </div>
-    <div class="box" style="border-left-color: #10b981;">
-      <h3 style="margin-top: 0;">AIコーディング用プロンプト</h3>
-      <div style="margin: 0 0 10px 0; color:#6b7280; font-size:0.88em;">
-        AIコーディングエージェントにそのまま渡せる作業指示です。ダッシュボードの出力モードを切り替えて実行すると生成されます。
-      </div>
-      <div id="llmAgentPrompt" class="llm-result" data-md="">未生成です。</div>
-    </div>
-  </section>`;
+  return section('LLM 構造解析', `
+    ${panel(`${initialStatus}<div id="llmResult" class="llm-result" data-md="${initialDataMd}">${initialContent}</div>`, {
+      title: '構造レビュー',
+      sub: '構造レビューは、モジュール依存グラフ・関数呼び出しグラフ・God Class分布をまとめて解釈し、このままで良いのか、優先改善が必要かを判断します。設定と再実行は VS Code拡張のダッシュボードパネルから行います。',
+    })}
+    ${panel('<div id="llmAgentPrompt" class="llm-result" data-md="">未生成です。</div>', {
+      title: 'AIコーディング用プロンプト',
+      sub: 'AIコーディングエージェントにそのまま渡せる作業指示です。ダッシュボードの出力モードを切り替えて実行すると生成されます。',
+    })}`, 'sec-llm');
 }
 
 export function circularSection(result: AnalysisResult): string {
@@ -64,115 +55,65 @@ export function circularSection(result: AnalysisResult): string {
   const complexCycles = result.circularDependencies.filter((dependency) => dependency.length >= CYCLE_LENGTH_THRESHOLDS.critical);
   const simpleCycles = result.circularDependencies.filter((dependency) => dependency.length <= CYCLE_LENGTH_THRESHOLDS.low);
   const longest = [...result.circularDependencies].sort((left, right) => right.length - left.length).slice(0, LONGEST_CYCLES_DISPLAY_LIMIT);
-  const longestSummary = longest.map((dependency) => `${dependency.cycle.slice(0, CYCLE_PATH_PREVIEW_LENGTH).join(' → ')}... (長さ${dependency.length})`).join(' / ');
+  const longestSummary = longest.map((dependency) => dependency.cycle.slice(0, CYCLE_PATH_PREVIEW_LENGTH).join(' → ') + '... (長さ' + dependency.length + ')').join(' / ');
   const mermaid = buildCircularDependencyMermaid(result.circularDependencies);
+  const analysis = bulletList([
+    `${result.circularDependencies.length}個の循環依存が検出されました`,
+    `${complexCycles.length}個の複雑な循環依存（長さ5以上）が存在します`,
+    `${simpleCycles.length}個は単純な相互参照（長さ2以下）です`,
+    ...(longest.length ? [`最長循環: ${escapeHtml(longestSummary)}`] : []),
+  ]);
 
-  return `
-  <section>
-    <h2>循環依存検出</h2>
-    <div style="background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0;">
-      <div style="padding: 15px; background: #fef2f2; border-left: 4px solid #dc2626; border-radius: 4px; margin-bottom: 20px;">
-        <strong style="color:#991b1b;">${result.circularDependencies.length} 件の循環依存が検出されました</strong>
+  return section('循環依存検出', `
+    ${notice('peach', `${result.circularDependencies.length} 件の循環依存が検出されました`, '')}
+    ${panel(table(['No.', '#長さ', '循環経路', '分類'], result.circularDependencies.map(renderCircularRow)))}
+    <div class="diagram panel glass">
+      <div class="toolbar">
+        <button type="button" class="btn" id="cycleZoomIn">+</button>
+        <button type="button" class="btn" id="cycleZoomOut">-</button>
+        <button type="button" class="btn" id="cycleZoomReset">Reset</button>
       </div>
-      <div style="overflow-x:auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
-          <thead>
-            <tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
-              <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; width: 90px;">No.</th>
-              <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; width: 90px;">長さ</th>
-              <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">循環経路</th>
-              <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; width: 120px;">分類</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${result.circularDependencies.map((dependency, index) => renderCircularRow(dependency, index)).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <div style="display:flex; gap:8px; justify-content:flex-end; margin: 8px 0;">
-      <button id="cycleZoomIn" style="padding:6px 10px; border:1px solid #e5e7eb; background:#fff; border-radius:6px; cursor:pointer;">+</button>
-      <button id="cycleZoomOut" style="padding:6px 10px; border:1px solid #e5e7eb; background:#fff; border-radius:6px; cursor:pointer;">-</button>
-      <button id="cycleZoomReset" style="padding:6px 10px; border:1px solid #e5e7eb; background:#fff; border-radius:6px; cursor:pointer;">Reset</button>
-    </div>
-    <div class="diagram" style="overflow: auto;">
       <div id="cycleMermaid" class="mermaid" style="transform-origin: 0 0;">${mermaid}</div>
     </div>
     <script>
       (function(){
         const target = document.getElementById('cycleMermaid');
-        const zoomIn = document.getElementById('cycleZoomIn');
-        const zoomOut = document.getElementById('cycleZoomOut');
-        const zoomReset = document.getElementById('cycleZoomReset');
-        if (!target || !zoomIn || !zoomOut || !zoomReset) return;
-
         let scale = 1;
-        const applyScale = () => {
-          target.style.transform = 'scale(' + scale.toFixed(2) + ')';
-        };
-
-        zoomIn.addEventListener('click', () => {
-          scale = Math.min(scale + 0.1, 3);
-          applyScale();
-        });
-
-        zoomOut.addEventListener('click', () => {
-          scale = Math.max(scale - 0.1, 0.3);
-          applyScale();
-        });
-
-        zoomReset.addEventListener('click', () => {
-          scale = 1;
-          applyScale();
-        });
+        const apply = function(next) { scale = next; target.style.transform = 'scale(' + scale.toFixed(2) + ')'; };
+        document.getElementById('cycleZoomIn').addEventListener('click', function() { apply(Math.min(scale + ${ZOOM.step}, ${ZOOM.max})); });
+        document.getElementById('cycleZoomOut').addEventListener('click', function() { apply(Math.max(scale - ${ZOOM.step}, ${ZOOM.min})); });
+        document.getElementById('cycleZoomReset').addEventListener('click', function() { apply(1); });
       })();
     </script>
-    <div class="box" style="border-left-color: var(--success)">
-      <h3>循環依存の分析</h3>
-      <ul style="padding-left:18px; margin-top:8px;">
-        <li>${result.circularDependencies.length}個の循環依存が検出されました</li>
-        <li>${complexCycles.length}個の複雑な循環依存（長さ5以上）が存在します</li>
-        <li>${simpleCycles.length}個は単純な相互参照（長さ2以下）です</li>
-        ${longest.length ? `<li>最長循環: ${longestSummary}</li>` : ''}
-      </ul>
-    </div>
-  </section>`;
+    ${notice('sky', '循環依存の分析', analysis)}`);
 }
 
 export function generateD3DependencyGraphSection(result: AnalysisResult): string {
   if (!result.files) return '';
   const graph = buildD3DependencyGraph(result.files.typescript, result.files.php);
   if (graph.nodes.length === 0) {
-    return '<section><h2>クラス依存グラフ (D3.js)</h2><div class="box">依存データがありません</div></section>';
+    return section('クラス依存グラフ (D3.js)', panel('<p class="muted">依存データがありません</p>'));
   }
-  return `
-  <section>
-    <h2>クラス依存グラフ (D3.js)</h2>
-    <div class="box">${graph.links.length === 0 ? NO_CLASS_LINKS_NOTE : ''}${generateD3VisualizationScript(graph)}</div>
-  </section>`;
+  return section('クラス依存グラフ (D3.js)', panel(`${graph.links.length === 0 ? NO_CLASS_LINKS_NOTE : ''}${generateD3VisualizationScript(graph)}`));
 }
 
 function renderCircularRow(dependency: AnalysisResult['circularDependencies'][number], index: number): string {
-  const category = getCycleCategory(dependency.length);
-  const categoryStyle = getCycleCategoryStyle(category);
-  return `<tr style="border-bottom: 1px solid #e5e7eb;">
-    <td style="padding: 12px; color: #374151; font-weight: 600;">Cycle ${index + 1}</td>
-    <td style="padding: 12px; color: #374151; text-align: center;">${dependency.length}</td>
-    <td style="padding: 12px; color: #6b7280; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">${dependency.cycle.join(' → ')}</td>
-    <td style="padding: 12px; text-align: center;"><span style="${categoryStyle} padding: 4px 8px; border-radius: 3px; font-size: 0.8em; font-weight: 600;">${category}</span></td>
+  const { label, tone } = getCycleCategory(dependency.length);
+  return `<tr>
+    <td class="cell-main">Cycle ${index + 1}</td>
+    <td class="num">${dependency.length}</td>
+    <td class="cell-sub">${escapeHtml(dependency.cycle.join(' → '))}</td>
+    <td>${badge(label, tone)}</td>
   </tr>`;
 }
 
-function getCycleCategory(length: number): string {
-  if (length >= 5) return '複雑';
-  if (length <= 2) return '単純';
-  return '中程度';
-}
+/** Cycle lengths: at least this many modules is complex; at most `simpleMax` is a simple back-reference. */
+const CYCLE_CATEGORY_LENGTHS = { complex: 5, simpleMax: 2 } as const;
 
-function getCycleCategoryStyle(category: string): string {
-  if (category === '複雑') return 'background:#fee2e2;color:#991b1b;';
-  if (category === '単純') return 'background:#dcfce7;color:#166534;';
-  return 'background:#fef3c7;color:#92400e;';
+function getCycleCategory(length: number): { label: string; tone: Tone } {
+  if (length >= CYCLE_CATEGORY_LENGTHS.complex) return { label: '複雑', tone: 'rose' };
+  if (length <= CYCLE_CATEGORY_LENGTHS.simpleMax) return { label: '単純', tone: 'mint' };
+  return { label: '中程度', tone: 'butter' };
 }
 
 function buildCircularDependencyMermaid(cycles: Array<{ cycle: string[] }>): string {

@@ -20,6 +20,9 @@ const styles = node_fs_1.default.readFileSync(node_path_1.default.join(__dirname
 const config_1 = require("../config");
 const settings_1 = require("./settings");
 const settingsSchema_1 = require("../settingsSchema");
+const engine_1 = require("../engine");
+/** Honami's emblem, shared with the report header. */
+const { BRAND_MARK_SVG } = (0, engine_1.loadEngine)('ja');
 function buildHtml(view) {
     const escapedError = view.modelFetchError
         ? (0, format_1.escapeHtmlAttr)(view.modelFetchError)
@@ -35,9 +38,15 @@ function buildHtml(view) {
   <style>${styles}</style>
 </head>
 <body>
-  <div class="card">
+  <div class="brand">
+    <div class="brand-mark">${BRAND_MARK_SVG}</div>
+    <div>
+      <div class="brand-name">Codes Doctor</div>
+      ${view.extensionVersion ? `<div class="brand-version">v${(0, format_1.escapeHtmlAttr)(view.extensionVersion)}</div>` : ''}
+    </div>
+  </div>
+  <div class="card intro">
     <p>${view.t("Codes Doctor analyzes the currently opened workspace folder and generates a structural diagnosis report (God Classes, technical debt, security score, dependency graphs, SBOM).")}</p>
-    ${view.extensionVersion ? `<p style="margin-top:6px; opacity:0.55; font-size:11px;">v${(0, format_1.escapeHtmlAttr)(view.extensionVersion)}</p>` : ''}
   </div>
 
   <div class="card">
@@ -57,14 +66,14 @@ function buildHtml(view) {
 
   <button data-command="${settingsSchema_1.COMMANDS.analyzeCurrentWorkspace}">${view.t("Analyze Current Workspace")}</button>
 
-  <div class="card" style="margin-top: 12px;">
+  <div class="card">
     <div class="field">
       <label class="field-label">${view.t("Report History")}</label>
       ${(0, history_1.buildReportHistory)(view)}
     </div>
   </div>
 
-  <div class="card" style="margin-top: 12px;">
+  <div class="card">
     <div class="field">
       <label class="field-label" for="llmProvider">${view.t("LLM Provider")}</label>
       ${(0, controls_1.buildSelectField)(view, settings_1.SETTINGS_FIELDS.find((field) => field.settingKey === 'llmProvider'))}

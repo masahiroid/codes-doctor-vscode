@@ -1,6 +1,7 @@
 import { D3Graph, D3_GRAPH_GROUPS } from './buildDependencyGraph';
 import { scriptJson } from '../../html';
 import { reportLibraryScript } from '../../report/browser/libraries';
+import { paletteDeclaration } from '../../report/browser/theme';
 
 const GRAPH_HEIGHT_PX = 600;
 /** Force-layout and legend tuning for the in-browser graph (embedded into the script as `layout`). */
@@ -20,7 +21,8 @@ const D3_LAYOUT = {
   legendTextOffset: 20,
   legendTextBaseline: 12,
 };
-const GROUP_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6b7280'];
+/** Palette tones for node groups, in group order; colors come from the report theme. */
+const GROUP_TONES = ['lavender', 'sky', 'mint', 'butter', 'peach', 'rose', 'muted'];
 
 /**
  * Generate the D3.js visualization markup (container + inline script) for a
@@ -29,7 +31,7 @@ const GROUP_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#e
  */
 export function generateD3VisualizationScript(graph: D3Graph): string {
   return `
-<div id="d3-graph" style="width: 100%; height: ${GRAPH_HEIGHT_PX}px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fafafa;"></div>
+<div id="d3-graph" style="width: 100%; height: ${GRAPH_HEIGHT_PX}px; border-radius: 10px; background: var(--well);"></div>
 
 ${reportLibraryScript('d3')}
 <script>
@@ -37,6 +39,7 @@ ${reportLibraryScript('d3')}
   const graphData = ${scriptJson(graph)};
   const groups = ${JSON.stringify(D3_GRAPH_GROUPS)};
   const layout = ${JSON.stringify(D3_LAYOUT)};
+  ${paletteDeclaration()}
 
   const container = document.getElementById('d3-graph');
   if (typeof d3 === 'undefined') {
@@ -50,7 +53,7 @@ ${reportLibraryScript('d3')}
 
   const colorScale = d3.scaleOrdinal()
     .domain(groups)
-    .range(${JSON.stringify(GROUP_COLORS)});
+    .range(${JSON.stringify(GROUP_TONES)}.map(function(tone) { return palette[tone]; }));
 
   const svg = d3.select('#d3-graph')
     .append('svg')
@@ -92,13 +95,13 @@ ${reportLibraryScript('d3')}
     .attr('orient', 'auto')
     .append('path')
     .attr('d', 'M0,-5L10,0L0,5')
-    .attr('fill', '#999');
+    .attr('fill', palette.muted);
 
   const link = g.append('g')
     .selectAll('line')
     .data(graphData.links)
     .enter().append('line')
-    .attr('stroke', '#999')
+    .attr('stroke', palette.muted)
     .attr('stroke-opacity', 0.6)
     .attr('stroke-width', d => Math.sqrt(d.value))
     .attr('marker-end', 'url(#arrow)');
@@ -109,7 +112,7 @@ ${reportLibraryScript('d3')}
     .enter().append('circle')
     .attr('r', d => Math.sqrt(d.size) * 0.5 + 5)
     .attr('fill', d => colorScale(d.group))
-    .attr('stroke', '#fff')
+    .attr('stroke', palette['ring-hole'])
     .attr('stroke-width', 2)
     .style('cursor', 'pointer')
     .call(d3.drag()
@@ -123,6 +126,7 @@ ${reportLibraryScript('d3')}
     .enter().append('text')
     .text(d => d.name)
     .attr('font-size', 10)
+    .attr('fill', palette.ink)
     .attr('dx', 12)
     .attr('dy', 4)
     .style('pointer-events', 'none');
@@ -174,7 +178,7 @@ ${reportLibraryScript('d3')}
     .attr('width', layout.legendSwatchSize)
     .attr('height', layout.legendSwatchSize)
     .attr('fill', d => colorScale(d))
-    .attr('stroke', '#ccc');
+    .attr('stroke', palette.hairline);
 
   legend.selectAll('text')
     .data(groups)
@@ -182,7 +186,8 @@ ${reportLibraryScript('d3')}
     .attr('x', layout.legendTextOffset)
     .attr('y', (d, i) => i * layout.legendRowHeight + layout.legendTextBaseline)
     .text(d => d)
-    .attr('font-size', 12);
+    .attr('font-size', 12)
+    .attr('fill', palette['ink-soft']);
   }
   const resize = function() {
     const width = container.clientWidth;

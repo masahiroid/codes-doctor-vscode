@@ -8,7 +8,35 @@ import { reportLibraryScript } from './browser/libraries';
 import { installReportTabs, TAB_SCRIPT_ID } from './browser/reportTabs';
 import { reviewCopySource } from './browser/reviewCopy';
 import { installJapaneseStrong } from './browser/markdown';
-import { PRODUCT_NAME } from './branding';
+import { BRAND_MARK_SVG, PRODUCT_NAME } from './branding';
+import { SOURCE_LANGUAGES } from '../analyzer/languages/catalog';
+
+/** Display name of a detected primary language (`mixed`/`unknown` are shown as is). */
+function languageLabel(id: string): string {
+  return SOURCE_LANGUAGES.find((language) => language.id === id)?.label ?? id;
+}
+import { REPORT_STYLES } from './theme';
+import { applySavedTheme, installPalette, installThemeToggle, paletteDeclaration } from './browser/theme';
+
+/** Mermaid colors from the report palette (runs in the browser). */
+function mermaidThemeVariables(palette: { alpha(tone: string, alpha: number): string; [name: string]: unknown }) {
+  return {
+    fontFamily: palette.font,
+    fontSize: '13px',
+    background: 'transparent',
+    primaryColor: palette.alpha('lavender', 0.28),
+    primaryBorderColor: palette.lavender,
+    primaryTextColor: palette.ink,
+    secondaryColor: palette.alpha('sky', 0.28),
+    tertiaryColor: palette.alpha('mint', 0.22),
+    lineColor: palette.muted,
+    textColor: palette.ink,
+    mainBkg: palette.alpha('lavender', 0.22),
+    nodeBorder: palette.lavender,
+    clusterBkg: palette.alpha('sky', 0.12),
+    edgeLabelBackground: palette['ring-hole'],
+  };
+}
 
 /**
  * Browser scripts carry text for both report languages and pick one from `<html lang>`.
@@ -30,91 +58,43 @@ export async function generateHTMLReport(result: AnalysisResult, outputPath: str
     ? `<meta name="codes-doctor-version" content="${escapeHtml(options.generatorVersion)}" />`
     : '';
   // Runs before Markdown rendering so copy buttons keep the original Markdown source.
+  const themeSetup = asciiScript(`(${installThemeToggle.toString()})();`);
   const markdownSetup = asciiScript(`if (typeof marked !== 'undefined') { (${installJapaneseStrong.toString()})(marked); }\n(${reviewCopySource()})();`);
   const outputDir = path.dirname(outputPath);
   const savedReviews = readSavedReviews(result.analysisId, outputDir);
 
+  const analyzedAt = new Date(result.analyzedAt).toLocaleString('ja-JP');
   const html = `<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />${generatorMeta}
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${PRODUCT_NAME} — ${repoName}</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --primary: #2563eb;
-      --success: #059669;
-      --warning: #d97706;
-      --danger: #dc2626;
-      --dark: #111827;
-      --muted: #6b7280;
-      --bg: #f3f4f6;
-      --border: #e5e7eb;
-      --white: #fff;
-    }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--dark); line-height: 1.6; padding: 20px; }
-    .container { max-width: 1400px; margin: 0 auto; background: var(--white); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
-    header { padding: 24px 28px; border-bottom: 1px solid var(--border); }
-    .header-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-    .meta { margin-top: 10px; color: var(--muted); font-size: 0.9rem; }
-    /* ---- Tab Navigation ---- */
-    .tab-nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 12px 28px 0; background: var(--bg); border-bottom: 2px solid var(--border); position: sticky; top: 0; z-index: 100; }
-    .tab-btn { padding: 8px 16px; border: 1px solid var(--border); border-bottom: none; border-radius: 6px 6px 0 0; background: #fff; cursor: pointer; font-size: 0.88rem; color: var(--muted); transition: background 0.15s, color 0.15s; }
-    .tab-btn:hover { background: #eff6ff; color: var(--primary); }
-    .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
-    main { padding: 28px; }
-    h2 { margin: 28px 0 14px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
-    h3 { margin: 18px 0 10px; }
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px; }
-    .card { border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: #fff; }
-    .card .label { color: var(--muted); font-size: 0.82rem; text-transform: uppercase; }
-    .card .value { font-size: 2rem; font-weight: 700; margin-top: 4px; }
-    .box { border: 1px solid var(--border); border-left: 4px solid var(--primary); border-radius: 8px; padding: 14px; margin: 14px 0; background: #fff; }
-    .warn { border-left-color: var(--warning); background: #fef3c7; }
-    table { width: 100%; border-collapse: collapse; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-    th, td { border-bottom: 1px solid var(--border); padding: 10px 12px; text-align: left; font-size: 0.9rem; }
-    th { background: #f9fafb; }
-    .diagram { border: 1px solid var(--border); border-left: 4px solid var(--primary); border-radius: 8px; padding: 12px; min-height: 220px; overflow-x: auto; }
-    .llm-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
-    .llm-controls button { width: auto; padding: 10px 14px; margin-top: 0; }
-    .llm-result { background: #f9fafb; border: 1px solid var(--border); border-radius: 6px; padding: 12px; white-space: normal; min-height: 120px; line-height: 1.7; }
-    .llm-result p { margin: 0 0 10px; }
-    .llm-result ul, .llm-result ol { padding-left: 20px; margin: 0 0 10px; }
-    .llm-result h1, .llm-result h2, .llm-result h3 { margin: 14px 0 6px; }
-    .llm-result code { background: #e5e7eb; padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
-    .llm-result pre code { background: none; padding: 0; }
-    footer { padding: 16px 28px; color: var(--muted); border-top: 1px solid var(--border); font-size: 0.85rem; }
-
-    @media print {
-      body { background: #fff; padding: 0; }
-      .container { border: none; }
-      .tab-nav { display: none !important; }
-      .tab-panel { display: block !important; }
-      h2, h3 { page-break-after: avoid; }
-      .card, .box, table, .diagram, tr, li { page-break-inside: avoid; break-inside: avoid; }
-      section { page-break-inside: avoid; break-inside: avoid; margin-bottom: 14px; }
-    }
-  </style>
+  <script>(${applySavedTheme.toString()})();</script>
+  <style>${REPORT_STYLES}</style>
   ${reportLibraryScript('chart')}
   ${reportLibraryScript('mermaid')}
   ${reportLibraryScript('marked')}
 </head>
 <body data-analysis-id="${result.analysisId}">
-  <div class="container">
-    <header>
-      <div class="header-top">
-        <h1>${PRODUCT_NAME}</h1>
+  <script>(${installPalette.toString()})();</script>
+  <div class="shell">
+    <header class="report-header glass">
+      <div class="brand">
+        <div class="brand-mark">${BRAND_MARK_SVG}</div>
+        <div>
+          <h1>${PRODUCT_NAME}</h1>
+          <p>コード構造の健康診断</p>
+        </div>
       </div>
-      <div class="meta">
-        <div><strong>リポジトリ:</strong> ${repoName}</div>
-        <div><strong>分析日時:</strong> ${new Date(result.analyzedAt).toLocaleString('ja-JP')}</div>
-        <div><strong>主要言語:</strong> ${result.detectedLanguages.primaryLanguage}</div>
+      <div class="chips">
+        <span class="chip">リポジトリ <b>${repoName}</b></span>
+        <span class="chip">主要言語 <b>${escapeHtml(languageLabel(result.detectedLanguages.primaryLanguage))}</b></span>
+        <span class="chip">${analyzedAt}</span>
+        <button type="button" class="theme-toggle" id="themeToggle"></button>
       </div>
     </header>
-    <nav class="tab-nav" id="tabNav">
+    <nav class="tab-nav glass" id="tabNav">
 ${renderTabNav()}
     </nav>
     <main>
@@ -123,7 +103,11 @@ ${renderTabPanels(result, savedReviews)}
     <footer>Generated by ${PRODUCT_NAME} — ${new Date().toLocaleString('ja-JP')}</footer>
   </div>
   <script>
-    if (typeof mermaid !== 'undefined') mermaid.initialize({ startOnLoad: false, theme: 'default' });
+    ${themeSetup}
+    if (typeof mermaid !== 'undefined') {
+      ${paletteDeclaration()}
+      mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: (${mermaidThemeVariables.toString()})(palette) });
+    }
     ${markdownSetup}
     // Render initial saved Markdown results
     document.querySelectorAll('[data-md]').forEach(function(el) {

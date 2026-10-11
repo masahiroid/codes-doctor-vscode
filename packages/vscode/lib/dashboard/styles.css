@@ -1,169 +1,125 @@
+/*
+ * Codes Doctor dashboard. Base colors come from the active VS Code theme so the panel
+ * sits naturally in any theme; the pastel accents match the HTML report.
+ */
 :root {
-      color-scheme: light dark;
-    }
+  color-scheme: light dark;
+  --lavender: #b8a6f0;
+  --sky: #9ccbea;
+  --mint: #a3dcc5;
+  --rose: #f2a9ba;
+  --ink-on-pastel: #2e2b3b;
+  --hairline: color-mix(in srgb, var(--vscode-foreground) 14%, transparent);
+  --surface: color-mix(in srgb, var(--vscode-foreground) 4%, transparent);
+  --surface-hover: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
+  --radius: 8px;
+}
 
-    body {
-      margin: 0;
-      padding: 12px;
-      font-family: var(--vscode-font-family);
-      color: var(--vscode-foreground);
-      background: var(--vscode-sideBar-background);
-    }
+body {
+  margin: 0;
+  padding: 12px;
+  font-family: var(--vscode-font-family);
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  background: var(--vscode-sideBar-background);
+}
 
-    .card {
-      border: 1px solid var(--vscode-panel-border);
-      border-radius: 10px;
-      padding: 12px;
-      margin-bottom: 12px;
-      background: var(--vscode-editor-background);
-    }
+/* Brand */
+.brand { display: flex; align-items: center; gap: 10px; margin: 2px 2px 12px; }
+.brand-mark {
+  width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; flex: none;
+  background: linear-gradient(140deg, var(--lavender), var(--sky));
+}
+.brand-mark svg { width: 24px; height: 24px; color: #fff; }
+.brand-name { font-size: 13px; font-weight: 650; line-height: 1.2; }
+.brand-version { font-size: 11px; opacity: 0.6; }
 
-    .card p {
-      font-size: 12px;
-      line-height: 1.5;
-      opacity: 0.85;
-      margin: 0;
-    }
+/* Cards */
+.card {
+  position: relative;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.card::before {
+  content: ""; position: absolute; inset: 0 auto 0 0; width: 3px;
+  background: linear-gradient(var(--lavender), var(--sky));
+  opacity: 0.85;
+}
+.card.intro::before { background: linear-gradient(var(--mint), var(--sky)); }
+.card p { font-size: 12px; line-height: 1.55; opacity: 0.85; margin: 0; }
+.card-title {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  opacity: 0.7; margin: 0 0 10px;
+}
 
-    .field-label {
-      display: block;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      opacity: 0.75;
-      margin-bottom: 6px;
-    }
+/* Fields */
+.field-label { display: block; font-size: 11px; letter-spacing: 0.02em; opacity: 0.75; margin-bottom: 6px; }
+.field + .field { margin-top: 12px; }
+.field-row { display: flex; gap: 8px; align-items: stretch; }
+.field-row select { flex: 1; }
+.field-row button { width: auto; white-space: nowrap; padding: 7px 10px; }
+.note { font-size: 11px; opacity: 0.7; margin-top: 6px; line-height: 1.5; }
+.note.error { color: var(--vscode-errorForeground, #f14c4c); opacity: 1; }
 
-    .field + .field {
-      margin-top: 12px;
-    }
+input[type="number"], select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--vscode-dropdown-border, var(--hairline));
+  background: var(--vscode-dropdown-background, var(--vscode-editor-background));
+  color: var(--vscode-dropdown-foreground, var(--vscode-foreground));
+  font-size: 12px;
+}
+input[type="number"]:focus, select:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+select:disabled { opacity: 0.6; }
 
-    .field-row {
-      display: flex;
-      gap: 8px;
-      align-items: stretch;
-    }
+/* Buttons: primary is pastel, secondary follows the theme */
+button {
+  appearance: none;
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  color: var(--ink-on-pastel);
+  background: linear-gradient(120deg, var(--lavender), var(--sky));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  transition: transform 0.08s ease, filter 0.12s ease, opacity 0.12s ease;
+}
+button:hover { filter: brightness(1.05) saturate(1.05); }
+button:active { transform: translateY(1px); filter: brightness(0.97); }
+button:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 2px; }
+button:disabled { opacity: 0.6; cursor: wait; filter: none; transform: none; }
+button.secondary {
+  color: var(--vscode-foreground);
+  background: var(--surface-hover);
+  border: 1px solid var(--hairline);
+  box-shadow: none;
+  font-weight: 600;
+}
+button.secondary:hover { background: color-mix(in srgb, var(--vscode-foreground) 12%, transparent); filter: none; }
 
-    .field-row select {
-      flex: 1;
-    }
+/* History lists */
+.history-list { list-style: none; margin: 0; padding: 0; max-height: 160px; overflow-y: auto; }
+.history-list li {
+  display: flex; justify-content: space-between; gap: 8px; padding: 6px 0;
+  border-bottom: 1px solid var(--hairline); font-size: 11px;
+}
+.history-list li:last-child { border-bottom: none; }
+.history-focus { font-weight: 600; white-space: nowrap; }
+.history-meta { opacity: 0.7; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history-row { cursor: pointer; border-radius: 6px; padding: 6px 6px; }
+.history-row:hover { background: var(--surface-hover); }
+.history-row.active { background: color-mix(in srgb, var(--lavender) 18%, transparent); }
+.history-row.active .history-focus { color: var(--vscode-textLink-foreground, var(--vscode-foreground)); }
 
-    .field-row button {
-      width: auto;
-      white-space: nowrap;
-      padding: 8px 10px;
-    }
-
-    .note {
-      font-size: 11px;
-      opacity: 0.7;
-      margin-top: 6px;
-      line-height: 1.5;
-    }
-
-    .note.error {
-      color: var(--vscode-errorForeground, #f14c4c);
-      opacity: 1;
-    }
-
-    input[type="number"], select {
-      width: 100%;
-      padding: 8px;
-      border-radius: 8px;
-      border: 1px solid var(--vscode-panel-border);
-      background: var(--vscode-dropdown-background, var(--vscode-editor-background));
-      color: var(--vscode-dropdown-foreground, var(--vscode-foreground));
-      font-size: 12px;
-    }
-
-    select:disabled {
-      opacity: 0.6;
-    }
-
-    button {
-      appearance: none;
-      width: 100%;
-      border: 1px solid var(--vscode-button-border, transparent);
-      border-radius: 10px;
-      padding: 10px 10px;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform 0.08s ease, filter 0.12s ease, opacity 0.12s ease;
-      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
-      background: linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--vscode-button-background) 88%, white),
-        var(--vscode-button-background)
-      );
-      color: var(--vscode-button-foreground);
-    }
-
-    button:hover {
-      filter: brightness(1.06);
-    }
-
-    button:active {
-      transform: translateY(1px) scale(0.99);
-      filter: brightness(0.96);
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: wait;
-      filter: none;
-      transform: none;
-    }
-
-    button.secondary {
-      background: var(--vscode-button-secondaryBackground, transparent);
-      color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
-    }
-
-    .history-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      max-height: 160px;
-      overflow-y: auto;
-    }
-
-    .history-list li {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 6px 0;
-      border-bottom: 1px solid var(--vscode-panel-border);
-      font-size: 11px;
-    }
-
-    .history-list li:last-child {
-      border-bottom: none;
-    }
-
-    .history-focus {
-      font-weight: 600;
-      white-space: nowrap;
-    }
-
-    .history-meta {
-      opacity: 0.7;
-      text-align: right;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .history-row {
-      cursor: pointer;
-      border-radius: 4px;
-      padding: 6px 4px;
-    }
-
-    .history-row:hover {
-      background: var(--vscode-list-hoverBackground);
-    }
-
-    .history-row.active .history-focus {
-      color: var(--vscode-textLink-foreground, var(--vscode-foreground));
-    }
+/* Buttons placed between cards */
+body > button { margin-bottom: 12px; }
