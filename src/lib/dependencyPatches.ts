@@ -3,8 +3,6 @@ const strategies: Readonly<Record<string, (source: string) => string>> = Object.
   "analyzer/moduleMetrics.js": require('./engine/moduleMetrics'),
   "llm/context/moduleMetricsContext.js": require('./engine/moduleClassification'),
   "llm/context/dependencyGraphContext.js": require('./engine/dependencyContext'),
-  "analyzer/pipeline/qualityAnalysis.js": require('./engine/qualityPipeline'),
-  "analyzer/layerAnalysis.js": require('./engine/layerClassification'),
 });
 
 export function patchDependencySource(source: string, relativePath: string) {

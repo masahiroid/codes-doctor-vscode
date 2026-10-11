@@ -20,7 +20,7 @@ for (const folder of ['csap', 'csap-en']) {
         'const template = `example eval(input) ${eval(input)}`;',
         'const password = "actual-secret";',
       ].join('\n'));
-      const result = await require(`../vendor/${folder}/analyzer/securityScore`).calculateSecurityScore([{ filePath: filename }], [], root);
+      const result = await require(`../vendor/${folder}/analyzer/securityScore`).calculateSecurityScore([{ language: 'typescript', files: [{ filePath: filename }] }], root);
       assert.deepEqual(result.issues.filter(i => i.type !== 'info').map(i => i.lineNumber).sort((a,b) => a-b), [6,7,8,9,10]);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });

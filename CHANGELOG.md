@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.0.0
+
+### New
+
+- **User guide** in English and Japanese ([docs/USER_GUIDE.md](docs/USER_GUIDE.md), [docs/USER_GUIDE.ja.md](docs/USER_GUIDE.ja.md)). It covers setup, every report tab, language support, the AI review and AI coding prompt, settings, privacy and troubleshooting. The READMEs link to it and list what is new in 2.0.
+- **AST tab for every language.** All analyzed files of every language are listed with their imports, types (with methods and property counts) and functions. Lightweight-parser languages show the structure the analysis actually used, instead of a separate regex scan that could disagree with the scores. Pagination and the "lightweight extraction" note now apply to all languages, not only TypeScript/JavaScript, PHP, Dart, Python and Go.
+
+### Changed
+
+- **Dart** classes are now included in God Class scoring and in the layer heatmap, like every other language.
+- In **JavaScript only** mode, TypeScript files are no longer analyzed as well.
+- The file statistics table labels TypeScript/JavaScript files as "TypeScript/JavaScript", and the "no supported files" banner lists languages in catalog order.
+- Engine (bundled): every language is defined once in a language catalog that drives detection, analysis, security scanning, layer analysis, the AST view and the AI context. Orchestrators were split into single-responsibility modules (LLM request resolution, LLM artifacts, live report updates, a report tab registry, AST section builders), and remaining magic numbers were replaced with named constants. Fixes the extension previously applied as patches (repo-relative layer classification, the AST review element ID, `$`-safe review saving) are now built into the engine, and those patches were removed.
+- Dashboard options are generated from the setting definitions in `package.json`, and a test fails if the language setting and the engine's language list ever differ.
+
+### Fixed
+
+- **Security:** the dependency vulnerability scan (`trivy` and `npm audit`) no longer builds a shell command from the folder path. A folder name containing quotes or `$(…)` could previously run a command.
+- Unknown `language` values sent to the engine are rejected with an error instead of being passed through.
+- Engine server mode: the "LLM is disabled" error now maps to HTTP 400 instead of 500.
+- The English report heading "LLM Structural Analysis" no longer runs the words together.
+
+### Quality
+
+Codes Doctor's own results: extension Technical Debt 91 (A) and Security 99 (A); engine Technical Debt 86 (A) and Security 99 (A, previously 59 F), with no unstable modules and no circular dependencies. See [docs/architecture.md](docs/architecture.md).
+
 ## 1.5.14
 
 - Add an LLM **Output Mode** setting (`codeDoctor.llmOutputMode`). The new **AI coding agent prompt** mode asks the LLM to write a ready-to-paste task prompt for Claude Code, Cursor, GitHub Copilot, or Codex — goal, supporting metrics, up to five prioritized tasks with inspect-first steps and acceptance checks, items to leave alone, and the report the agent should return — instead of a review for people to read. It is shown in its own box on the report's LLM tab with a copy button that copies the prompt as-is, and does not overwrite the review.

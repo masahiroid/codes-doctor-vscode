@@ -5,6 +5,17 @@
 
 Codes Doctor は、現在開いているワークスペースフォルダーを分析し、God Class・技術的負債・セキュリティ問題・依存グラフ・SBOM を含む構造診断レポートを VS Code 内で直接生成します。解析エンジンはプロセス内で実行されるため、外部サーバーは不要です。
 
+📘 **はじめての方は [利用マニュアル](https://github.com/masahiroid/codes-doctor-vscode/blob/main/docs/USER_GUIDE.ja.md) をご覧ください** — 導入、レポートの各タブの読み方、AI 機能、設定、トラブルシューティングをまとめています。
+
+## 2.0 の新機能
+
+- **11 言語を 1 つのカタログで管理。** TypeScript/JavaScript、PHP、Python、Go、Swift、C#、Java、Kotlin、Rust、C++、Dart を単一の言語カタログで定義し、検出・解析・セキュリティスキャン・レイヤー分析・AST 表示・AI 用コンテキストのすべてがそこから動きます。
+- **全言語で AST タブに対応。** 解析したすべてのファイルの構造（インポート、型とそのメソッド、関数）を、スコア計算と同じ解析結果から表示します。
+- **AI コーディング用プロンプト。** 解析結果を、Claude Code・Cursor・GitHub Copilot・Codex にそのまま貼れる作業指示に変換します。
+- **安全性の強化。** 脆弱性スキャナーがフォルダーのパスをシェル経由で渡さなくなり、不正な言語設定は無視せずエラーにします。
+
+詳細は [CHANGELOG](CHANGELOG.md) を参照してください。
+
 ## 実際の画面
 
 以下は Codes Doctor を自分自身のソースコードに対して実行して生成した、実際のレポートです。
@@ -21,7 +32,7 @@ Codes Doctor は、現在開いているワークスペースフォルダーを�
 
 ![Dependency graph tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/media/screenshots/dependency-graph.png)
 
-**SBOM & Vulnerabilities** — 直接・推移・開発依存の内訳を含む完全なソフトウェア部品表です。
+**SBOM & Vulnerabilities** — 直接・推移・開発依存の内訳を含む完全なソフトウェア部品表と、依存関係の脆弱性スキャン（Trivy があれば Trivy、なければ `npm audit`）です。
 
 ![SBOM tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/media/screenshots/sbom.png)
 
@@ -34,7 +45,7 @@ Codes Doctor は、現在開いているワークスペースフォルダーを�
 
 インストール後、Activity Bar に Codes Doctor アイコンが表示されます。ダッシュボードから以下を操作できます。
 
-- 言語モードの選択（`auto` / TypeScript・JavaScript / PHP / Dart / Python）
+- 解析対象の言語の選択（`auto`、または対応言語のいずれか 1 つ）
 - レポートの開き方の選択（外部ブラウザ / VS Code WebView / VS Code URI オープン）
 - 解析の実行
 - LLM プロバイダの選択、API キーの設定、モデル一覧のライブ取得、任意の AI 構造レビューの実行
@@ -50,10 +61,10 @@ Codes Doctor は、現在開いているワークスペースフォルダーを�
 
 Codes Doctor は LLM（OpenAI または Anthropic）に分析結果をレビューさせ、構造評価をレポートに書き込ませることができます。
 
-1. ダッシュボードの **LLM Provider** ドロップダウンでプロバイダを選択
-2. **Set API Key** をクリックして API キーを貼り付け — VS Code の secret storage（OS keychain）に保存され、settings.json やワークスペース内のどこにも平文で残りません
-3. **Fetch** をクリックして、そのキーでアクセス可能なモデル一覧をライブ取得し、1つ選択
-4. 分析を実行した後、**Run LLM Review** をクリック — 結果は生成済みレポートに書き戻されます
+1. ダッシュボードの **LLMプロバイダー** でプロバイダを選択
+2. **APIキーを設定** をクリックして API キーを貼り付け — VS Code の secret storage（OS keychain）に保存され、settings.json やワークスペース内のどこにも平文で残りません
+3. **取得** をクリックして、そのキーでアクセス可能なモデル一覧をライブ取得し、1つ選択
+4. 分析を実行した後、**LLMレビューを実行** をクリック — 結果は生成済みレポートに書き戻されます
 
 ### AIコーディング用プロンプトモード
 
@@ -63,7 +74,7 @@ Codes Doctor は LLM（OpenAI または Anthropic）に分析結果をレビュ�
 
 ## 設定
 
-ダッシュボードの **Display & Report Language / 画面・レポートの言語** で **English**（デフォルト）または **日本語** を選択できます。画面・通知・新しく生成するHTMLレポート・AIレビューに適用されます。既存レポートは生成時の言語を保持し、履歴から追加するAIレビューもその言語に合わせます。言語を切り替えた後、再解析すると選択した言語のレポートを生成できます。
+ダッシュボードの **画面・レポートの言語** で **English**（デフォルト）または **日本語** を選択できます。画面・通知・新しく生成するHTMLレポート・AIレビューに適用されます。既存レポートは生成時の言語を保持し、履歴から追加するAIレビューもその言語に合わせます。言語を切り替えた後、再解析すると選択した言語のレポートを生成できます。
 
 - `codeDoctor.displayLanguage`（デフォルト: `en`） — `en` / `ja`。アプリ全体のユーザー設定として保存され、次に変更するまで、ワークスペースの切り替えや再起動後も選択を保持します。解析対象のプログラミング言語とは独立した設定です。
 - `codeDoctor.analysisLanguage`（デフォルト: `auto`） — `auto` / `typescript` / `javascript` / `php` / `dart` / `python` / `go` / `swift` / `csharp` / `java` / `kotlin` / `rust` / `cpp`
@@ -74,6 +85,7 @@ Codes Doctor は LLM（OpenAI または Anthropic）に分析結果をレビュ�
 - `codeDoctor.llmProvider`（デフォルト: `openai`） — `openai` / `anthropic`
 - `codeDoctor.llmOutputMode`（デフォルト: `review`） — `review`（構造レビューレポート） / `agentPrompt`（AIコーディング用プロンプト）
 - `codeDoctor.llmModel`（デフォルト: 空） — ダッシュボードのモデル取得後にドロップダウンから設定
+- `codeDoctor.llmMaxOutputTokens`（デフォルト: `16000`） — AI 出力の上限トークン数（200〜1,000,000）
 
 ## 対応言語
 
@@ -91,7 +103,7 @@ Codes Doctor は LLM（OpenAI または Anthropic）に分析結果をレビュ�
 | C++ | ✅ | ✅ | ✅ | — |
 | Dart | ✅ | ✅ | — | — |
 
-依存グラフ・循環依存検出・レイヤー分析・SBOM/脆弱性スキャンは、言語を問わず対応する全ファイルを横断して実行されます。
+TypeScript/JavaScript と PHP は完全な構文木で、その他の言語は簡易的な構造抽出で解析します。依存グラフ・循環依存検出・レイヤー分析・SBOM/脆弱性スキャンは、言語を問わず対応する全ファイルを横断して実行されます。
 
 C++の解析対象は `.cpp` / `.cc` / `.cxx` / `.hpp` / `.hh` です。`.h` / `.c`（Cの可能性があるファイル）は解析対象外です。
 
@@ -122,4 +134,4 @@ MarkdownのHTMLはサニタイズしてから描画します。拡張経由で�
 
 静的セキュリティー検出は、内容の確認が必要な候補です。コメント、文字列内のコード例、正規表現リテラルの `.exec()` は指摘しません。実行されるテンプレート式は検査します。型専用importは実行時の依存グラフに含めません。生成JSとTSソースの両方があるリポジトリでは重複計測されることがあります。
 
-バージョン履歴は [CHANGELOG](CHANGELOG.md) を参照してください。
+バージョン履歴は [CHANGELOG](CHANGELOG.md)、拡張機能と解析エンジンの構成は [docs/architecture.md](docs/architecture.md) を参照してください。

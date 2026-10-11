@@ -25,9 +25,9 @@ for (const folder of ['csap', 'csap-en']) {
       const cycles = engine.detectCircularDependencies(files);
       assert.equal(cycles.length, 1);
       assert.equal(cycles[0].length, 2);
-      const deps = require(`../vendor/${folder}/llm/context/dependencyGraphContext`).buildDependencyGraphContext(files, [], []);
+      const deps = require(`../vendor/${folder}/llm/context/dependencyGraphContext`).buildDependencyGraphContext(files);
       assert.equal(deps.totalInternalDeps, 5);
-      const heatmap = require(`../vendor/${folder}/analyzer/layerAnalysis`).generateLayerHeatmap(files, [], [], [], [], [], [], [], [], [], [], root);
+      const heatmap = require(`../vendor/${folder}/analyzer/layerAnalysis`).generateLayerHeatmap([{ files, dependencyStyle: 'path' }], [], root);
       assert.ok(heatmap.layers.every(l => !['Tmp', 'Private', 'Volumes'].includes(l.name)));
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });

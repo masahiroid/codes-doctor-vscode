@@ -1,7 +1,7 @@
 import { PRODUCT_NAME, EXTENSION_VERSION } from '../settingsSchema';
 import { reportLibraryScripts } from './browserLibraries';
 import { installReportTabs, TAB_SCRIPT_ID, legacyTabScript } from '../reportTabs';
-import { installReviewCopy } from '../reportCopy';
+import { reviewCopySource } from '../reportCopy';
 import { installJapaneseStrong } from './markdown';
 import { replaceRequired } from './sourceReplacement';
 
@@ -13,7 +13,7 @@ module.exports = function patch(source: string) {
     const marker = '// Render initial saved Markdown results';
     if (!source.includes(marker)) throw new Error('Markdown initialization marker missing');
     const script = `if (typeof marked !== 'undefined') { (${installJapaneseStrong.toString()})(marked); }`;
-    source = source.replace(marker, () => '${' + JSON.stringify((script + '\n(' + installReviewCopy.toString() + ')();').replace(/[\u3000-\u9fff]/g, (char: string) => '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0'))) + '}\n    ' + marker);
+    source = source.replace(marker, () => '${' + JSON.stringify((script + '\n(' + reviewCopySource() + ')();').replace(/[\u3000-\u9fff]/g, (char: string) => '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0'))) + '}\n    ' + marker);
 
   if (!legacyTabScript.test(source)) throw new Error('Report tab initialization marker missing');
   source = source.replace(legacyTabScript, '');

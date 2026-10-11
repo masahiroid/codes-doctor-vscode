@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { installReviewCopy, injectReviewCopy } = require('../lib/reportCopy');
+const { reviewCopySource, injectReviewCopy } = require('../lib/reportCopy');
 
 test('copy includes the requested instruction and preserves Japanese Markdown in browser and webview', async () => {
   const markdown = '## 改善結果\n```js\nconst 値 = "$& $1 $` $\'";\n```\n😀';
@@ -17,7 +17,7 @@ test('copy includes the requested instruction and preserves Japanese Markdown in
     };
     const context = { document, window: { addEventListener() {} }, navigator: { clipboard: { async writeText(text) { copied = text; } } } };
     if (webview) context.acquireVsCodeApi = () => ({ postMessage(message) { copied = message.text; } });
-    vm.runInNewContext('(' + installReviewCopy.toString() + ')()', context);
+    vm.runInNewContext('(' + reviewCopySource() + ')()', context);
     await button.click();
     assert.equal(copied, '以下のレポートに基づき、実際のコードを確認して改善を実装してください。まず依存抽出の正常性を確認し、再計測してください。その後、確認できた問題を優先順に修正し、既存の動作と公開インターフェースを維持してください。関連テストを実行し、変更内容・検証結果・未解決事項を報告してください。\n\n' + markdown);
     assert.equal(button.child.tag, 'svg');
@@ -36,7 +36,7 @@ test('agent prompt is copied verbatim without the review instruction prefix', as
     createElement(tag) { const el = element(); if (tag === 'button') button = el; return el; },
   };
   const context = { document, window: { addEventListener() {} }, navigator: { clipboard: { async writeText(text) { copied = text; } } } };
-  vm.runInNewContext('(' + installReviewCopy.toString() + ')()', context);
+  vm.runInNewContext('(' + reviewCopySource() + ')()', context);
   await button.click();
   assert.equal(copied, markdown);
 });
@@ -44,7 +44,7 @@ test('agent prompt is copied verbatim without the review instruction prefix', as
 test('existing copy script is upgraded without duplication or replacement token corruption', () => {
   const old = '<script>(function installReviewCopy() {\n// old\n})();</script>';
   const updated = injectReviewCopy(old);
-  assert.ok(updated.includes(installReviewCopy.toString()));
+  assert.ok(updated.includes(reviewCopySource()));
   assert.equal(injectReviewCopy(updated), updated);
   assert.equal((updated.match(/function installReviewCopy/g) || []).length, 1);
 });
@@ -56,7 +56,7 @@ test('copy upgrade never replaces escaped source examples inside pending AST tem
   const upgraded = injectReviewCopy(original);
   assert.ok(upgraded.includes(example), 'AST source and closing template must remain intact');
   assert.equal((upgraded.match(/<template/g) || []).length, (upgraded.match(/<\/template>/g) || []).length);
-  assert.ok(upgraded.includes(installReviewCopy.toString()));
+  assert.ok(upgraded.includes(reviewCopySource()));
   assert.equal(injectReviewCopy(upgraded), upgraded);
 });
 

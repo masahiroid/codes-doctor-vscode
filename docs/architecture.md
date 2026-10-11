@@ -59,3 +59,44 @@ Generated reports record the extension version in codes-doctor-version metadata.
 CodeDoctorDashboardViewProvider now owns only VS Code view attachment, redraw and disposal. createDashboardController composes typed state with the existing action and review workflows; it does not own VS Code view lifecycle. Presentation functions call the focused control/history renderers directly instead of routing every section through provider methods. DashboardHost therefore no longer includes rendering methods. Replacing a view disposes its prior subscriptions, and closing a view releases the retained reference.
 
 The provider has four methods and no structural warnings; its source and generated JavaScript both score 16 (Low). Medium candidates are zero. Implementation sources are 58 TypeScript files; Node tests and the JavaScript vendor are still outside that migration scope.
+
+## Catalog-driven engine and slimmer patch set (2.0.0)
+
+### Engine
+
+The vendored engine now defines every language once, in `analyzer/languages/catalog.ts`. Detection, the language analysis loop, security targets, layer sources, the AST section, the AST-only LLM context and the server's language dropdown all derive from it. Analysis results expose parsed files as `files: Record<LanguageId, …>` instead of eleven `xxxFiles` fields. Detection reports `fileCounts`/`enabled` per source language. Tables that must cover every language are typed `Record<LanguageId, …>`, so a new catalog entry does not compile until each table handles it. See the engine's `docs/ARCHITECTURE.md` for the full layout.
+
+Responsibilities that used to be mixed into orchestrators were split out: `llm/artifacts.ts` (context/result files), `services/llmRequest.ts` (request validation and option resolution), `report/liveUpdate.ts` (writing a result into a saved report), `report/sections/index.ts` (tab → section registry), and `report/sections/ast/` (limits, outline rendering, per-parser structure builders).
+
+### Patch inventory
+
+Engine fixes that the extension used to apply as patches are now part of the engine, and their patches were deleted:
+
+- `qualityPipeline` / `layerClassification`: repo-relative layer classification is built into `generateLayerHeatmap(sources, godClasses, repoPath)`.
+- Most of `llmPersistence`: the AST-only element ID and the `$`-safe replacement are fixed in the engine. The patch now targets `report/liveUpdate.js` and only reveals the extension's hidden AST review wrapper.
+
+The `astSection` patch was rewritten against named functions (`renderAstReviewBox`, `renderAstNotes`, `joinAstBlocks`) instead of template fragments. A new `astLimits` patch lifts every cap in `AST_SECTION_LIMITS` to `Infinity`, and `localizeAstLabels` is applied to every module under `report/sections/ast/`. Pagination and the lightweight-parser note therefore cover every language, not only the first five.
+
+### Single sources inside the extension
+
+- Dashboard select options come from the `package.json` enums through `enumOptions()`. A value without a dashboard label is an error at load time.
+- `test/language-catalog.test.js` fails if the `codeDoctor.analysisLanguage` enum differs from the engine's `ANALYSIS_LANGUAGES`.
+- LLM focus IDs come from the engine (`analyzer.ts` re-exports `LLM_FOCUS`). Review-copy target IDs live in `reviewTargets.ts` and are inlined into the serialized `installReviewCopy` by `reviewCopySource()`.
+
+### Verification
+
+The engine has no unit tests, so the refactor was checked with a golden-master run that compared normalized analysis results, reports and LLM contexts before and after. It covered 16 corpora in the English build: a sample per lightweight language, a polyglot repository in auto mode and in five forced-language modes, an unsupported-language (Ruby) sample, and both codebases. The polyglot repository was also run in the Japanese build. Analysis results were identical except for these intended changes:
+
+- Forced `javascript` mode no longer also analyzes TypeScript.
+- Dart classes now enter God Class scoring and the layer heatmap.
+
+Report differences were limited to the intended presentation changes (catalog labels, parsed lightweight structures, pagination for all languages, D3 layout constants).
+
+Codes Doctor's own scores after the refactor:
+
+| Codebase | Technical debt | Security | Notes |
+| --- | --- | --- | --- |
+| Extension (`src/`) | 91 A | 99 A | No God Class candidates above Low; no cycles. |
+| Engine (`src/`) | 86 A | 99 A (was 59 F) | No unstable modules (was 2); no cycles. |
+
+The engine's security grade rose because AST structure is now built from parsed data instead of `RegExp.exec()` loops, and `trivy`/`npm audit` are started with `execFile` (the old `exec` calls interpolated the repository path into a shell command). Engine maintainability is 53, which is the average structural score; that metric favors fewer, larger modules, so it was not optimized at the expense of single-responsibility modules.

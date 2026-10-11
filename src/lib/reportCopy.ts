@@ -1,4 +1,8 @@
+import { REVIEW_TARGET_IDS, AGENT_PROMPT_TARGET_ID } from './reviewTargets';
 declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
+// Placeholders inside installReviewCopy, substituted when the function is serialized into a report.
+declare const REVIEW_TARGET_IDS_PLACEHOLDER: readonly string[];
+declare const AGENT_PROMPT_TARGET_ID_PLACEHOLDER: string;
 // Runs before Markdown rendering so copied reviews preserve the original source.
 export function installReviewCopy() {
   if (document.getElementById('review-copy-installed')) return;
@@ -13,12 +17,12 @@ export function installReviewCopy() {
   const label = ja ? 'AI向けにコピー（Markdown）' : 'Copy for AI (Markdown)';
   let vscode: { postMessage(message: unknown): void } | undefined;
   if (typeof acquireVsCodeApi === 'function') vscode = acquireVsCodeApi();
-  for (const id of ['llmResult', 'astResult', 'llmAgentPrompt']) {
+  for (const id of REVIEW_TARGET_IDS_PLACEHOLDER) {
     const result = document.getElementById(id);
     const markdown = result?.getAttribute('data-md');
     if (!result || !markdown?.trim()) continue;
     // The agent prompt is already written as instructions; prefixing another instruction would duplicate them.
-    const text = id === 'llmAgentPrompt' ? markdown : instruction + '\n\n' + markdown;
+    const text = id === AGENT_PROMPT_TARGET_ID_PLACEHOLDER ? markdown : instruction + '\n\n' + markdown;
     const toolbar = document.createElement('div');
     toolbar.style.cssText = 'display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:8px';
     const button = document.createElement('button');
@@ -69,13 +73,20 @@ export function installReviewCopy() {
   }
 }
 
-const reviewCopyScript = `<script>(${installReviewCopy.toString()})();</script>`;
+/** installReviewCopy as standalone source, with the shared target IDs inlined. */
+export function reviewCopySource(): string {
+  return installReviewCopy.toString()
+    .replace('REVIEW_TARGET_IDS_PLACEHOLDER', JSON.stringify(REVIEW_TARGET_IDS))
+    .replace('AGENT_PROMPT_TARGET_ID_PLACEHOLDER', JSON.stringify(AGENT_PROMPT_TARGET_ID));
+}
+
+const reviewCopyScript = `<script>(${reviewCopySource()})();</script>`;
 export function injectReviewCopy(html: string) {
   // Never search/replace source-code text displayed in escaped AST previews.
   const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)];
   const installed = scripts.find((match) => /\(function installReviewCopy\(\) \{/.test(match[1]));
   if (installed) {
-    const updated = installed[0].replace(/\(function installReviewCopy\(\) \{[\s\S]*?\n\}\)\(\);/, () => '(' + installReviewCopy.toString() + ')();');
+    const updated = installed[0].replace(/\(function installReviewCopy\(\) \{[\s\S]*?\n\}\)\(\);/, () => '(' + reviewCopySource() + ')();');
     return html.slice(0, installed.index!) + updated + html.slice(installed.index! + installed[0].length);
   }
   const renderer = scripts.find((match) => match[1].includes('// Render initial saved Markdown results'));
@@ -83,4 +94,4 @@ export function injectReviewCopy(html: string) {
   return insertion >= 0 ? html.slice(0, insertion) + reviewCopyScript + html.slice(insertion) : html;
 }
 
-module.exports = { installReviewCopy, injectReviewCopy };
+module.exports = { installReviewCopy, injectReviewCopy, reviewCopySource };

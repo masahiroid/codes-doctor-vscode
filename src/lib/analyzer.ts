@@ -86,7 +86,12 @@ export async function runLlmAnalysis(params: import('./types').LlmReviewRequest)
 }
 
 
+/** Analysis focus IDs, owned by the engine (identical in both locale builds). */
+// eslint-disable-next-line global-require
+export const LLM_FOCUS: Readonly<{ review: string; astOnly: string; agentPrompt: string }> = require('../vendor/csap/llm/focus').LLM_FOCUS;
+
 module.exports = {
+  LLM_FOCUS,
   analyzeWorkspace,
   getReportLanguage,
   listModels,

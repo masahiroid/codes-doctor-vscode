@@ -1,9 +1,7 @@
 import { getLlmProvider, getLlmModel, getLlmMaxOutputTokens, getLlmOutputMode, getReportOpenMode } from './config';
 
-/** Matches AGENT_PROMPT_FOCUS in the vendored engine's llm/openai/prompts. */
-const AGENT_PROMPT_FOCUS = 'agent-prompt';
 import { getApiKey } from './secrets';
-import { runLlmAnalysis, getReportLanguage } from './analyzer';
+import { runLlmAnalysis, getReportLanguage, LLM_FOCUS } from './analyzer';
 import { getLastAnalysis } from './lastAnalysisState';
 import { openReport } from './reportViewer';
 
@@ -45,7 +43,7 @@ export async function executeDashboardReview(dashboard: import('./dashboard/cont
             provider,
             apiKey,
             model: model || undefined,
-            focus: agentPrompt ? AGENT_PROMPT_FOCUS : undefined,
+            focus: agentPrompt ? LLM_FOCUS.agentPrompt : undefined,
             maxOutputTokens: getLlmMaxOutputTokens(dashboard.vscode),
             displayLanguage: getReportLanguage(lastAnalysis.reportPath),
           });

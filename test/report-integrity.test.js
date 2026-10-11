@@ -5,6 +5,9 @@ const os = require('node:os');
 const path = require('node:path');
 const vm = require('node:vm');
 
+const LANGUAGE_IDS = ['typescript', 'php', 'dart', 'python', 'go', 'swift', 'csharp', 'java', 'kotlin', 'rust', 'cpp'];
+const languageFiles = overrides => Object.fromEntries(LANGUAGE_IDS.map(id => [id, overrides[id] ?? []]));
+
 for (const folder of ['csap', 'csap-en']) {
   test(`${folder}: security severity cannot disappear in a large project`, async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'codes-security-'));
@@ -21,14 +24,14 @@ for (const folder of ['csap', 'csap-en']) {
         ['const value = process.env.VALUE;', 'info', 99, 'A'],
       ]) {
         fs.writeFileSync(issue, code);
-        const result = await calculateSecurityScore(files, [], root);
+        const result = await calculateSecurityScore([{ language: 'typescript', files }], root);
         assert.equal(result.summary[severity], 1);
         assert.equal(result.overallScore, cap);
         assert.equal(result.grade, grade);
         assert.doesNotMatch(result.explanation, /軽微|minor/);
         if (severity === 'critical') assert.match(result.explanation, /Critical: 1/);
       }
-      const cleanResult = await calculateSecurityScore([{ filePath: clean }], [], root);
+      const cleanResult = await calculateSecurityScore([{ language: 'typescript', files: [{ filePath: clean }] }], root);
       assert.equal(cleanResult.overallScore, 100);
       assert.equal(cleanResult.issues.length, 0);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
@@ -36,7 +39,7 @@ for (const folder of ['csap', 'csap-en']) {
 
   test(`${folder}: AST structure is available without an LLM review`, () => {
     const { astSection } = require(`../vendor/${folder}/report/sections/astSection`);
-    const result = { tsFiles: [{ filePath: path.join(__dirname, '..', 'extension.js') }], phpFiles: [], dartFiles: [], pythonFiles: [], goFiles: [], swiftFiles: [], csharpFiles: [], javaFiles: [], kotlinFiles: [], rustFiles: [], cppFiles: [] };
+    const result = { files: languageFiles({ typescript: [{ filePath: path.join(__dirname, '..', 'extension.js') }] }) };
     const html = astSection(result);
     assert.doesNotMatch(html, /未実行|Not run yet|Run LLM Review/);
     assert.match(html, /activate\(\)/);
@@ -103,8 +106,8 @@ test('AST-specific review updates and reveals its own saved-result element', asy
 test('class graphs explain both empty data and classes without dependency links', () => {
   for (const folder of ['csap', 'csap-en']) {
     const { generateD3DependencyGraphSection } = require(`../vendor/${folder}/report/sections/graphSections`);
-    assert.match(generateD3DependencyGraphSection({ tsFiles: [], phpFiles: [] }), folder === 'csap' ? /依存データがありません/ : /No dependency data/);
-    const html = generateD3DependencyGraphSection({ tsFiles: [{ filePath: 'example.js', classes: [{ name: 'Example', methodCount: 1, lineCount: 10, dependencies: [] }] }], phpFiles: [] });
+    assert.match(generateD3DependencyGraphSection({ files: languageFiles({}) }), folder === 'csap' ? /依存データがありません/ : /No dependency data/);
+    const html = generateD3DependencyGraphSection({ files: languageFiles({ typescript: [{ filePath: 'example.js', classes: [{ name: 'Example', methodCount: 1, lineCount: 10, dependencies: [] }] }] }) });
     assert.match(html, folder === 'csap' ? /ノードのみ表示/ : /Showing nodes only/);
   }
 });
@@ -119,7 +122,7 @@ for (const folder of ['csap', 'csap-en']) {
         fs.writeFileSync(filePath, `class Class${i} { ${methods} }`);
         return { filePath };
       });
-      const html = require(`../vendor/${folder}/report/sections/astSection`).astSection({ tsFiles, phpFiles: [], dartFiles: [], pythonFiles: [], goFiles: [], swiftFiles: [], csharpFiles: [], javaFiles: [], kotlinFiles: [], rustFiles: [], cppFiles: [] });
+      const html = require(`../vendor/${folder}/report/sections/astSection`).astSection({ files: languageFiles({ typescript: tsFiles }) });
       for (let i = 0; i < 45; i++) assert.ok(html.includes(`Class${i}`), `Missing file ${i}`);
       assert.match(html, /method34\(\)/);
       assert.doesNotMatch(html, /Sampled|サンプル|読みやすい形式|初回の静的解析|先頭5|構造表示は簡易/);

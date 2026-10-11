@@ -430,5 +430,7 @@
   "構造": " Structure",
   "生データ": " Raw Data",
   "さらに表示（残り": "Show more (remaining: ",
-  "ファイル）": " files)"
+  "ファイル）": " files)",
+  "型": "Types",
+  "構造体": "Structs"
 }

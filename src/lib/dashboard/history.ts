@@ -3,13 +3,13 @@ import { listLlmResults, listReports, getDefaultOutputDir } from '../reports/rep
 import { getLastAnalysis } from '../lastAnalysisState';
 import { getDisplayLanguage } from '../config';
 import { escapeHtmlAttr } from './format';
-/** Focus IDs used by csap-main's llmService.ts (resolveAnalysisFocus), mapped to a
- * short human label for the history list. 'graph-metrics' is the default full-review
- * focus when none is passed; 'ast-structure-only' is always used for astOnlyMode runs. */
+import { LLM_FOCUS } from '../analyzer';
+
+/** Short history-list label for each engine focus ID. */
 const FOCUS_LABELS: Record<string, string> = {
-  'graph-metrics': 'Structural Review',
-  'ast-structure-only': 'AST Review',
-  'agent-prompt': 'AI Coding Prompt',
+  [LLM_FOCUS.review]: 'Structural Review',
+  [LLM_FOCUS.astOnly]: 'AST Review',
+  [LLM_FOCUS.agentPrompt]: 'AI Coding Prompt',
 };
 
 function focusLabel(focus: string) {

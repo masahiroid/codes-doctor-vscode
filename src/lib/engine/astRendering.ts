@@ -26,20 +26,21 @@ export const astPaginationScript = `<script>
 })();
 </script>`;
 
+/** Japanese labels for the engine's English AST section and structure outlines. */
 export const astLabels = {
   'AST Structure (Readable)': 'AST構造',
   'AST Raw Data (Sampled)': 'AST生データ',
-  '>Notes<': '>補足<',
-  'To keep the report readable, only the first ${maxFilesPerLang} files per language are shown.': '表示は各言語の先頭${maxFilesPerLang}ファイルに限定しています。',
-  'Dart uses a lightweight parser, so the structure is best-effort.': 'DartとPythonの構造表示は簡易抽出です。完全なAST解析ではありません。',
-  "lines.push('File')": "lines.push('ファイル')",
-  '  Imports (': '  インポート (',
-  '  Classes (': '  クラス (',
-  '  Functions (': '  関数 (',
-  '  Namespaces (': '  名前空間 (',
-  '  Uses (': '  使用宣言 (',
-  '- fields: ': '- フィールド: ',
-  '- properties: ': '- プロパティ: ',
+  "['File']": "['ファイル']",
+  "heading: 'Imports'": "heading: 'インポート'",
+  "heading: 'Namespaces'": "heading: '名前空間'",
+  "heading: 'Uses'": "heading: '使用宣言'",
+  "heading: 'Functions'": "heading: '関数'",
+  "heading: 'Classes'": "heading: 'クラス'",
+  "'Classes')": "'クラス')",
+  "'Structs')": "'構造体')",
+  "'Types')": "'型')",
+  "label: 'fields'": "label: 'フィールド'",
+  "label: 'properties'": "label: 'プロパティ'",
   '- method: ': '- メソッド: ',
   ' more)': ' 件省略)',
   'Failed to parse AST': 'ASTの解析に失敗しました',
@@ -49,4 +50,10 @@ export const astLabels = {
   '... (truncated)': '...（省略）',
 };
 
-module.exports = { renderAstFileList, astPaginationScript, astLabels };
+/** Apply `astLabels` to any compiled AST-section module. */
+export function localizeAstLabels(source: string): string {
+  for (const [from, to] of Object.entries(astLabels)) source = source.split(from).join(to);
+  return source;
+}
+
+module.exports = { renderAstFileList, astPaginationScript, astLabels, localizeAstLabels };
