@@ -2,7 +2,7 @@
   "name": "codes-doctor",
   "displayName": "Codes Doctor",
   "description": "%extension.description%",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "publisher": "masahirocom",
   "license": "Apache-2.0",
   "icon": "media/icon.png",

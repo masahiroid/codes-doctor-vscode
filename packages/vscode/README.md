@@ -105,6 +105,8 @@ Choose **Display & Report Language** in the Dashboard: **English** (default) or 
 
 TypeScript/JavaScript and PHP are parsed into a full syntax tree; the other languages use a lightweight structural scan. Dependency graphs, circular dependency detection, layer analysis, and SBOM/vulnerability scanning run across all supported files regardless of language.
 
+> **Accuracy outside TypeScript/JavaScript and PHP.** TypeScript/JavaScript and PHP are the primary languages: they are parsed into a full syntax tree and are the most thoroughly tested. The other languages use a lightweight structural scan, so expect more false positives and missed findings. For example, Go security checks match code patterns without knowing whether an argument is a constant or user input, and methods are attached to types by name. Treat results for these languages as leads to review, not verdicts.
+
 C++ analysis covers `.cpp`, `.cc`, `.cxx`, `.hpp`, and `.hh` files. Plain `.h`/`.c` files (which may be C, not C++) are not analyzed.
 
 ## Development
@@ -124,8 +126,6 @@ The engine build produces the Japanese (`vendor/csap`) and English (`vendor/csap
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE).
-
-Implementation sources are in `src/`. `npm run build` uses TypeScript 7 and rebuilds browser report libraries. `npm run typecheck` checks types; `npm run test:browser` verifies report tabs and diagrams in a real browser. Reports embed the audited libraries and work without a CDN connection. Dependency compatibility constraints and audit results are recorded in `docs/dependency-update.md`.
 
 ## Security and report interpretation
 

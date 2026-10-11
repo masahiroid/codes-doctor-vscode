@@ -1,12 +1,13 @@
 # Changelog
 
-## 2.0.1
+## 3.0.0
 
+- Documentation: results for languages other than TypeScript/JavaScript and PHP come from a lightweight scan and can include more false positives (for example in Go); the READMEs and User Guide now say so.
 - Repository: the extension, its analysis engine and a new CLI now live in one monorepo (`packages/vscode`, `packages/engine`, `packages/cli`). The engine's former web server was removed.
 - The extension uses the engine exactly as built: all vendor-time patches were moved into the engine or became its defaults. Report behavior is unchanged.
 - Reports: removed the "Start New Analysis" and "PDF Download" buttons, which pointed at the former server and did nothing; raw AST previews are indented again.
 - New `codes-doctor` CLI for terminals and CI, with `--min-security`/`--min-debt` thresholds as exit codes. See [packages/cli](https://github.com/masahiroid/codes-doctor-vscode/tree/main/packages/cli).
-- GitHub automation: weekly Dependabot updates, CI (audit, tests, browser tests, self-analysis), auto-merge of minor/patch updates, and a weekly release that bumps the version, attaches the VSIX to a GitHub release and can publish to the Marketplace.
+- Releases are automated: weekly dependency updates, CI, and publishing to the Visual Studio Marketplace.
 - The VSIX is smaller (about 7 MB instead of 10 MB): report libraries are no longer shipped twice.
 
 ## 2.0.0
@@ -30,10 +31,6 @@
 - Unknown `language` values sent to the engine are rejected with an error instead of being passed through.
 - Engine server mode: the "LLM is disabled" error now maps to HTTP 400 instead of 500.
 - The English report heading "LLM Structural Analysis" no longer runs the words together.
-
-### Quality
-
-Codes Doctor's own results: extension Technical Debt 91 (A) and Security 99 (A); engine Technical Debt 86 (A) and Security 99 (A, previously 59 F), with no unstable modules and no circular dependencies. See [docs/architecture.md](docs/architecture.md).
 
 ## 1.5.14
 

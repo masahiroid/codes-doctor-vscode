@@ -105,6 +105,8 @@ Codes Doctor は LLM（OpenAI または Anthropic）に分析結果をレビュ�
 
 TypeScript/JavaScript と PHP は完全な構文木で、その他の言語は簡易的な構造抽出で解析します。依存グラフ・循環依存検出・レイヤー分析・SBOM/脆弱性スキャンは、言語を問わず対応する全ファイルを横断して実行されます。
 
+> **TypeScript/JavaScript と PHP 以外の言語の精度について。** メインの対応言語は TypeScript/JavaScript と PHP で、完全な構文木で解析し、最も検証されています。その他の言語は簡易的な構造抽出のため、誤検知や見落としが多くなります。たとえば Go のセキュリティ検出は、引数が定数か利用者の入力かを区別せずにコードのパターンで判定し、メソッドと型の対応も名前で推定しています。これらの言語の結果は、確定した評価ではなく確認のきっかけとして扱ってください。
+
 C++の解析対象は `.cpp` / `.cc` / `.cxx` / `.hpp` / `.hh` です。`.h` / `.c`（Cの可能性があるファイル）は解析対象外です。
 
 ## 開発
@@ -124,8 +126,6 @@ npm run package       # codes-doctor-<version>.vsix を生成
 ## ライセンス
 
 Apache License 2.0 — [LICENSE](LICENSE) を参照してください。
-
-開発・VSIX作成にはNode.js 22以上を使用してください。実装ソースは `src/` にあります。`npm run build` はTypeScript 7でコンパイルし、レポート用ライブラリーを再構築します。`npm run typecheck` で型チェック、`npm run test:browser` で実ブラウザのタブ・図表を検証します。レポートには監査済みライブラリーを埋め込み、CDN接続を不要にしています。依存の互換性制約と監査結果は `docs/dependency-update.md` に記録しています。
 
 ## セキュリティーとレポートの見方
 

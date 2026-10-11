@@ -7,6 +7,8 @@
 
 対応言語: TypeScript/JavaScript と PHP（完全な AST）、Python、Go、Swift、C#、Java、Kotlin、Rust、C++、Dart（簡易的な構造抽出）。詳しくは [docs/ARCHITECTURE.ja.md](docs/ARCHITECTURE.ja.md) を参照してください。
 
+> **TypeScript/JavaScript と PHP 以外の言語の精度について。** メインの対応言語は TypeScript/JavaScript と PHP で、完全な構文木で解析し、最も検証されています。その他の言語は簡易的な構造抽出のため、誤検知や見落としが多くなります。たとえば Go のセキュリティ検出は、引数が定数か利用者の入力かを区別せずにコードのパターンで判定し、メソッドと型の対応も名前で推定しています。これらの言語の結果は、確定した評価ではなく確認のきっかけとして扱ってください。
+
 ## ビルド
 
 ```bash

@@ -1,9 +1,14 @@
 name: Release
 
-# Weekly: if dependencies changed since the last release, bump the patch version,
-# record the updates in the CHANGELOG, build the VSIX, attach it to a GitHub release
-# and (when enabled) publish it to the Visual Studio Marketplace.
+# Publishes the extension to the Visual Studio Marketplace.
+# - Pushing a `v*` tag releases exactly that version.
+# - Weekly (and on manual runs): if dependencies changed since the last `v*` tag, bump
+#   the patch version, record the updates in the CHANGELOG, tag, and release.
+# Every release runs the tests, builds the VSIX, attaches it to a GitHub release and
+# publishes it with the VSCE_PAT secret.
 on:
+  push:
+    tags: ["v*"]
   schedule:
     - cron: "0 1 * * 5" # Friday 10:00 JST
   workflow_dispatch:
@@ -32,32 +37,46 @@ jobs:
           cache: npm
           cache-dependency-path: packages/*/package-lock.json
 
-      - name: Find dependency changes since the last release
-        id: changes
+      - name: Decide what to release
+        id: plan
         run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            version="${GITHUB_REF_NAME#v}"
+            manifest=$(node -p "require('./packages/vscode/package.json').version")
+            if [ "$version" != "$manifest" ]; then
+              echo "Tag $GITHUB_REF_NAME does not match packages/vscode/package.json ($manifest)" >&2
+              exit 1
+            fi
+            echo "Release $GITHUB_REF_NAME" > notes.txt
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "bump=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           last=$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -1)
           git log "$last"..HEAD --format='%s' -- 'packages/*/package.json' 'packages/*/package-lock.json' \
-            | grep -iE '^(bump|build\(deps)' | sed 's/ (#[0-9]*)$//' | sort -u > changes.txt || true
-          echo "count=$(wc -l < changes.txt | tr -d ' ')" >> "$GITHUB_OUTPUT"
-          cat changes.txt
+            | grep -iE '^(bump|build\(deps)' | sed 's/ (#[0-9]*)$//' | sort -u > notes.txt || true
+          if [ -s notes.txt ] || [ "${{ inputs.force }}" = "true" ]; then
+            echo "bump=true" >> "$GITHUB_OUTPUT"
+          fi
+          cat notes.txt
 
       - name: Install
-        if: steps.changes.outputs.count != '0' || inputs.force
+        if: steps.plan.outputs.version || steps.plan.outputs.bump == 'true'
         run: npm run install:all
 
       - name: Test
-        if: steps.changes.outputs.count != '0' || inputs.force
+        if: steps.plan.outputs.version || steps.plan.outputs.bump == 'true'
         run: |
           npm run build --prefix packages/engine
           npm test --prefix packages/cli
           npm run vendor:csap --prefix packages/vscode
           npm test --prefix packages/vscode
 
-      - name: Bump version
-        id: version
-        if: steps.changes.outputs.count != '0' || inputs.force
+      - name: Bump version and tag
+        id: bump
+        if: steps.plan.outputs.bump == 'true'
         run: |
-          mapfile -t lines < <(sed 's/^/Dependency update: /' changes.txt)
+          mapfile -t lines < <(sed 's/^/Dependency update: /' notes.txt)
           [ ${#lines[@]} -eq 0 ] && lines=("Maintenance release.")
           version=$(node scripts/bump-version.mjs "${lines[@]}")
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -68,21 +87,22 @@ jobs:
           git push origin HEAD "v$version"
 
       - name: Build VSIX
-        if: steps.version.outputs.version
-        run: npm run package --prefix packages/vscode -- -o "codes-doctor-${{ steps.version.outputs.version }}.vsix"
+        id: vsix
+        if: steps.plan.outputs.version || steps.bump.outputs.version
+        run: |
+          version="${{ steps.plan.outputs.version || steps.bump.outputs.version }}"
+          npm run package --prefix packages/vscode -- -o "codes-doctor-$version.vsix"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "path=packages/vscode/codes-doctor-$version.vsix" >> "$GITHUB_OUTPUT"
 
       - name: GitHub release
-        if: steps.version.outputs.version
-        run: |
-          gh release create "v${{ steps.version.outputs.version }}" \
-            "packages/vscode/codes-doctor-${{ steps.version.outputs.version }}.vsix" \
-            --title "v${{ steps.version.outputs.version }}" --notes-file changes.txt
+        if: steps.vsix.outputs.version
+        run: gh release create "v${{ steps.vsix.outputs.version }}" "${{ steps.vsix.outputs.path }}" --title "v${{ steps.vsix.outputs.version }}" --notes-file notes.txt
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish to the Marketplace
-        # Turn on by setting the repository variable AUTO_PUBLISH to "true".
-        if: steps.version.outputs.version && vars.AUTO_PUBLISH == 'true'
-        run: npx --prefix packages/vscode @vscode/vsce publish --packagePath "packages/vscode/codes-doctor-${{ steps.version.outputs.version }}.vsix"
+      - name: Publish to the Visual Studio Marketplace
+        if: steps.vsix.outputs.version
+        run: npx --prefix packages/vscode @vscode/vsce publish --packagePath "${{ steps.vsix.outputs.path }}"
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}

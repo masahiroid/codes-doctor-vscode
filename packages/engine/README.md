@@ -7,6 +7,8 @@ The analysis engine behind the [Codes Doctor VS Code extension](../vscode) and t
 
 Supported languages: TypeScript/JavaScript and PHP (full AST), and Python, Go, Swift, C#, Java, Kotlin, Rust, C++ and Dart (lightweight structural scan). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+> **Accuracy outside TypeScript/JavaScript and PHP.** TypeScript/JavaScript and PHP are the primary languages: they are parsed into a full syntax tree and are the most thoroughly tested. The other languages use a lightweight structural scan, so expect more false positives and missed findings. For example, Go security checks match code patterns without knowing whether an argument is a constant or user input, and methods are attached to types by name. Treat results for these languages as leads to review, not verdicts.
+
 ## Build
 
 ```bash

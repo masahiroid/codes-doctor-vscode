@@ -113,6 +113,8 @@ The dependencies listed in `package.json` and lock files, split into direct, tra
 | C++ | Lightweight | ✅ | ✅ | ✅ | — |
 | Dart | Lightweight | ✅ | ✅ | — | — |
 
+> **Accuracy outside TypeScript/JavaScript and PHP.** TypeScript/JavaScript and PHP are the primary languages: they are parsed into a full syntax tree and are the most thoroughly tested. The other languages use a lightweight structural scan, so expect more false positives and missed findings. For example, Go security checks match code patterns without knowing whether an argument is a constant or user input, and methods are attached to types by name. Treat results for these languages as leads to review, not verdicts.
+
 - **Full AST** languages are parsed with a real parser. **Lightweight** languages use a brace- and indentation-aware structural scan. It finds classes, methods, functions, and imports reliably in conventional code, but it is not a compiler.
 - Dependency graphs, circular dependencies, layer analysis, and the SBOM work across all languages.
 - C++ covers `.cpp`, `.cc`, `.cxx`, `.hpp`, and `.hh`. Plain `.h` and `.c` files are skipped because they may be C.
