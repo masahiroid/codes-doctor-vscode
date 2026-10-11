@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.0.0 (in development)
+
+- **Syntax-tree analysis for Python, Go, Java, C#, Rust and C++.** These languages are now parsed with Tree-sitter instead of a regex scan. Classes, methods, fields, functions and imports are read from the syntax tree, so code inside strings and comments is no longer mistaken for declarations, local classes inside functions are found, Go and Rust methods are attached to their types, and C++ methods declared in a class body are counted. Swift, Kotlin and Dart keep the lightweight scan.
+- **Fewer security false positives.** In these languages, matches inside comments and plain strings are ignored, and command-execution calls made only with constant arguments (such as `exec.Command("git", "status")`) are not reported.
+- **Test code is recognised.** Findings in test files (`*_test.go`, `tests/`, `*Test.java`, `*.spec.ts`, …) are listed with a "Test code" label and no longer lower the security score.
+
 ## 3.0.2
 
 - New icon: Honami (保奈美), for the Marketplace and the Activity Bar.

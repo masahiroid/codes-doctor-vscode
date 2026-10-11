@@ -29,13 +29,20 @@ for (const language of ['ja', 'en']) {
     fs.writeFileSync(path.join(repo, 'a.ts'), "import { b } from './b';\nexport class A { run() { return b(); } }\n");
     fs.writeFileSync(path.join(repo, 'b.ts'), 'export function b() { return 1; }\n');
     fs.writeFileSync(path.join(repo, 'c.php'), '<?php class C { function x() {} }\n');
+    fs.writeFileSync(path.join(repo, 'd.go'), 'package d\nimport "os/exec"\ntype D struct{ a int }\nfunc (d *D) Run(x string) { exec.Command("ls"); exec.Command(x) }\n');
+    fs.writeFileSync(path.join(repo, 'e.py'), 'class E:\n    def __init__(self):\n        self.a = 1\n');
     const log = console.log;
     console.log = () => {};
     try {
       const engine = require(path.join(DIST, `engine-${language}.js`));
       const { result, reportPath } = await engine.analyzeRepository(repo, 'auto', root, { generatorVersion: 'test' });
-      assert.equal(result.summary.totalFiles, 3);
+      assert.equal(result.summary.totalFiles, 5);
       assert.equal(result.files.php.length, 1);
+      // Tree-sitter grammars load from the bundle's node_modules.
+      assert.deepEqual(result.files.go[0].classes.map((c) => [c.name, c.methodCount, c.propertyCount]), [['D', 1, 1]]);
+      assert.deepEqual(result.files.python[0].classes.map((c) => [c.name, c.propertyCount, c.constructorExists]), [['E', 1, true]]);
+      // Only the call with a variable argument is a command-injection candidate.
+      assert.equal(result.securityScore.issues.filter((i) => i.category === 'Command Injection').length, 1);
       const html = fs.readFileSync(reportPath, 'utf8');
       assert.match(html, new RegExp(`<html lang="${language}">`));
       assert.equal((html.match(/data-report-library=/g) || []).length, 4);

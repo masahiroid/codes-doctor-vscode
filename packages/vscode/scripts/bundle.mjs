@@ -2,6 +2,7 @@
 //   extension.js            the extension (compiled tsc output), with `vscode` external
 //   engine-ja.js / -en.js   the vendored engine for each report language, parsers included
 //   node_modules/typescript the TypeScript compiler, shared by both engine bundles
+//   node_modules/@vscode/tree-sitter-wasm  the Tree-sitter runtime and the grammars in use
 //   assets/, styles.css     files read at runtime relative to the bundles
 // Run `npm run vendor:csap && npm run build` first.
 import fs from 'node:fs';
@@ -15,6 +16,8 @@ const DIST = path.join(ROOT, 'dist');
 const require = createRequire(path.join(ROOT, 'package.json'));
 /** Too large to include in both engine bundles; shipped once and resolved at runtime. */
 const SHARED_EXTERNAL = 'typescript';
+/** Tree-sitter loads its runtime and grammars as .wasm files at runtime, so it cannot be bundled. */
+const TREE_SITTER = '@vscode/tree-sitter-wasm';
 
 const common = { bundle: true, platform: 'node', format: 'cjs', target: 'node20', minify: true, legalComments: 'eof', logLevel: 'warning' };
 
@@ -33,7 +36,7 @@ for (const [language, folder] of [['ja', 'csap'], ['en', 'csap-en']]) {
     ...common,
     entryPoints: [path.join(ROOT, 'vendor', folder, 'index.js')],
     outfile: path.join(DIST, `engine-${language}.js`),
-    external: [SHARED_EXTERNAL],
+    external: [SHARED_EXTERNAL, TREE_SITTER],
   });
 }
 
@@ -45,6 +48,16 @@ fs.copyFileSync(path.join(typescriptRoot, 'package.json'), path.join(typescriptT
 fs.copyFileSync(path.join(typescriptRoot, typescriptMain), path.join(typescriptTarget, typescriptMain));
 for (const license of ['LICENSE.txt', 'ThirdPartyNoticeText.txt']) {
   if (fs.existsSync(path.join(typescriptRoot, license))) fs.copyFileSync(path.join(typescriptRoot, license), path.join(typescriptTarget, license));
+}
+
+// Only the runtime and the grammars the engine actually loads.
+const { GRAMMARS } = require(path.join(ROOT, 'vendor', 'csap', 'analyzer', 'syntax', 'treeSitter.js'));
+const treeSitterRoot = path.dirname(require.resolve(`${TREE_SITTER}/package.json`));
+const treeSitterTarget = path.join(DIST, 'node_modules', ...TREE_SITTER.split('/'));
+fs.mkdirSync(path.join(treeSitterTarget, 'wasm'), { recursive: true });
+for (const file of ['package.json', 'LICENSE']) fs.copyFileSync(path.join(treeSitterRoot, file), path.join(treeSitterTarget, file));
+for (const file of ['tree-sitter.js', 'tree-sitter.wasm', ...Object.values(GRAMMARS)]) {
+  fs.copyFileSync(path.join(treeSitterRoot, 'wasm', file), path.join(treeSitterTarget, 'wasm', file));
 }
 
 fs.cpSync(path.join(ROOT, 'vendor', 'assets'), path.join(DIST, 'assets'), {

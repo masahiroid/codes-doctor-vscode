@@ -103,9 +103,9 @@ Choose **Display & Report Language** in the Dashboard: **English** (default) or 
 | C++ | ✅ | ✅ | ✅ | — |
 | Dart | ✅ | ✅ | — | — |
 
-TypeScript/JavaScript and PHP are parsed into a full syntax tree; the other languages use a lightweight structural scan. Dependency graphs, circular dependency detection, layer analysis, and SBOM/vulnerability scanning run across all supported files regardless of language.
+TypeScript/JavaScript and PHP use dedicated full parsers; Python, Go, Java, C#, Rust and C++ are parsed with Tree-sitter; Swift, Kotlin and Dart use a lightweight structural scan. Dependency graphs, circular dependency detection, layer analysis, and SBOM/vulnerability scanning run across all supported files regardless of language.
 
-> **Accuracy outside TypeScript/JavaScript and PHP.** TypeScript/JavaScript and PHP are the primary languages: they are parsed into a full syntax tree and are the most thoroughly tested. The other languages use a lightweight structural scan, so expect more false positives and missed findings. For example, Go security checks match code patterns without knowing whether an argument is a constant or user input, and methods are attached to types by name. Treat results for these languages as leads to review, not verdicts.
+> **Accuracy by language.** TypeScript/JavaScript and PHP are the primary languages: they are parsed by dedicated full parsers and are the most thoroughly tested. Python, Go, Java, C#, Rust and C++ are parsed into a syntax tree with Tree-sitter, so their structure (classes, methods, functions, imports) is reliable, and the security scan ignores comments, plain strings and calls made only with constant arguments. Their security checks are still pattern-based, though, and do not follow data from user input to a dangerous call, so expect some false positives (for example, Go's `text/template` import is always flagged). Swift, Kotlin and Dart still use a lightweight structural scan and produce more false positives and missed findings. Findings in test code are listed with a "Test code" label and do not lower the security score. Treat results as leads to review, not verdicts.
 
 C++ analysis covers `.cpp`, `.cc`, `.cxx`, `.hpp`, and `.hh` files. Plain `.h`/`.c` files (which may be C, not C++) are not analyzed.
 

@@ -27,11 +27,10 @@ src/
 │   ├── pipeline/            Language stage, then global stages (graph, quality, supply chain)
 │   ├── typescript/          TS/JS AST parsing, God Score, call graph
 │   ├── php/                 PHP AST parsing, call graph
-│   ├── bracelang/           Shared lightweight engine for brace-delimited languages
-│   ├── swift/ csharp/ java/ kotlin/ cpp/   Per-language configs for the bracelang engine
-│   ├── go/ rust/            Standalone lightweight parsers (methods live outside the type body)
-│   ├── python/ dart/        Standalone lightweight parsers (indentation / Dart syntax)
-│   ├── security/patterns.ts Security pattern families, one per language
+│   ├── syntax/              Tree-sitter parsing: runtime, generic structure extraction, per-language specs
+│   ├── bracelang/           Lightweight engine for brace-delimited languages without a grammar
+│   ├── swift/ kotlin/ dart/ Lightweight parsers (Swift and Kotlin use bracelang)
+│   ├── security/            Pattern families, syntax evidence, test-code detection
 │   ├── securityScore.ts     Security scan and scoring
 │   ├── moduleMetrics.ts     Fan-in/fan-out, instability, structural score, cycles
 │   ├── layerAnalysis.ts     Architecture layer detection and heatmap
@@ -97,16 +96,23 @@ Everything else is derived from the catalog: detection, the per-language analysi
 |----------|--------|---------|------------|
 | TypeScript/JavaScript | Full AST | `@typescript-eslint/typescript-estree` | ✅ |
 | PHP | Full AST | `php-parser` v3 | ✅ |
-| Swift, C#, Java, Kotlin, C++ | Lightweight, shared bracelang engine | none | — |
-| Go, Rust | Lightweight, standalone (brace-tracking) | none | — |
-| Python | Lightweight, indentation-tracking | none | — |
+| Python, Go, Java, C#, Rust, C++ | Syntax tree | Tree-sitter (`@vscode/tree-sitter-wasm`) | — |
+| Swift, Kotlin | Lightweight, brace-tracking (bracelang engine) | none | — |
 | Dart | Lightweight, brace-tracking | none | — |
 
-Lightweight parsers avoid pulling in a full language SDK. They track type and function boundaries well enough for God Class scoring, security scanning, and import extraction, but don't build a full AST or a call graph. All of them return the same `SimpleFileInfo` shape and share the text utilities in `analyzer/parsing/sourceText.ts` (comment stripping with per-language string delimiters, brace matching, line counting, top-level parameter counting).
+### Tree-sitter languages
 
-The bracelang engine (`analyzer/bracelang/engine.ts`) handles languages where one type header owns one body. Each language supplies only a `BraceLanguageConfig`: its type, method and import patterns, string delimiters, and keywords that look like calls. C++'s method header tolerates a constructor initializer list. Only `.cpp`/`.cc`/`.cxx`/`.hpp`/`.hh` are treated as C++; `.h`/`.c` are skipped because they are ambiguous with plain C. C++ member functions defined outside the class body are not attributed to the class.
+`analyzer/syntax/treeSitter.ts` loads the WebAssembly runtime and grammars from `@vscode/tree-sitter-wasm` (the same package VS Code uses), so nothing is compiled natively. Each language has a `LanguageSyntaxSpec` (`syntax/languages/`) that names the grammar's node types: type declarations and their bodies, functions, fields, imports, constructors, and — for the security scan — comments, string and other literals, calls and import nodes. `syntax/structure.ts` turns any tree into the shared `SimpleFileInfo` with one generic walk:
 
-Go and Rust have standalone parsers because their methods live outside the type declaration (`func (r *X) Method()`, `impl X { fn method() }`); both pair methods with their type by name. A Rust struct's `lineCount` covers only its field block, so line-based God Score weighting undercounts Rust types relative to languages whose methods live inside the type body.
+- Types declared inside functions (local classes, test fixtures) are still types.
+- Methods declared outside their type are credited to it: Go receivers and Rust `impl` blocks always (the type may be in another file); C++ `Scope::name` only when `Scope` is a type declared in the same file, because the scope may be a namespace. Rust blanket impls (`impl<T> Trait for T`) are not types.
+- C++ counts methods declared in a class body, including constructors.
+
+Only `.cpp`/`.cc`/`.cxx`/`.hpp`/`.hh` are treated as C++; `.h`/`.c` are skipped because they are ambiguous with plain C.
+
+### Lightweight languages
+
+Swift, Kotlin and Dart have no grammar in `@vscode/tree-sitter-wasm`. Swift and Kotlin use the bracelang engine (`analyzer/bracelang/engine.ts`): comment stripping, brace matching and import extraction shared, with per-language type/method/import patterns. Dart has its own scanner. They track type and function boundaries well enough for scoring, but miss unusual layouts and cannot inform the security scan.
 
 ### God Class Scoring
 
@@ -127,7 +133,13 @@ rank: critical (>=75) / high (>=50) / medium (>=25) / low (<25)
 
 ### Security Scoring
 
-Pattern families live in `analyzer/security/patterns.ts`, typed as `Record<SecurityLanguage, SecurityPattern[]>`. `calculateSecurityScore(targets, repoPath)` scans each target (`{ language, files }`) built from the catalog's `security` keys, skipping matches on comment lines. Patterns cover code and command injection, hard-coded credentials, weak cryptography and randomness, string-built SQL, and language-specific risks (for example Python's `pickle.load`, PHP's direct `$_GET`/`$_POST` use, Go's `InsecureSkipVerify`, Swift's `NSAllowsArbitraryLoads`, C#'s always-true certificate callbacks, C++'s `strcpy`/`gets`). Dart has no pattern family yet.
+Pattern families live in `analyzer/security/patterns.ts`, typed as `Record<SecurityLanguage, SecurityPattern[]>`. `calculateSecurityScore(targets, repoPath)` scans each target (`{ language, files }`) built from the catalog's `security` keys. Before reporting a match it consults the file's syntax:
+
+- **Text, not code.** TS/JS uses the TypeScript compiler's ranges (a match starting in a string, comment or regex literal is skipped). Tree-sitter languages use `security/syntaxEvidence.ts`: a match lying entirely inside a comment or a string is skipped. Strings in import statements stay code, so a pattern for an imported module still fires.
+- **Constant-only calls.** For command-execution patterns, a call whose arguments are all literals (strings, numbers, lists of them, keyword arguments with literal values; not interpolated strings) is not reported.
+- **Test code.** `security/testCode.ts` recognises test files by directory (`test/`, `tests/`, `__tests__/`, `testdata/`, …) and file name (`*_test.go`, `test_*.py`, `*Test.java`, `*.spec.ts`, …), relative to the repository. Such findings carry `inTest: true`: they are listed with a label, but the score, explanation, category breakdown and top risks cover production code only.
+
+Patterns cover code and command injection, hard-coded credentials, weak cryptography and randomness, string-built SQL, and language-specific risks. They do not follow data from a source to a sink; that taint analysis is planned on top of the syntax trees. Dart has no pattern family yet.
 
 ## Language-Agnostic Analysis
 

@@ -1,13 +1,8 @@
 import type { LanguageId } from '../catalog';
 import { analyzeDirectory as parseDart } from '../../dart/simpleAst';
-import { analyzeDirectory as parsePython } from '../../python/simpleAst';
-import { analyzeDirectory as parseGo } from '../../go/simpleAst';
 import { analyzeDirectory as parseSwift } from '../../swift/simpleAst';
-import { analyzeDirectory as parseCSharp } from '../../csharp/simpleAst';
-import { analyzeDirectory as parseJava } from '../../java/simpleAst';
 import { analyzeDirectory as parseKotlin } from '../../kotlin/simpleAst';
-import { analyzeDirectory as parseRust } from '../../rust/simpleAst';
-import { analyzeDirectory as parseCpp } from '../../cpp/simpleAst';
+import { SYNTAX_SPECS, syntaxDirectoryParser } from '../../syntax';
 import { analyzeTypeScript } from './typescriptAnalyzer';
 import { analyzePhp } from './phpAnalyzer';
 import { createSimpleAnalyzer } from './simpleAnalyzer';
@@ -20,12 +15,12 @@ export const LANGUAGE_ANALYZERS: { [K in LanguageId]: LanguageAnalyzer<K> } = {
   typescript: analyzeTypeScript,
   php: analyzePhp,
   dart: createSimpleAnalyzer('dart', parseDart),
-  python: createSimpleAnalyzer('python', parsePython),
-  go: createSimpleAnalyzer('go', parseGo),
+  python: createSimpleAnalyzer('python', syntaxDirectoryParser(SYNTAX_SPECS.python)),
+  go: createSimpleAnalyzer('go', syntaxDirectoryParser(SYNTAX_SPECS.go)),
   swift: createSimpleAnalyzer('swift', parseSwift),
-  csharp: createSimpleAnalyzer('csharp', parseCSharp),
-  java: createSimpleAnalyzer('java', parseJava),
+  csharp: createSimpleAnalyzer('csharp', syntaxDirectoryParser(SYNTAX_SPECS.csharp)),
+  java: createSimpleAnalyzer('java', syntaxDirectoryParser(SYNTAX_SPECS.java)),
   kotlin: createSimpleAnalyzer('kotlin', parseKotlin),
-  rust: createSimpleAnalyzer('rust', parseRust),
-  cpp: createSimpleAnalyzer('cpp', parseCpp),
+  rust: createSimpleAnalyzer('rust', syntaxDirectoryParser(SYNTAX_SPECS.rust)),
+  cpp: createSimpleAnalyzer('cpp', syntaxDirectoryParser(SYNTAX_SPECS.cpp)),
 };

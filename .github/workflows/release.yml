@@ -67,7 +67,7 @@ jobs:
       - name: Test
         if: steps.plan.outputs.version || steps.plan.outputs.bump == 'true'
         run: |
-          npm run build --prefix packages/engine
+          npm test --prefix packages/engine
           npm test --prefix packages/cli
           npm run vendor:csap --prefix packages/vscode
           npm test --prefix packages/vscode

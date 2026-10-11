@@ -223,6 +223,8 @@ export interface SecurityIssue {
   lineNumber?: number;
   recommendation: string;
   codeSnippet?: string;
+  /** Found in test code: listed, but not counted in the score. */
+  inTest?: boolean;
 }
 
 export interface SecurityCategoryDetail {

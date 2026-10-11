@@ -432,5 +432,7 @@
   "さらに表示（残り": "Show more (remaining: ",
   "ファイル）": " files)",
   "型": "Types",
-  "構造体": "Structs"
+  "構造体": "Structs",
+  "スコアには含めません": "Not counted in the score",
+  "テストコード": "Test code"
 }

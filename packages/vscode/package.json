@@ -203,6 +203,7 @@
   },
   "dependencies": {
     "@typescript-eslint/typescript-estree": "^8.71.1",
+    "@vscode/tree-sitter-wasm": "^0.3.1",
     "php-parser": "^3.7.0",
     "typescript": "^6.0.3"
   },

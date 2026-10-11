@@ -27,11 +27,10 @@ src/
 │   ├── pipeline/            言語ステージ → 全体ステージ（グラフ、品質、サプライチェーン）
 │   ├── typescript/          TS/JS の AST 解析、God Score、呼び出しグラフ
 │   ├── php/                 PHP の AST 解析、呼び出しグラフ
-│   ├── bracelang/           波括弧系言語の共通簡易解析エンジン
-│   ├── swift/ csharp/ java/ kotlin/ cpp/   bracelang エンジン用の言語別設定
-│   ├── go/ rust/            独立した簡易パーサー（メソッドが型の本体の外にある）
-│   ├── python/ dart/        独立した簡易パーサー（インデント / Dart 構文）
-│   ├── security/patterns.ts 言語ごとのセキュリティパターン
+│   ├── syntax/              Tree-sitter による解析: ランタイム、汎用の構造抽出、言語別の定義
+│   ├── bracelang/           文法のない波括弧系言語向けの簡易解析エンジン
+│   ├── swift/ kotlin/ dart/ 簡易パーサー（Swift と Kotlin は bracelang を使用）
+│   ├── security/            パターン定義、構文による判定、テストコードの判定
 │   ├── securityScore.ts     セキュリティスキャンとスコア算出
 │   ├── moduleMetrics.ts     ファンイン/ファンアウト、不安定度、構造スコア、循環
 │   ├── layerAnalysis.ts     アーキテクチャレイヤーの検出とヒートマップ
@@ -97,16 +96,23 @@ scripts/
 |------|---------|-----------|---------------|
 | TypeScript/JavaScript | 完全な AST | `@typescript-eslint/typescript-estree` | ✅ |
 | PHP | 完全な AST | `php-parser` v3 | ✅ |
-| Swift、C#、Java、Kotlin、C++ | 簡易解析（共通 bracelang エンジン） | なし | — |
-| Go、Rust | 簡易解析（独立、括弧追跡） | なし | — |
-| Python | 簡易解析（インデント追跡） | なし | — |
+| Python、Go、Java、C#、Rust、C++ | 構文木 | Tree-sitter（`@vscode/tree-sitter-wasm`） | — |
+| Swift、Kotlin | 簡易解析（括弧追跡、bracelang エンジン） | なし | — |
 | Dart | 簡易解析（括弧追跡） | なし | — |
 
-簡易パーサーは、各言語の SDK を丸ごと取り込まずに済むようにするためのものです。God Class スコア、セキュリティスキャン、インポート抽出に十分な精度で型と関数の範囲を追跡しますが、完全な AST や呼び出しグラフは作りません。どのパーサーも同じ `SimpleFileInfo` 形式を返し、`analyzer/parsing/sourceText.ts` の共通処理（言語別の文字列区切りに対応したコメント除去、括弧の対応付け、行数計算、トップレベルの引数数え上げ）を使います。
+### Tree-sitter の言語
 
-bracelang エンジン（`analyzer/bracelang/engine.ts`）は「1 つの型宣言が 1 つの本体を持つ」言語を扱います。各言語は `BraceLanguageConfig`（型・メソッド・インポートのパターン、文字列の区切り、呼び出しに見えるキーワード）だけを用意します。C++ のメソッド宣言はコンストラクタの初期化子リストも受け付けます。C++ として扱うのは `.cpp`/`.cc`/`.cxx`/`.hpp`/`.hh` だけで、`.h`/`.c` は C と区別できないため対象外です。クラス本体の外で定義されたメンバー関数はクラスに数えません。
+`analyzer/syntax/treeSitter.ts` は、VS Code 自身も使う `@vscode/tree-sitter-wasm` から WebAssembly のランタイムと文法を読み込むため、ネイティブのビルドは不要です。言語ごとに `LanguageSyntaxSpec`（`syntax/languages/`）があり、文法のノード種別を定義します: 型宣言とその本体、関数、フィールド、インポート、コンストラクター、そしてセキュリティ検査用にコメント、文字列などのリテラル、呼び出し、インポートのノード。`syntax/structure.ts` が 1 つの汎用的な走査で、どの言語の構文木も共通の `SimpleFileInfo` に変換します。
 
-Go と Rust はメソッドが型宣言の外にある（`func (r *X) Method()`、`impl X { fn method() }`）ため独立したパーサーを持ち、型名でメソッドを対応付けます。Rust の構造体の `lineCount` はフィールド部分だけなので、行数による God Score の重み付けは、メソッドが型の本体内にある言語より小さく出ます。
+- 関数の中で宣言された型（ローカルクラス、テスト用の型）も型として扱います。
+- 型の外で宣言されたメソッドはその型に数えます。Go のレシーバーと Rust の `impl` ブロックは常に（型は別ファイルにあることもあります）。C++ の `Scope::name` は、`Scope` が同じファイルで宣言された型のときだけです（名前空間の場合があるため）。Rust の包括実装（`impl<T> Trait for T`）は型として扱いません。
+- C++ はクラス本体で宣言されたメソッド（コンストラクターを含む）も数えます。
+
+C++ として扱うのは `.cpp`/`.cc`/`.cxx`/`.hpp`/`.hh` だけで、`.h`/`.c` は C と区別できないため対象外です。
+
+### 簡易解析の言語
+
+Swift、Kotlin、Dart は `@vscode/tree-sitter-wasm` に文法がありません。Swift と Kotlin は bracelang エンジン（`analyzer/bracelang/engine.ts`）を使い、コメント除去・括弧の対応付け・インポート抽出を共通化し、型・メソッド・インポートのパターンだけを言語ごとに持ちます。Dart は独自の簡易スキャナーです。スコア計算に足りる程度に型と関数の範囲を追跡しますが、特殊な書き方は取りこぼし、セキュリティ検査の判定材料にはなりません。
 
 ### God Class スコア
 
@@ -127,7 +133,13 @@ rank: critical (>=75) / high (>=50) / medium (>=25) / low (<25)
 
 ### セキュリティスコア
 
-パターンは `analyzer/security/patterns.ts` にあり、`Record<SecurityLanguage, SecurityPattern[]>` 型です。`calculateSecurityScore(targets, repoPath)` は、カタログの `security` キーから作った対象（`{ language, files }`）を順にスキャンし、コメント行の一致は除外します。コード・コマンドインジェクション、ハードコードされた認証情報、弱い暗号と乱数、文字列で組み立てた SQL のほか、言語固有のリスク（Python の `pickle.load`、PHP の `$_GET`/`$_POST` の直接使用、Go の `InsecureSkipVerify`、Swift の `NSAllowsArbitraryLoads`、C# の常に true を返す証明書コールバック、C++ の `strcpy`/`gets` など）を検出します。Dart のパターンはまだありません。
+パターンは `analyzer/security/patterns.ts` にあり、`Record<SecurityLanguage, SecurityPattern[]>` 型です。`calculateSecurityScore(targets, repoPath)` は、カタログの `security` キーから作った対象（`{ language, files }`）を順にスキャンし、一致を報告する前にファイルの構文を確認します。
+
+- **コードではなく文字列。** TS/JS は TypeScript コンパイラーの範囲を使います（文字列・コメント・正規表現リテラルの中で始まる一致は除外）。Tree-sitter の言語は `security/syntaxEvidence.ts` を使い、一致全体がコメントか文字列の中にあれば除外します。インポート文の文字列はコードとして扱うので、インポートしたモジュールに対するパターンは引き続き検出します。
+- **定数だけの呼び出し。** コマンド実行のパターンでは、引数がすべてリテラル（文字列、数値、それらのリスト、値がリテラルのキーワード引数。埋め込み式を含む文字列は除く）の呼び出しは報告しません。
+- **テストコード。** `security/testCode.ts` が、リポジトリからの相対パスのディレクトリ名（`test/`、`tests/`、`__tests__/`、`testdata/` など）とファイル名（`*_test.go`、`test_*.py`、`*Test.java`、`*.spec.ts` など）でテストコードを判定します。該当する指摘は `inTest: true` となり、一覧にはラベル付きで表示しますが、スコア・説明・カテゴリ別の内訳・主なリスクは本番コードだけを対象にします。
+
+パターンはコード・コマンドインジェクション、ハードコードされた認証情報、弱い暗号と乱数、文字列で組み立てた SQL、言語固有のリスクを対象にしています。入力から危険な処理までのデータの流れは追跡していません。この汚染解析は構文木の上に今後実装する予定です。Dart のパターンはまだありません。
 
 ## 言語に依存しない解析
 

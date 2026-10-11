@@ -1,6 +1,9 @@
 import path from 'node:path';
 import type { AnalysisResult, SecurityIssue } from '../../types';
 import { ISSUE_SEVERITY_SCORE_THRESHOLDS, CYCLE_LENGTH_THRESHOLDS } from '../../analyzer/technicalDebt';
+
+/** Marks findings in test code, which are listed but do not count toward the score. */
+const TEST_CODE_BADGE = ' <span style="font-size: 0.75em; padding: 2px 6px; border-radius: 999px; background: #eef2ff; color: #4f46e5;" title="スコアには含めません">テストコード</span>';
 import { escapeHtml, scriptJson } from '../../html';
 
 const SECURITY_ISSUE_TABLE_ROW_LIMIT = 40;
@@ -167,7 +170,7 @@ function renderMetricDetailCard(metric: { label: string; score: number; detail: 
 function renderSecurityIssueRow(issue: SecurityIssue): string {
   return `<tr style="border-bottom: 1px solid #e5e7eb;">
     <td style="padding: 12px;"><span style="${severityStyle(issue.type)} padding: 4px 8px; border-radius: 3px; font-size: 0.8em; font-weight: 600; text-transform: uppercase;">${issue.type}</span></td>
-    <td style="padding: 12px; color: #374151;">${issue.category}</td>
+    <td style="padding: 12px; color: #374151;">${issue.category}${issue.inTest ? TEST_CODE_BADGE : ''}</td>
     <td style="padding: 12px; color: #6b7280;">${issue.description}</td>
     <td style="padding: 12px; color: #1f2937;"><code style="background: #f3f4f6; padding: 3px 6px; border-radius: 3px; font-size: 0.85em;">${escapeHtml(path.basename(issue.filePath))}${issue.lineNumber ? `:${issue.lineNumber}` : ''}</code></td>
     <td style="padding: 12px; color: #6b7280;">${issue.recommendation}</td>

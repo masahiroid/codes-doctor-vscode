@@ -2,6 +2,9 @@ import { SecurityScore, SecurityIssue } from '../types';
 import type { SecurityLanguage } from './languages/catalog';
 import { SECURITY_PATTERNS } from './security/patterns';
 import { securityIgnoredRanges } from './security/ignoredRanges';
+import { securityEvidence, SecurityEvidence } from './security/syntaxEvidence';
+import { isTestPath } from './security/testCode';
+import { SYNTAX_SPECS, LanguageSyntaxSpec } from './syntax';
 import fs from 'node:fs';
 import path from 'node:path';
 import { scoreToGrade, GradeThresholds } from './grading';
@@ -46,16 +49,18 @@ export interface SecurityScanTarget {
 export async function calculateSecurityScore(targets: readonly SecurityScanTarget[], repoPath: string): Promise<SecurityScore> {
   const issues: SecurityIssue[] = [];
   for (const target of targets) {
-    scanFiles(target.files, repoPath, target.language, issues);
+    await scanFiles(target.files, repoPath, target.language, issues);
   }
 
-  // Count issues by severity
+  // The score, its explanation and the top risks are about production code; findings in
+  // tests are listed separately.
+  const productionIssues = issues.filter((issue) => !issue.inTest);
   const summary = {
-    critical: issues.filter((i) => i.type === 'critical').length,
-    high: issues.filter((i) => i.type === 'high').length,
-    medium: issues.filter((i) => i.type === 'medium').length,
-    low: issues.filter((i) => i.type === 'low').length,
-    info: issues.filter((i) => i.type === 'info').length,
+    critical: productionIssues.filter((i) => i.type === 'critical').length,
+    high: productionIssues.filter((i) => i.type === 'high').length,
+    medium: productionIssues.filter((i) => i.type === 'medium').length,
+    low: productionIssues.filter((i) => i.type === 'low').length,
+    info: productionIssues.filter((i) => i.type === 'info').length,
   };
 
   // Calculate overall score (0-100, higher is better)
@@ -64,13 +69,13 @@ export async function calculateSecurityScore(targets: readonly SecurityScanTarge
   const grade = scoreToGrade(overallScore, SECURITY_GRADE_THRESHOLDS);
 
   // Generate category breakdown
-  const categoryBreakdown = generateCategoryBreakdown(issues);
+  const categoryBreakdown = generateCategoryBreakdown(productionIssues);
   
   // Generate explanation
   const explanation = generateExplanation(overallScore, grade, summary, totalFiles);
   
   // Generate top risks
-  const topRisks = generateTopRisks(issues, summary);
+  const topRisks = generateTopRisks(productionIssues, summary);
 
   return {
     overallScore,
@@ -222,6 +227,9 @@ function generateTopRisks(issues: SecurityIssue[], summary: SecurityScore['summa
   return risks;
 }
 
+/** Categories whose patterns match a call; a call made only with literal arguments is not reported. */
+const CALL_CATEGORIES = new Set(['Command Injection']);
+
 /**
  * Scan a batch of files (one language) for security issues, appending results into `issues`.
  * `fileInfo.filePath` is already absolute (fileWalker returns absolute paths),
@@ -229,47 +237,67 @@ function generateTopRisks(issues: SecurityIssue[], summary: SecurityScore['summa
  * produce a non-existent path if given an absolute second argument, making every
  * file in the batch fail to read and be skipped without surfacing an error.
  */
-function scanFiles(
+async function scanFiles(
   files: ReadonlyArray<{ filePath: string }>,
   repoPath: string,
   language: SecurityLanguage,
   issues: SecurityIssue[]
-): void {
+): Promise<void> {
   for (const fileInfo of files) {
     const fullPath = path.isAbsolute(fileInfo.filePath)
       ? fileInfo.filePath
       : path.join(repoPath, fileInfo.filePath);
+    let content: string;
     try {
-      const content = fs.readFileSync(fullPath, 'utf-8');
-      issues.push(...scanFileForIssues(content, fileInfo.filePath, language));
-    } catch (error) {
-      // Skip files that can't be read
+      content = fs.readFileSync(fullPath, 'utf-8');
+    } catch {
+      continue; // Skip files that can't be read
     }
+    const inTest = isTestPath(path.relative(repoPath, fullPath));
+    issues.push(...(await scanFileForIssues(content, fileInfo.filePath, language)).map((issue) => ({ ...issue, inTest })));
+  }
+}
+
+/** Syntax facts that rule matches out: literal/comment text, and calls made only with constants. */
+async function evidenceFor(content: string, language: SecurityLanguage): Promise<SecurityEvidence> {
+  if (language === 'typescript') return { textRanges: securityIgnoredRanges(content), literalCallParens: new Set() };
+  const spec = (SYNTAX_SPECS as Partial<Record<SecurityLanguage, LanguageSyntaxSpec>>)[language];
+  if (!spec) return { textRanges: [], literalCallParens: new Set() };
+  try {
+    return await securityEvidence(spec, content);
+  } catch {
+    return { textRanges: [], literalCallParens: new Set() };
   }
 }
 
 /**
  * Scan a single file for security issues
  */
-function scanFileForIssues(
+async function scanFileForIssues(
   content: string,
   filePath: string,
   language: SecurityLanguage
-): SecurityIssue[] {
+): Promise<SecurityIssue[]> {
   const issues: SecurityIssue[] = [];
   const patterns = SECURITY_PATTERNS[language];
   const lines = content.split('\n');
-  const ignored = language === 'typescript' ? securityIgnoredRanges(content) : [];
+  const evidence = await evidenceFor(content, language);
+  // TypeScript ranges come from the compiler: a match starting inside one is text. Tree-sitter
+  // ranges must contain the whole match, so patterns spanning a string boundary still count.
+  const isText = (start: number, end: number) => language === 'typescript'
+    ? evidence.textRanges.some(([from, to]) => start >= from && start < to)
+    : evidence.textRanges.some(([from, to]) => start >= from && end <= to);
 
   for (const patternDef of patterns) {
     const matches = content.matchAll(patternDef.pattern);
-    
+
     for (const match of matches) {
-      if (ignored.some(([start, end]) => match.index >= start && match.index < end)) continue;
+      if (isText(match.index, match.index + match[0].length)) continue;
+      if (CALL_CATEGORIES.has(patternDef.category) && evidence.literalCallParens.has(match.index + match[0].lastIndexOf('('))) continue;
       // Find line number
       const beforeMatch = content.substring(0, match.index);
       const lineNumber = beforeMatch.split('\n').length;
-      
+
       // Skip if it's in a comment
       const lineContent = lines[lineNumber - 1];
       if (isInComment(lineContent, language)) {
