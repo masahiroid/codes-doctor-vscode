@@ -152,7 +152,7 @@ function generateExplanation(
   totalFiles: number
 ): string {
   const total = summary.critical + summary.high + summary.medium + summary.low + summary.info;
-  const title = `セキュリティスコア${score}点（グレード${grade}）: `;
+  const title = `セキュリティスコア ${score}点（グレード${grade}）: `;
   if (totalFiles === 0) return title + '解析対象ファイルがありません。安全性は評価できません。';
   if (total === 0) return title + '検出ルールに該当する指摘はありません。安全性を保証するものではありません。';
   const counts = `指摘${total}件（Critical: ${summary.critical}件、High: ${summary.high}件、Medium: ${summary.medium}件、Low: ${summary.low}件、Info: ${summary.info}件）。`;

@@ -493,5 +493,7 @@
   "優先アクションにも、入力から到達した経路を優先度順に含める": "Also include the traced input paths in the priority actions, in order of priority",
   "入力から到達した経路（": "List the paths where input reaches a sink (",
   "）は「要確認」として、確認手順を示す": ") as \"needs review\", with steps to verify them",
-  "）を、ファイル・関数・行番号と修正方法つきで挙げる": ") with file, function, line numbers and how to fix them"
+  "）を、ファイル・関数・行番号と修正方法つきで挙げる": ") with file, function, line numbers and how to fix them",
+  "の説明": "overview",
+  "依存の種類": "Dependency"
 }

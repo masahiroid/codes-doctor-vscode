@@ -175,7 +175,8 @@ export const REPORT_STYLES = `
   tbody tr:hover td { background: var(--well); }
   td:first-child, th:first-child { padding-left: 4px; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  .cell-main { font-weight: 600; }
+  .cell-main { font-weight: 600; overflow-wrap: anywhere; }
+  td .meter .track { width: 56px; }
   .cell-sub { font-family: var(--mono); font-size: 0.76rem; color: var(--muted); word-break: break-all; }
   .more { margin-top: 10px; font-size: 0.8rem; color: var(--muted); text-align: center; }
 

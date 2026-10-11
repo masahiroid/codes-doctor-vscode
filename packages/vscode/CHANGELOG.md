@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.0.0 (in development)
+## 4.0.0
 
 - **Syntax-tree analysis for Python, Go, Java, C#, Rust and C++.** These languages are now parsed with Tree-sitter instead of a regex scan. Classes, methods, fields, functions and imports are read from the syntax tree, so code inside strings and comments is no longer mistaken for declarations, local classes inside functions are found, Go and Rust methods are attached to their types, and C++ methods declared in a class body are counted. Swift, Kotlin and Dart keep the lightweight scan.
 - **Fewer security false positives.** In these languages, matches inside comments and plain strings are ignored, and command-execution calls made only with constant arguments (such as `exec.Command("git", "status")`) are not reported.
@@ -8,7 +8,9 @@
 - **Redesigned report and dashboard.** A new design system with soft pastel tones on translucent surfaces replaces the saturated gradients, in light and dark. Reports follow the OS theme, the VS Code theme when opened inside VS Code, or a light/dark/auto toggle in the header. Scores are shown as rings with a one-line verdict, findings as severity bars, and charts, Mermaid diagrams and the D3 graph use the same palette. Distribution charts and the layer heatmap are now plain HTML, so they look the same in every viewer and in print. The dashboard keeps the VS Code theme's colors with pastel accents and Honami in its header.
 - **Taint analysis: findings backed by a traced input path.** In JavaScript/TypeScript, PHP, Python, Go, Java, C#, Rust and C++, the engine now follows untrusted input (request parameters, command-line arguments, standard input, …) through assignments within each function to command execution, SQL, `eval`, file paths, outgoing URLs and HTML output. A traced flow is reported with an "Input reaches" label and its path (input → via → sink) in the report. A pattern match where no input could be traced is lowered to Low and labelled "Needs review". Validation and escaping calls (`parseInt`, `escapeshellarg`, `html.escape`, `strconv.Atoi`, …) stop a flow, and parameterized queries are not reported. Flows through other functions are not followed yet.
 - **Security evidence for the LLM review and the agent prompt.** The LLM context now includes the security findings, separated by how far they can be trusted: traced flows with their input → via → sink lines, the function they are in and that function's callers; pattern matches without a traced input, grouped by category; and other findings. The review gains a "Security findings" section, and the agent prompt puts fixes for traced flows before refactoring while treating the rest as items to inspect first. Test-code findings are only counted.
-- **English report fix.** Translated text containing an apostrophe no longer breaks the English report's scripts.
+- **English report fixes.** Translated text containing an apostrophe no longer breaks the English report's scripts; the security score summary has its missing space, and the SBOM table no longer shows two "Type" columns.
+- **Long class names wrap** in report tables instead of pushing the last column out of view.
+- **New README screenshots** of the redesigned report.
 - **Activity Bar icon.** The Activity Bar now uses a simple cross that stays legible at small sizes; Honami (保奈美) remains the Marketplace icon and appears in the report header.
 
 ## 3.0.2

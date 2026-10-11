@@ -56,8 +56,8 @@ export function generateSBOMSection(result: AnalysisResult): string {
       ${stat('推移的依存', transitive, { tone: 'sky' })}
       ${stat('開発依存', dev, { tone: 'butter' })}
     </div>
-    ${panel(table(['パッケージ名', 'バージョン', 'タイプ', '種別'], rows, { more: hidden > 0 ? '他 ' + hidden + ' 件を除外表示' : undefined }), { title: '依存関係一覧' })}
-    ${notice('mint', 'SBOMについて', about)}`);
+    ${panel(table(['パッケージ名', 'バージョン', 'タイプ', '依存の種類'], rows, { more: hidden > 0 ? '他 ' + hidden + ' 件を除外表示' : undefined }), { title: '依存関係一覧' })}
+    ${notice('mint', 'SBOM の説明', about)}`);
 }
 
 export function generateVulnerabilityScanSection(result: AnalysisResult): string {
