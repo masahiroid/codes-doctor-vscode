@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+**/node_modules/
+package-lock.json
+yarn.lock
+
+# Generated SBOM/vulnerability scan scratch output
+/.sbom-tool/
+
+# Build output
+dist/
+*.js.map
+*.d.ts.map
+
+# Temporary files
+uploads/*
+!uploads/.gitkeep
+temp/*
+!temp/.gitkeep
+output/*
+!output/.gitkeep
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*log
+npm-debug.log*

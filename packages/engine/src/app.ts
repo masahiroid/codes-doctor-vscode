@@ -1,0 +1,1 @@
+export { createConfiguredApp as createApp } from './app/factory';
