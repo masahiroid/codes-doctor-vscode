@@ -1,26 +1,45 @@
 name: Dependabot auto-merge
 
-# Minor and patch updates (including grouped ones) merge on their own once the required
-# CI checks pass. Major updates stay open for a person to review.
+# Minor and patch updates (including grouped ones) are merged once the CI workflow has
+# passed on the pull request's commit. Major updates stay open for a person to review.
 on: pull_request
 
 permissions:
   contents: write
   pull-requests: write
+  actions: read
 
 jobs:
   automerge:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - id: metadata
         uses: dependabot/fetch-metadata@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Enable auto-merge
+      - name: Wait for CI and merge
         if: steps.metadata.outputs.update-type != 'version-update:semver-major'
-        run: gh pr merge --auto --squash "$PR_URL"
+        run: |
+          poll_seconds=30
+          for _ in $(seq 1 160); do
+            result=$(gh run list --repo "$REPO" --workflow CI --commit "$SHA" --json status,conclusion \
+              --jq 'map(select(.status == "completed")) | if length > 0 then .[0].conclusion else "" end')
+            if [ "$result" = "success" ]; then
+              gh pr merge --squash "$PR_URL"
+              exit 0
+            elif [ -n "$result" ]; then
+              echo "CI finished with '$result'; leaving the pull request open."
+              exit 1
+            fi
+            sleep "$poll_seconds"
+          done
+          echo "CI did not finish in time."
+          exit 1
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
