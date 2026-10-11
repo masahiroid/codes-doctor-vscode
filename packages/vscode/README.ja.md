@@ -7,12 +7,12 @@ Codes Doctor は、現在開いているワークスペースフォルダーを�
 
 📘 **はじめての方は [利用マニュアル](https://github.com/masahiroid/codes-doctor-vscode/blob/main/packages/vscode/docs/USER_GUIDE.ja.md) をご覧ください** — 導入、レポートの各タブの読み方、AI 機能、設定、トラブルシューティングをまとめています。
 
-## 2.0 の新機能
+## 4.0 の新機能
 
-- **11 言語を 1 つのカタログで管理。** TypeScript/JavaScript、PHP、Python、Go、Swift、C#、Java、Kotlin、Rust、C++、Dart を単一の言語カタログで定義し、検出・解析・セキュリティスキャン・レイヤー分析・AST 表示・AI 用コンテキストのすべてがそこから動きます。
-- **全言語で AST タブに対応。** 解析したすべてのファイルの構造（インポート、型とそのメソッド、関数）を、スコア計算と同じ解析結果から表示します。
-- **AI コーディング用プロンプト。** 解析結果を、Claude Code・Cursor・GitHub Copilot・Codex にそのまま貼れる作業指示に変換します。
-- **安全性の強化。** 脆弱性スキャナーがフォルダーのパスをシェル経由で渡さなくなり、不正な言語設定は無視せずエラーにします。
+- **経路を追跡したセキュリティ指摘。** TypeScript/JavaScript、PHP、Python、Go、Java、C#、Rust、C++ で、外部からの入力が関数内でコマンド実行・SQL・`eval`・ファイルパス・URL・HTML 出力に届くかを追跡します。経路を確認できた指摘は「入力から到達」としてその経路を示し、パターンに一致しただけのものは Low に下げて「要確認」と表示します。
+- **より多くの言語で構文木解析。** Python、Go、Java、C#、Rust、C++ を Tree-sitter で解析し、コメントや文字列による誤検知を減らしました。テストコードの指摘は区別して表示し、スコアには含めません。
+- **レポートのデザインを刷新。** 透明感のあるパステル調で、OS や VS Code のテーマに合わせたライト／ダークに対応します。
+- **AI に渡す情報を強化。** AI レビューとエージェント向けプロンプトに、確度ごとに分けたセキュリティ情報を渡します。
 
 詳細は [CHANGELOG](CHANGELOG.md) を参照してください。
 
@@ -24,7 +24,7 @@ Codes Doctor は、現在開いているワークスペースフォルダーを�
 
 ![Overview tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/packages/vscode/media/screenshots/overview.png)
 
-**Risk & Security** — 複雑度・保守性・循環依存をスコア化して内訳表示します。
+**Risk & Security** — セキュリティスコアと、各指摘の重大度・対策を表示します。経路を追跡できた指摘には入力からの経路も示します。
 
 ![Risk & Security tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/packages/vscode/media/screenshots/risk-security.png)
 
