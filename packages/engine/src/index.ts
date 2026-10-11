@@ -2,7 +2,8 @@
  * Public API of the Codes Doctor engine. Consumers (the VS Code extension, the CLI)
  * import from here rather than from internal module paths.
  */
-export { analyzePathRequest } from './services/pathAnalysis';
+export { analyzePathRequest, analyzeRepository } from './services/pathAnalysis';
+export type { RepositoryAnalysis } from './services/pathAnalysis';
 export { analyzeLlmRequest, getSavedLlmResult, listLlmModels } from './services/llmService';
 export { runAnalysis } from './analyzer';
 export { generateHTMLReport } from './report/htmlBuilder';
