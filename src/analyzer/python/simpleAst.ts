@@ -1,6 +1,6 @@
 import path from 'path';
 import { readFileContent } from '../../fileWalker';
-import { PythonClassInfo, PythonFileInfo, PythonFunctionInfo } from '../../types';
+import type { SimpleClassInfo, SimpleFileInfo, SimpleFunctionInfo } from '../../types';
 
 interface LogicalLine {
   /** Indentation width in columns (tabs expanded to TAB_WIDTH spaces) */
@@ -103,7 +103,7 @@ function countParams(paramsText: string): number {
 const CLASS_HEADER_REGEX = /^class\s+([A-Za-z_][A-Za-z0-9_]*)/;
 const DEF_HEADER_REGEX = /^(?:async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)/;
 
-export async function parsePythonFile(filePath: string): Promise<PythonFileInfo> {
+export async function parsePythonFile(filePath: string): Promise<SimpleFileInfo> {
   const content = await readFileContent(filePath);
   if (!content) {
     return { filePath, classes: [], functions: [], imports: [], lineCount: 0, dependencies: [] };
@@ -113,7 +113,7 @@ export async function parsePythonFile(filePath: string): Promise<PythonFileInfo>
   const logicalLines = toLogicalLines(content);
   const imports = extractImports(logicalLines);
 
-  const classes: PythonClassInfo[] = [];
+  const classes: SimpleClassInfo[] = [];
   const classRanges: Array<{ start: number; end: number }> = [];
 
   for (let i = 0; i < logicalLines.length; i += 1) {
@@ -156,7 +156,7 @@ export async function parsePythonFile(filePath: string): Promise<PythonFileInfo>
     classRanges.push({ start: i, end: blockEnd });
   }
 
-  const functions: PythonFunctionInfo[] = [];
+  const functions: SimpleFunctionInfo[] = [];
   for (let i = 0; i < logicalLines.length; i += 1) {
     if (classRanges.some((r) => i > r.start && i <= r.end)) continue;
 
@@ -174,8 +174,8 @@ export async function parsePythonFile(filePath: string): Promise<PythonFileInfo>
   return { filePath, classes, functions, imports, lineCount, dependencies: imports };
 }
 
-export async function analyzeDirectory(files: string[]): Promise<PythonFileInfo[]> {
-  const results: PythonFileInfo[] = [];
+export async function analyzeDirectory(files: string[]): Promise<SimpleFileInfo[]> {
+  const results: SimpleFileInfo[] = [];
 
   for (const file of files) {
     try {

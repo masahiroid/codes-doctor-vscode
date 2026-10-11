@@ -2,6 +2,25 @@ import { escapeHtml } from '../html';
 import { homePageStyles } from './pages/homePageStyles';
 import { homePageScript } from './pages/homePageScript';
 import { renderErrorPageLayout } from './pages/errorPageLayout';
+import { ANALYSIS_LANGUAGES, AUTO_LANGUAGE, AnalysisLanguage, SOURCE_LANGUAGES } from '../analyzer/languages/catalog';
+
+/** Dropdown wording that differs from a language's plain name. */
+const LANGUAGE_OPTION_LABELS: Partial<Record<AnalysisLanguage, string>> = {
+  [AUTO_LANGUAGE]: '自動検出 (推奨)',
+  typescript: 'TypeScript/JavaScript',
+  javascript: 'JavaScript のみ',
+  dart: 'Dart (Flutter)',
+};
+
+function languageOptionLabel(language: AnalysisLanguage): string {
+  return LANGUAGE_OPTION_LABELS[language] ?? SOURCE_LANGUAGES.find((source) => source.id === language)?.label ?? language;
+}
+
+function renderLanguageOptions(): string {
+  return ANALYSIS_LANGUAGES
+    .map((language) => `<option value="${language}">${escapeHtml(languageOptionLabel(language))}</option>`)
+    .join('\n                ');
+}
 
 export function renderHomePage(): string {
   return `<!DOCTYPE html>
@@ -24,12 +43,7 @@ export function renderHomePage(): string {
                 解析言語
             </label>
             <select id="languageSelect" class="language-select">
-                <option value="auto">自動検出 (推奨)</option>
-                <option value="typescript">TypeScript/JavaScript</option>
-                <option value="javascript">JavaScript のみ</option>
-                <option value="php">PHP</option>
-                <option value="dart">Dart (Flutter)</option>
-                <option value="python">Python</option>
+                ${renderLanguageOptions()}
             </select>
         </div>
 

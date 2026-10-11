@@ -1,5 +1,5 @@
 import { CallGraph } from '../../types';
-import { percentile } from './percentile';
+import { P90, percentile } from './percentile';
 
 const TOP_N_LIST_SIZE = 10;
 
@@ -33,8 +33,8 @@ export function buildCallGraphContext(callGraph: CallGraph | undefined): CallGra
   return {
     edgeCount: callGraph?.edges?.length || 0,
     nodeCount: callGraph?.nodes?.length || 0,
-    outDegreeP90: percentile(Array.from(callerMap.values()), 90),
-    inDegreeP90: percentile(Array.from(calleeMap.values()), 90),
+    outDegreeP90: percentile(Array.from(callerMap.values()), P90),
+    inDegreeP90: percentile(Array.from(calleeMap.values()), P90),
     topCallers,
     topCallees,
   };

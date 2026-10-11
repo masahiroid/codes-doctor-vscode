@@ -1,4 +1,6 @@
-import { LayerHeatmap, LayerInfo, FileInfo, PHPFileInfo, PythonFileInfo, GodClassResult } from '../types';
+import path from 'node:path';
+import { LayerHeatmap, LayerInfo, GodClassResult } from '../types';
+import type { LayerDependencyStyle } from './languages/catalog';
 
 /** Directory-name patterns used to classify a file path into an architectural layer. */
 const LAYER_PATTERNS: Array<{ pattern: RegExp; name: string }> = [
@@ -50,36 +52,51 @@ interface LayerAccumulator {
 
 interface AnalyzableFile {
   filePath: string;
+  /** File-level imports; only consulted for `keyword`-style languages. */
+  dependencies?: string[];
   classes: Array<{ dependencies: string[] }>;
 }
 
+/** One language's parsed files plus how its dependency strings map to layers. */
+export interface LayerSource {
+  files: readonly AnalyzableFile[];
+  dependencyStyle: LayerDependencyStyle;
+}
+
 /**
- * Analyze architectural layers and generate heatmap.
+ * Analyze architectural layers and generate heatmap. When `repoPath` is given, file
+ * paths are made repo-relative first so that directories above the repository
+ * (e.g. `/Users/me/projects/`) cannot be mistaken for layers.
  */
 export function generateLayerHeatmap(
-  tsFiles: FileInfo[],
-  phpFiles: PHPFileInfo[],
+  sources: readonly LayerSource[],
   godClasses: GodClassResult[],
-  pythonFiles: PythonFileInfo[] = []
+  repoPath?: string
 ): LayerHeatmap {
-  const layers = detectLayers(tsFiles, phpFiles, pythonFiles, godClasses);
-  const matrix = buildDependencyMatrix(layers, tsFiles, phpFiles, pythonFiles);
+  const toRelative = repoPath ? relativizer(repoPath) : <T extends { filePath: string }>(item: T) => item;
+  const relativeSources = sources.map((source) => ({ ...source, files: source.files.map(toRelative) }));
+  const relativeGodClasses = godClasses.map(toRelative);
+
+  const layers = detectLayers(relativeSources.flatMap((source) => source.files), relativeGodClasses);
+  const matrix = buildDependencyMatrix(layers, relativeSources);
 
   return { layers, matrix };
+}
+
+function relativizer(repoPath: string) {
+  return <T extends { filePath: string }>(item: T): T => ({
+    ...item,
+    filePath: path.relative(repoPath, item.filePath).split(path.sep).join('/'),
+  });
 }
 
 /**
  * Detect architectural layers from file paths and aggregate per-layer stats.
  */
-function detectLayers(
-  tsFiles: FileInfo[],
-  phpFiles: PHPFileInfo[],
-  pythonFiles: PythonFileInfo[],
-  godClasses: GodClassResult[]
-): LayerInfo[] {
+function detectLayers(files: readonly AnalyzableFile[], godClasses: GodClassResult[]): LayerInfo[] {
   const layerMap = new Map<string, LayerAccumulator>();
 
-  for (const fileInfo of [...tsFiles, ...phpFiles, ...pythonFiles]) {
+  for (const fileInfo of files) {
     accumulateFileIntoLayer(layerMap, fileInfo, godClasses);
   }
 
@@ -149,7 +166,8 @@ function compareByDisplayOrder(a: LayerInfo, b: LayerInfo): number {
  */
 function detectLayerName(filePath: string): string {
   for (const { pattern, name } of LAYER_PATTERNS) {
-    if (pattern.test(filePath)) {
+    // Leading slash lets a top-level directory (`services/x.ts`) match `/services/`.
+    if (pattern.test('/' + filePath)) {
       return name;
     }
   }
@@ -184,12 +202,7 @@ function extractLayersFromDependencies(depStrings: string[]): Set<string> {
 /**
  * Build a layer x layer dependency count matrix.
  */
-function buildDependencyMatrix(
-  layers: LayerInfo[],
-  tsFiles: FileInfo[],
-  phpFiles: PHPFileInfo[],
-  pythonFiles: PythonFileInfo[]
-): number[][] {
+function buildDependencyMatrix(layers: LayerInfo[], sources: readonly LayerSource[]): number[][] {
   const size = layers.length;
   const matrix: number[][] = Array(size).fill(0).map(() => Array(size).fill(0));
 
@@ -206,28 +219,25 @@ function buildDependencyMatrix(
     }
   };
 
-  for (const fileInfo of tsFiles) {
-    const sourceLayer = detectLayerName(fileInfo.filePath);
-    for (const classInfo of fileInfo.classes) {
-      for (const dep of classInfo.dependencies) {
-        addEdge(sourceLayer, detectLayerName(dep));
-      }
-    }
-  }
-
-  for (const fileInfo of [...phpFiles, ...pythonFiles]) {
-    const sourceLayer = detectLayerName(fileInfo.filePath);
-
-    for (const targetLayer of extractLayersFromDependencies(fileInfo.dependencies)) {
-      addEdge(sourceLayer, targetLayer);
-    }
-
-    for (const classInfo of fileInfo.classes) {
-      for (const targetLayer of extractLayersFromDependencies(classInfo.dependencies)) {
+  for (const source of sources) {
+    for (const fileInfo of source.files) {
+      const sourceLayer = detectLayerName(fileInfo.filePath);
+      for (const targetLayer of dependencyLayersOf(fileInfo, source.dependencyStyle)) {
         addEdge(sourceLayer, targetLayer);
       }
     }
   }
 
   return matrix;
+}
+
+/** Target layers referenced by one file, in the order the matrix has always counted them. */
+function dependencyLayersOf(fileInfo: AnalyzableFile, style: LayerDependencyStyle): string[] {
+  if (style === 'path') {
+    return fileInfo.classes.flatMap((classInfo) => classInfo.dependencies.map(detectLayerName));
+  }
+  return [
+    ...extractLayersFromDependencies(fileInfo.dependencies ?? []),
+    ...fileInfo.classes.flatMap((classInfo) => [...extractLayersFromDependencies(classInfo.dependencies)]),
+  ];
 }

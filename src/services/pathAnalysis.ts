@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { runAnalysis } from '../analyzer';
 import { generateHTMLReport } from '../report/htmlBuilder';
 import { getReportPath } from '../report/output';
-import type { AnalysisLanguage } from '../types';
+import { toAnalysisLanguage } from '../analyzer/languages/catalog';
 
 /**
  * @param outputDir Base output directory for the generated report. Defaults to
@@ -36,7 +36,7 @@ export async function analyzePathRequest(
     throw new Error('Specified path is not a directory');
   }
 
-  const targetLanguage = (language as AnalysisLanguage) || 'auto';
+  const targetLanguage = toAnalysisLanguage(language);
   const analysisId = uuidv4();
   const reportPath = outputDir ? getReportPath(analysisId, outputDir) : getReportPath(analysisId);
 

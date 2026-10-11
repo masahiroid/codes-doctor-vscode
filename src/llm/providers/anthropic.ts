@@ -6,6 +6,8 @@ import {
   buildFullAnalysisPrompt,
   buildAstOnlySystemPrompt,
   buildAstOnlyPrompt,
+  buildAgentPromptSystemPrompt,
+  buildAgentPromptUserPrompt,
 } from '../openai/prompts';
 
 const ANTHROPIC_API_HOST = 'api.anthropic.com';
@@ -115,5 +117,9 @@ export const anthropicProvider: LlmProvider = {
     options: LlmCallOptions
   ): Promise<string> {
     return callMessagesApi(buildAstOnlySystemPrompt(), buildAstOnlyPrompt(context, focus), options);
+  },
+
+  async generateAgentPrompt(context: LlmContext, options: LlmCallOptions): Promise<string> {
+    return callMessagesApi(buildAgentPromptSystemPrompt(), buildAgentPromptUserPrompt(context), options);
   },
 };

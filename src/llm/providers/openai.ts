@@ -6,6 +6,8 @@ import {
   buildFullAnalysisPrompt,
   buildAstOnlySystemPrompt,
   buildAstOnlyPrompt,
+  buildAgentPromptSystemPrompt,
+  buildAgentPromptUserPrompt,
 } from '../openai/prompts';
 
 const OPENAI_API_HOST = 'api.openai.com';
@@ -42,6 +44,13 @@ function isModelNotFoundError(error: unknown): boolean {
 function isUnsupportedMaxTokensError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   return error.message.includes('unsupported_parameter') && error.message.includes('max_tokens');
+}
+
+/** Some reasoning models (o1/o3/o4, some gpt-5 variants) only support the default
+ * temperature (1) and reject any explicit value — including 1 itself, on some models. */
+function isUnsupportedTemperatureError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return error.message.includes('unsupported_value') && error.message.includes('temperature');
 }
 
 /** GPT-5 series uses the Responses API (/v1/responses) instead of Chat Completions */
@@ -111,11 +120,12 @@ async function callChatCompletions(
   systemPrompt: string,
   userPrompt: string,
   options: LlmCallOptions,
-  tokenParamName: 'max_tokens' | 'max_completion_tokens' = 'max_tokens'
+  tokenParamName: 'max_tokens' | 'max_completion_tokens' = 'max_tokens',
+  includeTemperature = true
 ): Promise<string> {
   const payload = JSON.stringify({
     model: options.model,
-    temperature: options.temperature,
+    ...(includeTemperature ? { temperature: options.temperature } : {}),
     [tokenParamName]: options.maxTokens,
     messages: [
       { role: 'system', content: systemPrompt },
@@ -127,11 +137,15 @@ async function callChatCompletions(
   try {
     response = await httpPostJson('/v1/chat/completions', payload, options.apiKey);
   } catch (error) {
-    // Retry once with the other token-limit parameter name if the API rejected this one —
-    // which one a model accepts isn't predictable from the model ID alone across providers'
-    // ongoing API changes, so probing is more reliable than a hardcoded model-name list.
+    // Retry once with the other token-limit parameter name, or without temperature, if the
+    // API rejected this request on one of those params — which params a model accepts isn't
+    // predictable from the model ID alone across providers' ongoing API changes, so probing
+    // is more reliable than a hardcoded model-name list.
     if (tokenParamName === 'max_tokens' && isUnsupportedMaxTokensError(error)) {
-      return callChatCompletions(systemPrompt, userPrompt, options, 'max_completion_tokens');
+      return callChatCompletions(systemPrompt, userPrompt, options, 'max_completion_tokens', includeTemperature);
+    }
+    if (includeTemperature && isUnsupportedTemperatureError(error)) {
+      return callChatCompletions(systemPrompt, userPrompt, options, tokenParamName, false);
     }
     throw error;
   }
@@ -212,5 +226,9 @@ export const openAiProvider: LlmProvider = {
       temperature: Math.max(options.temperature, AST_ONLY_MIN_TEMPERATURE),
     };
     return callLlm(buildAstOnlySystemPrompt(), buildAstOnlyPrompt(context, focus), astOnlyOptions);
+  },
+
+  async generateAgentPrompt(context: LlmContext, options: LlmCallOptions): Promise<string> {
+    return callLlm(buildAgentPromptSystemPrompt(), buildAgentPromptUserPrompt(context), options);
   },
 };

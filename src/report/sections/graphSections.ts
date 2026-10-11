@@ -2,7 +2,13 @@ import { buildD3DependencyGraph, generateD3VisualizationScript } from '../../gra
 import type { AnalysisResult } from '../../types';
 import { escapeHtml } from '../../html';
 import { CYCLE_LENGTH_THRESHOLDS } from '../../analyzer/technicalDebt';
-import { buildLlmControlsHtml, buildLlmControlsScript } from './llmControls';
+
+/** Cycle edges drawn in the circular-dependency diagram before it is truncated. */
+const MAX_CYCLE_EDGES = 80;
+/** djb2 string hash, used for stable Mermaid node IDs of non-word labels. */
+const DJB2_SEED = 5381;
+const DJB2_MULTIPLIER = 33;
+const BASE36 = 36;
 
 const LONGEST_CYCLES_DISPLAY_LIMIT = 2;
 const CYCLE_PATH_PREVIEW_LENGTH = 3;
@@ -15,61 +21,36 @@ export function mermaidSection(title: string, graphText: string): string {
   </section>`;
 }
 
-const LLM_DEFAULT_TOKENS = 3000;
-
+/**
+ * Read-only display of the LLM structural review. All configuration (provider, API key,
+ * model) and the "run" action live in the VS Code extension's Dashboard panel only —
+ * this report is a static file with no place to hold secrets or settings of its own.
+ * Re-running from the Dashboard patches this saved result back into the report in place.
+ */
 export function llmSection(result: AnalysisResult, savedResult?: string): string {
-  const enabled = result.config.features.llm;
-  const analysisId = result.analysisId;
-  const focus = 'architecture-review';
-  const disabledNote = enabled ? '' : 'LLM分析は無効です。CSAP_LLM_ENABLED=true と API キーを設定してください。';
-  const initialContent = savedResult ? escapeHtml(savedResult) : '未実行';
+  const initialContent = savedResult
+    ? escapeHtml(savedResult)
+    : '未実行。VS Code拡張のダッシュボードパネルから「Run LLM Review」を実行してください。';
   const initialDataMd = savedResult ? escapeHtml(savedResult) : '';
-  const initialStatus = savedResult ? 'レポート生成時の保存済み結果' : disabledNote;
+  const initialStatus = savedResult ? 'レポート生成時の保存済み結果' : '';
 
   return `
   <section id="sec-llm">
-    <h2>LLM構造解析</h2>
+    <h2>LLM 構造解析</h2>
     <div class="box">
-      ${buildLlmControlsHtml({
-        idPrefix: 'llm',
-        defaultTokens: LLM_DEFAULT_TOKENS,
-        enabled,
-        buttonLabel: '構造レビュー (再実行)',
-      })}
-      <div id="llmStatusInit" style="display:none;">${initialStatus}</div>
-      <div style="margin: 10px 0; color:#6b7280; font-size:0.88em;">
-        構造レビューは、モジュール依存グラフ・関数呼び出しグラフ・God Class分布をまとめて解釈し、このままで良いのか、優先改善が必要かを判断します。
+      <div style="margin: 0 0 10px 0; color:#6b7280; font-size:0.88em;">
+        構造レビューは、モジュール依存グラフ・関数呼び出しグラフ・God Class分布をまとめて解釈し、このままで良いのか、優先改善が必要かを判断します。設定と再実行は VS Code拡張のダッシュボードパネルから行います。
       </div>
+      ${initialStatus ? `<div style="color:#6b7280; font-size:0.9em; margin-bottom:8px;">${initialStatus}</div>` : ''}
       <div id="llmResult" class="llm-result" data-md="${initialDataMd}">${initialContent}</div>
     </div>
-    <script>
-      (function(){
-        const enabled = ${enabled ? 'true' : 'false'};
-        const analysisId = "${analysisId}";
-        const focus = "${focus}";
-        const astOnlyMode = false;
-        const defaultTokens = ${LLM_DEFAULT_TOKENS};
-        const statusEl = document.getElementById('llmStatus');
-        const resultEl = document.getElementById('llmResult');
-        const initialStatusEl = document.getElementById('llmStatusInit');
-        if (statusEl && initialStatusEl) statusEl.textContent = initialStatusEl.textContent;
-
-        async function loadSavedResult() {
-          try {
-            const response = await fetch('/api/llm/result/' + encodeURIComponent(analysisId) + '/' + encodeURIComponent(focus));
-            if (!response.ok) return;
-            const data = await response.json();
-            if (!data.success || !data.result) return;
-            resultEl.innerHTML = typeof marked !== 'undefined' ? marked.parse(data.result) : data.result;
-            statusEl.textContent = data.createdAt ? '保存済み結果を表示' : '保存済み結果';
-          } catch (_error) {}
-        }
-
-        ${buildLlmControlsScript('llm')}
-
-        loadSavedResult();
-      })();
-    </script>
+    <div class="box" style="border-left-color: #10b981;">
+      <h3 style="margin-top: 0;">AIコーディング用プロンプト</h3>
+      <div style="margin: 0 0 10px 0; color:#6b7280; font-size:0.88em;">
+        AIコーディングエージェントにそのまま渡せる作業指示です。ダッシュボードの出力モードを切り替えて実行すると生成されます。
+      </div>
+      <div id="llmAgentPrompt" class="llm-result" data-md="">未生成です。</div>
+    </div>
   </section>`;
 }
 
@@ -156,8 +137,8 @@ export function circularSection(result: AnalysisResult): string {
 }
 
 export function generateD3DependencyGraphSection(result: AnalysisResult): string {
-  if (!result.tsFiles || !result.phpFiles) return '';
-  const graph = buildD3DependencyGraph(result.tsFiles, result.phpFiles);
+  if (!result.files) return '';
+  const graph = buildD3DependencyGraph(result.files.typescript, result.files.php);
   if (graph.nodes.length === 0) {
     return '<section><h2>クラス依存グラフ (D3.js)</h2><div class="box">依存データがありません</div></section>';
   }
@@ -198,7 +179,6 @@ function buildCircularDependencyMermaid(cycles: Array<{ cycle: string[] }>): str
   }
 
   const edgeSet = new Set<string>();
-  const maxEdges = 80;
 
   for (const cycle of cycles) {
     const cyclePath = cycle.cycle.length > 1 ? cycle.cycle : [];
@@ -209,7 +189,7 @@ function buildCircularDependencyMermaid(cycles: Array<{ cycle: string[] }>): str
     }
   }
 
-  const edges = Array.from(edgeSet).slice(0, maxEdges);
+  const edges = Array.from(edgeSet).slice(0, MAX_CYCLE_EDGES);
   const lines = ['graph LR'];
 
   for (const edge of edges) {
@@ -219,8 +199,8 @@ function buildCircularDependencyMermaid(cycles: Array<{ cycle: string[] }>): str
     lines.push(`  ${fromId}["${escapeMermaidLabel(from)}"] --> ${toId}["${escapeMermaidLabel(to)}"]`);
   }
 
-  if (edgeSet.size > maxEdges) {
-    lines.push(`  note["Showing ${maxEdges} of ${edgeSet.size} cycle edges"]`);
+  if (edgeSet.size > MAX_CYCLE_EDGES) {
+    lines.push(`  note["Showing ${MAX_CYCLE_EDGES} of ${edgeSet.size} cycle edges"]`);
   }
 
   return lines.join('\n');
@@ -241,10 +221,10 @@ function escapeMermaidLabel(value: string): string {
 }
 
 function hashString(value: string): string {
-  let hash = 5381;
+  let hash = DJB2_SEED;
   for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 33) ^ (value.codePointAt(index) || 0);
+    hash = (hash * DJB2_MULTIPLIER) ^ (value.codePointAt(index) || 0);
   }
-  return (hash >>> 0).toString(36);
+  return (hash >>> 0).toString(BASE36);
 }
 

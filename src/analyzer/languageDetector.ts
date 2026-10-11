@@ -1,67 +1,49 @@
-import { listFiles } from '../fileWalker';
-import { DetectionResult } from '../types';
+import { listFilesByExtension } from '../fileWalker';
+import type { DetectionResult } from '../types';
+import { AnalysisLanguage, SOURCE_LANGUAGES, SourceLanguageId, enabledSourcesFor } from './languages/catalog';
 
 type PrimaryLanguage = DetectionResult['primaryLanguage'];
 
 /** Share of total files a language must reach to be called the sole primary language */
 const MIXED_LANGUAGE_THRESHOLD = 0.7;
 
+export interface LanguageDetection {
+  detection: DetectionResult;
+  /** Files per source language, emptied for languages the analysis mode does not enable. */
+  sourceFiles: Record<SourceLanguageId, string[]>;
+}
+
 /**
- * Detect programming languages present in a repository directory.
+ * Detect the languages in a repository with a single directory walk, and apply the
+ * analysis mode (`auto` analyzes everything detected; a forced mode narrows it).
  */
-export async function detectLanguages(repoPath: string): Promise<DetectionResult> {
-  // List all TypeScript and JavaScript files
-  const tsFiles = await listFiles(repoPath, ['.ts', '.tsx']);
-  const jsFiles = await listFiles(repoPath, ['.js', '.jsx']);
-  const phpFiles = await listFiles(repoPath, ['.php']);
-  const dartFiles = await listFiles(repoPath, ['.dart']);
-  const pythonFiles = await listFiles(repoPath, ['.py']);
+export async function detectLanguages(repoPath: string, mode: AnalysisLanguage): Promise<LanguageDetection> {
+  const filesBySource = await listFilesByExtension(repoPath, SOURCE_LANGUAGES);
+  const enabledSources = enabledSourcesFor(mode);
 
-  const tsCount = tsFiles.length;
-  const jsCount = jsFiles.length;
-  const phpCount = phpFiles.length;
-  const dartCount = dartFiles.length;
-  const pythonCount = pythonFiles.length;
+  const fileCounts = {} as Record<SourceLanguageId, number>;
+  const enabled = {} as Record<SourceLanguageId, boolean>;
+  const sourceFiles = {} as Record<SourceLanguageId, string[]>;
+  for (const { id } of SOURCE_LANGUAGES) {
+    fileCounts[id] = filesBySource[id].length;
+    enabled[id] = enabledSources.has(id) && fileCounts[id] > 0;
+    sourceFiles[id] = enabledSources.has(id) ? filesBySource[id] : [];
+  }
 
-  const counts: Array<{ lang: Exclude<PrimaryLanguage, 'mixed' | 'unknown'>; count: number }> = [
-    { lang: 'typescript', count: tsCount },
-    { lang: 'javascript', count: jsCount },
-    { lang: 'php', count: phpCount },
-    { lang: 'dart', count: dartCount },
-    { lang: 'python', count: pythonCount },
-  ];
-
-  const primaryLanguage = determinePrimaryLanguage(counts);
-
+  const totalFiles = Object.values<number>(fileCounts).reduce((sum, count) => sum + count, 0);
   return {
-    hasTypeScript: tsCount > 0,
-    hasJavaScript: jsCount > 0,
-    hasPHP: phpCount > 0,
-    hasDart: dartCount > 0,
-    hasPython: pythonCount > 0,
-    fileCount: {
-      ts: tsCount,
-      js: jsCount,
-      php: phpCount,
-      dart: dartCount,
-      python: pythonCount,
-      total: tsCount + jsCount + phpCount + dartCount + pythonCount,
-    },
-    primaryLanguage,
+    detection: { fileCounts, totalFiles, enabled, primaryLanguage: determinePrimaryLanguage(fileCounts, totalFiles) },
+    sourceFiles,
   };
 }
 
-function determinePrimaryLanguage(
-  counts: Array<{ lang: Exclude<PrimaryLanguage, 'mixed' | 'unknown'>; count: number }>
-): PrimaryLanguage {
-  const totals = counts.reduce((sum, c) => sum + c.count, 0);
-  if (totals === 0) return 'unknown';
+function determinePrimaryLanguage(fileCounts: Record<SourceLanguageId, number>, totalFiles: number): PrimaryLanguage {
+  if (totalFiles === 0) return 'unknown';
 
+  const counts = SOURCE_LANGUAGES.map(({ id }) => ({ id, count: fileCounts[id] }));
   const nonZero = counts.filter((c) => c.count > 0);
-  if (nonZero.length === 1) return nonZero[0].lang;
+  if (nonZero.length === 1) return nonZero[0].id;
 
-  const ranked = [...counts].sort((a, b) => b.count - a.count);
-  const top = ranked[0];
-  const ratio = top.count / totals;
-  return ratio >= MIXED_LANGUAGE_THRESHOLD ? top.lang : 'mixed';
+  const [top] = [...counts].sort((a, b) => b.count - a.count);
+  return top.count / totalFiles >= MIXED_LANGUAGE_THRESHOLD ? top.id : 'mixed';
 }

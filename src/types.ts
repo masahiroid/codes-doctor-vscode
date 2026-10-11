@@ -1,4 +1,5 @@
 import type { AppConfig } from './config';
+import type { SourceLanguageId } from './analyzer/languages/catalog';
 
 /**
  * TypeScript/JavaScript AST Analysis Types
@@ -55,16 +56,16 @@ export interface PHPFileInfo {
 }
 
 /**
- * Dart Analysis Types (lightweight)
+ * Lightweight (regex-based) parser output, shared by every language that is not
+ * parsed with a full AST (Dart, Python, Go, Swift, C#, Java, Kotlin, Rust, C++).
  */
-
-export interface DartFunctionInfo {
+export interface SimpleFunctionInfo {
   name: string;
   lineCount: number;
   paramCount: number;
 }
 
-export interface DartClassInfo {
+export interface SimpleClassInfo {
   name: string;
   filePath: string;
   lineCount: number;
@@ -76,41 +77,10 @@ export interface DartClassInfo {
   dependencies: string[];
 }
 
-export interface DartFileInfo {
+export interface SimpleFileInfo {
   filePath: string;
-  classes: DartClassInfo[];
-  functions: DartFunctionInfo[];
-  imports: string[];
-  lineCount: number;
-  dependencies: string[];
-}
-
-/**
- * Python Analysis Types (lightweight, indentation-based)
- */
-
-export interface PythonFunctionInfo {
-  name: string;
-  lineCount: number;
-  paramCount: number;
-}
-
-export interface PythonClassInfo {
-  name: string;
-  filePath: string;
-  lineCount: number;
-  methodCount: number;
-  propertyCount: number;
-  importCount: number;
-  constructorExists: boolean;
-  methods: string[];
-  dependencies: string[];
-}
-
-export interface PythonFileInfo {
-  filePath: string;
-  classes: PythonClassInfo[];
-  functions: PythonFunctionInfo[];
+  classes: SimpleClassInfo[];
+  functions: SimpleFunctionInfo[];
   imports: string[];
   lineCount: number;
   dependencies: string[];
@@ -120,24 +90,34 @@ export interface PythonFileInfo {
  * Language Detection Types
  */
 
-export type AnalysisLanguage = 'typescript' | 'javascript' | 'php' | 'dart' | 'python' | 'auto';
+export type { AnalysisLanguage } from './analyzer/languages/catalog';
 
 export interface DetectionResult {
-  hasTypeScript: boolean;
-  hasJavaScript: boolean;
-  hasPHP: boolean;
-  hasDart: boolean;
-  hasPython: boolean;
-  fileCount: {
-    ts: number;
-    js: number;
-    php: number;
-    dart: number;
-    python: number;
-    total: number;
-  };
-  primaryLanguage: 'typescript' | 'javascript' | 'php' | 'dart' | 'python' | 'mixed' | 'unknown';
+  /** Files found per source language (before any forced-language override). */
+  fileCounts: Record<SourceLanguageId, number>;
+  totalFiles: number;
+  /** Source languages that will be analyzed (all detected ones, or only the forced mode's). */
+  enabled: Record<SourceLanguageId, boolean>;
+  primaryLanguage: SourceLanguageId | 'mixed' | 'unknown';
 }
+
+/** Parse results per analysis language; keys are `LanguageId`s from the language catalog. */
+export interface LanguageFileMap {
+  typescript: FileInfo[];
+  php: PHPFileInfo[];
+  dart: SimpleFileInfo[];
+  python: SimpleFileInfo[];
+  go: SimpleFileInfo[];
+  swift: SimpleFileInfo[];
+  csharp: SimpleFileInfo[];
+  java: SimpleFileInfo[];
+  kotlin: SimpleFileInfo[];
+  rust: SimpleFileInfo[];
+  cpp: SimpleFileInfo[];
+}
+
+/** A parsed file of any language. */
+export type ParsedFile = LanguageFileMap[keyof LanguageFileMap][number];
 
 /**
  * God Class Scoring Types
@@ -367,10 +347,6 @@ export interface AnalysisResult {
   analyzedAt: string;
   summary: {
     totalFiles: number;
-    tsFiles: number;
-    phpFiles: number;
-    dartFiles: number;
-    pythonFiles: number;
     totalClasses: number;
     totalMethods: number;
     avgGodScore: number;
@@ -379,10 +355,7 @@ export interface AnalysisResult {
   dependencyGraph: string;
   callGraph: CallGraph;
   callGraphMermaid: string;
-  tsFiles: FileInfo[];
-  phpFiles: PHPFileInfo[];
-  dartFiles: DartFileInfo[];
-  pythonFiles: PythonFileInfo[];
+  files: LanguageFileMap;
   detectedLanguages: DetectionResult;
   moduleMetrics: ModuleMetrics[];
   circularDependencies: CircularDependency[];

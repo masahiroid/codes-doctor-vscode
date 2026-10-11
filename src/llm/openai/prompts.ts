@@ -55,6 +55,53 @@ export function buildFullAnalysisPrompt(context: LlmContext, focus: string): str
   ].join('\n');
 }
 
+// Kept free of Japanese literals on purpose: the English engine build only swaps "in Japanese" for
+// "in English", so no per-fragment translation entries are needed for this prompt.
+export function buildAgentPromptSystemPrompt(): string {
+  return [
+    'You are a senior software architect who writes task instructions for AI coding agents',
+    '(such as Claude Code, Cursor, GitHub Copilot agent mode, or Codex).',
+    'Your output is not a report for humans: it is the prompt itself, which the user will paste into the agent unchanged.',
+  ].join(' ');
+}
+
+export function buildAgentPromptUserPrompt(context: LlmContext): string {
+  return [
+    'You are given a codebase structural analysis summary in JSON.',
+    'Turn it into a single prompt that an AI coding agent can execute against this repository.',
+    '',
+    'Output rules:',
+    '- Output only the prompt, as Markdown. No preamble, no closing remarks, and do not wrap the whole output in a code fence.',
+    '- Address the agent directly in the imperative ("Inspect...", "Split...").',
+    '- Write the entire prompt in Japanese.',
+    '',
+    'Required structure:',
+    '1. Goal: one or two sentences on what this refactoring pass should achieve and why, citing the key numbers.',
+    '2. Context: repository name, primary language, and the 3-6 metrics that justify the work (God Score, fan-in/fan-out, instability, cycle length, method/line counts).',
+    '3. Tasks: at most 5, in priority order. For each task give:',
+    '   - Target: exact file paths, modules, classes, or functions, taken only from the JSON.',
+    '   - Evidence: the metric values that make this a problem.',
+    '   - Inspect first: what the agent must read and confirm in the actual code before changing anything.',
+    '   - Change: the concrete refactoring to apply if the problem is confirmed (extract, split, invert a dependency, break a cycle, ...).',
+    '   - Do not change: interfaces, behavior, or files that must stay as they are.',
+    '   - Done when: verifiable acceptance checks (tests pass, the cycle is gone, the class no longer holds responsibility X, ...).',
+    '4. Leave as-is: items the analysis flags but that should not be touched, each with a one-line reason (e.g. natural entry points, thin orchestration modules, shared foundations).',
+    '5. Global constraints: inspect before editing; work one task at a time with a separate commit per task; preserve public APIs and existing behavior; run the existing tests after each task; if a task\'s evidence does not hold in the actual code, skip it and say why instead of forcing a change.',
+    '6. Final report: tell the agent to finish by listing, per task, what it changed, how it verified it, and anything left unresolved.',
+    '',
+    'Grounding rules:',
+    '- Never invent file names, symbols, test commands, or defects that are not in the JSON. If something must be confirmed, phrase it as an inspection step.',
+    '- Do not invent a test command; tell the agent to find and use the project\'s existing one.',
+    '- A module with instability=1.00 but fanIn=0, lineCount<=80, and fanOut<=3 is a lightweight entry point, not a refactoring target.',
+    '- Treat moduleMetrics.naturalEntrypoints as false-positive exclusions and moduleMetrics.reviewTargets as the main candidates.',
+    '- If dependency data looks empty or unreliable, make the first task "verify dependency extraction and re-run the analysis" instead of dependency-driven refactoring.',
+    '- If nothing warrants change, say so in the Goal and produce only the Leave as-is and Final report sections.',
+    '',
+    'JSON:',
+    JSON.stringify(context),
+  ].join('\n');
+}
+
 export function buildAstOnlySystemPrompt(): string {
   return [
     'You are a principal code reviewer analyzing AST-based code structure.',

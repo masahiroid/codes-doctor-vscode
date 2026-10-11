@@ -1,5 +1,6 @@
 import path from 'node:path';
-import { AnalysisResult, ModuleMetrics } from '../../types';
+import type { AnalysisResult, FileInfo, LanguageFileMap, ModuleMetrics, PHPFileInfo, SimpleFileInfo } from '../../types';
+import { LANGUAGES, LanguageId } from '../../analyzer/languages/catalog';
 
 const MAX_FILES_PER_LANGUAGE = 8;
 /** Weight applied to module coupling (fanIn+fanOut) when ranking files by code complexity */
@@ -11,12 +12,7 @@ export interface AstOnlyLlmContext {
   analyzedAt: string;
   primaryLanguage: string;
   mode: 'ast-only';
-  astData: {
-    typescript: SampledLanguageFiles;
-    php: SampledLanguageFiles;
-    dart: SampledLanguageFiles;
-    python: SampledLanguageFiles;
-  };
+  astData: Record<LanguageId, SampledLanguageFiles>;
 }
 
 interface SampledLanguageFiles {
@@ -26,7 +22,7 @@ interface SampledLanguageFiles {
     filePath: string;
     complexity: number;
     cyclomaticComplexity?: number;
-    ast: any;
+    ast: unknown;
   }>;
 }
 
@@ -36,6 +32,9 @@ interface FileLike {
   classes: unknown[];
   functions: unknown[];
 }
+
+/** What a sampled file contributes besides its path and complexity. */
+type FileSampler<F> = (file: F, result: AnalysisResult) => { ast: unknown; cyclomaticComplexity?: number };
 
 /**
  * Code complexity = actual code volume * content richness.
@@ -51,20 +50,19 @@ function getCodeComplexity(fileInfo: FileLike, moduleMetrics: ModuleMetrics[]): 
   return fileInfo.lineCount + coupling * COUPLING_WEIGHT;
 }
 
-function buildTypeScriptAstStructure(fileInfo: any) {
+function buildTypeScriptAstStructure(fileInfo: FileInfo) {
   return {
     type: 'Program',
     filePath: fileInfo.filePath,
     lineCount: fileInfo.lineCount,
     imports: fileInfo.imports,
     exports: [],
-    classes: fileInfo.classes.map((c: any) => ({
+    classes: fileInfo.classes.map((c) => ({
       name: c.name,
       methods: c.methods,
       lineCount: c.lineCount,
-      complexity: c.complexity,
     })),
-    functions: fileInfo.functions.map((f: any) => ({
+    functions: fileInfo.functions.map((f) => ({
       name: f.name,
       paramCount: f.paramCount,
       lineCount: f.lineCount,
@@ -72,38 +70,39 @@ function buildTypeScriptAstStructure(fileInfo: any) {
   };
 }
 
-function buildPhpAstStructure(fileInfo: any) {
+function buildPhpAstStructure(fileInfo: PHPFileInfo) {
   return {
     type: 'Program',
     filePath: fileInfo.filePath,
     lineCount: fileInfo.lineCount,
     dependencies: fileInfo.dependencies,
-    classes: fileInfo.classes.map((c: any) => ({
+    classes: fileInfo.classes.map((c) => ({
       name: c.name,
       namespace: c.namespace,
       methods: c.methods,
       lineCount: c.lineCount,
     })),
-    functions: fileInfo.functions.map((f: any) => ({
+    functions: fileInfo.functions.map((f) => ({
       name: f.name,
       lineCount: f.lineCount,
     })),
   };
 }
 
-function buildDartAstStructure(fileInfo: any) {
+/** Every lightweight-parsed language shares one file shape, so it shares one structure. */
+function buildLightweightAstStructure(fileInfo: SimpleFileInfo) {
   return {
     type: 'Program',
     filePath: fileInfo.filePath,
     lineCount: fileInfo.lineCount,
     imports: fileInfo.imports,
     dependencies: fileInfo.dependencies,
-    classes: fileInfo.classes.map((c: any) => ({
+    classes: fileInfo.classes.map((c) => ({
       name: c.name,
       methods: c.methods,
       lineCount: c.lineCount,
     })),
-    functions: fileInfo.functions.map((f: any) => ({
+    functions: fileInfo.functions.map((f) => ({
       name: f.name,
       paramCount: f.paramCount,
       lineCount: f.lineCount,
@@ -111,97 +110,45 @@ function buildDartAstStructure(fileInfo: any) {
   };
 }
 
-function buildPythonAstStructure(fileInfo: any) {
-  return {
-    type: 'Program',
-    filePath: fileInfo.filePath,
-    lineCount: fileInfo.lineCount,
-    imports: fileInfo.imports,
-    dependencies: fileInfo.dependencies,
-    classes: fileInfo.classes.map((c: any) => ({
-      name: c.name,
-      methods: c.methods,
-      lineCount: c.lineCount,
-    })),
-    functions: fileInfo.functions.map((f: any) => ({
-      name: f.name,
-      paramCount: f.paramCount,
-      lineCount: f.lineCount,
-    })),
-  };
-}
+/** TypeScript samples also carry the worst cyclomatic complexity among the file's God Class candidates. */
+const sampleTypeScriptFile: FileSampler<FileInfo> = (file, result) => {
+  const fileGodClasses = result.godClasses.filter((gc) => gc.filePath === file.filePath);
+  const maxCc = fileGodClasses.length > 0
+    ? Math.max(...fileGodClasses.map((c) => c.cyclomaticComplexity || 0))
+    : undefined;
+  return { cyclomaticComplexity: maxCc && maxCc > 0 ? maxCc : undefined, ast: buildTypeScriptAstStructure(file) };
+};
 
-function sampleTypeScriptFiles(
-  tsFiles: AnalysisResult['tsFiles'],
-  moduleMetrics: ModuleMetrics[],
-  godClasses: AnalysisResult['godClasses']
-): SampledLanguageFiles {
-  const sorted = [...tsFiles].sort(
-    (a, b) => getCodeComplexity(b, moduleMetrics) - getCodeComplexity(a, moduleMetrics)
-  );
-  const files = sorted.slice(0, MAX_FILES_PER_LANGUAGE).map((f) => {
-    const fileGodClasses = godClasses.filter((gc) => gc.filePath === f.filePath);
-    const maxCc = fileGodClasses.length > 0
-      ? Math.max(...fileGodClasses.map((c) => c.cyclomaticComplexity || 0))
-      : undefined;
+const sampleLightweightFile: FileSampler<SimpleFileInfo> = (file) => ({ ast: buildLightweightAstStructure(file) });
 
-    return {
-      filePath: f.filePath,
-      complexity: getCodeComplexity(f, moduleMetrics),
-      cyclomaticComplexity: maxCc && maxCc > 0 ? maxCc : undefined,
-      ast: buildTypeScriptAstStructure(f),
-    };
-  });
+const FILE_SAMPLERS: { [K in LanguageId]: FileSampler<LanguageFileMap[K][number]> } = {
+  typescript: sampleTypeScriptFile,
+  php: (file) => ({ ast: buildPhpAstStructure(file) }),
+  dart: sampleLightweightFile,
+  python: sampleLightweightFile,
+  go: sampleLightweightFile,
+  swift: sampleLightweightFile,
+  csharp: sampleLightweightFile,
+  java: sampleLightweightFile,
+  kotlin: sampleLightweightFile,
+  rust: sampleLightweightFile,
+  cpp: sampleLightweightFile,
+};
 
-  return { sampledCount: files.length, totalCount: tsFiles.length, files };
-}
+/** The most complex files of one language, most complex first. */
+function sampleLanguage<K extends LanguageId>(id: K, result: AnalysisResult): SampledLanguageFiles {
+  const languageFiles: ReadonlyArray<LanguageFileMap[K][number]> = result.files[id];
+  const sampler = FILE_SAMPLERS[id] as FileSampler<LanguageFileMap[K][number]>;
+  const complexity = (file: FileLike) => getCodeComplexity(file, result.moduleMetrics);
+  const files = [...languageFiles]
+    .sort((a, b) => complexity(b) - complexity(a))
+    .slice(0, MAX_FILES_PER_LANGUAGE)
+    .map((file) => {
+      const { ast, cyclomaticComplexity } = sampler(file, result);
+      return { filePath: file.filePath, complexity: complexity(file), cyclomaticComplexity, ast };
+    });
 
-function samplePhpFiles(
-  phpFiles: AnalysisResult['phpFiles'],
-  moduleMetrics: ModuleMetrics[]
-): SampledLanguageFiles {
-  const sorted = [...phpFiles].sort(
-    (a, b) => getCodeComplexity(b, moduleMetrics) - getCodeComplexity(a, moduleMetrics)
-  );
-  const files = sorted.slice(0, MAX_FILES_PER_LANGUAGE).map((f) => ({
-    filePath: f.filePath,
-    complexity: getCodeComplexity(f, moduleMetrics),
-    ast: buildPhpAstStructure(f),
-  }));
-
-  return { sampledCount: files.length, totalCount: phpFiles.length, files };
-}
-
-function sampleDartFiles(
-  dartFiles: AnalysisResult['dartFiles'],
-  moduleMetrics: ModuleMetrics[]
-): SampledLanguageFiles {
-  const sorted = [...dartFiles].sort(
-    (a, b) => getCodeComplexity(b, moduleMetrics) - getCodeComplexity(a, moduleMetrics)
-  );
-  const files = sorted.slice(0, MAX_FILES_PER_LANGUAGE).map((f) => ({
-    filePath: f.filePath,
-    complexity: getCodeComplexity(f, moduleMetrics),
-    ast: buildDartAstStructure(f),
-  }));
-
-  return { sampledCount: files.length, totalCount: dartFiles.length, files };
-}
-
-function samplePythonFiles(
-  pythonFiles: AnalysisResult['pythonFiles'],
-  moduleMetrics: ModuleMetrics[]
-): SampledLanguageFiles {
-  const sorted = [...pythonFiles].sort(
-    (a, b) => getCodeComplexity(b, moduleMetrics) - getCodeComplexity(a, moduleMetrics)
-  );
-  const files = sorted.slice(0, MAX_FILES_PER_LANGUAGE).map((f) => ({
-    filePath: f.filePath,
-    complexity: getCodeComplexity(f, moduleMetrics),
-    ast: buildPythonAstStructure(f),
-  }));
-
-  return { sampledCount: files.length, totalCount: pythonFiles.length, files };
+  return { sampledCount: files.length, totalCount: languageFiles.length, files };
 }
 
 export function buildAstOnlyLlmContext(result: AnalysisResult): AstOnlyLlmContext {
@@ -211,11 +158,6 @@ export function buildAstOnlyLlmContext(result: AnalysisResult): AstOnlyLlmContex
     analyzedAt: result.analyzedAt,
     primaryLanguage: result.detectedLanguages.primaryLanguage,
     mode: 'ast-only',
-    astData: {
-      typescript: sampleTypeScriptFiles(result.tsFiles, result.moduleMetrics, result.godClasses),
-      php: samplePhpFiles(result.phpFiles, result.moduleMetrics),
-      dart: sampleDartFiles(result.dartFiles, result.moduleMetrics),
-      python: samplePythonFiles(result.pythonFiles, result.moduleMetrics),
-    },
+    astData: Object.fromEntries(LANGUAGES.map(({ id }) => [id, sampleLanguage(id, result)])) as AstOnlyLlmContext['astData'],
   };
 }

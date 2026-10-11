@@ -4,6 +4,7 @@ import type { AppConfig } from '../types';
 import { analyzeLlmRequest, getSavedLlmResult, listLlmModels } from '../services/llmService';
 import { analyzePathRequest } from '../services/pathAnalysis';
 import { isValidAnalysisId, isValidFocus } from '../validation';
+import { HTTP_STATUS } from '../app/httpStatus';
 
 export function createApiRouter(config: AppConfig): Router {
   const router = createRouter();
@@ -18,7 +19,7 @@ export function createApiRouter(config: AppConfig): Router {
       res.json({ success: true, ...result });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Path analysis failed';
-      const status = isBadRequestMessage(message) ? 400 : 500;
+      const status = isBadRequestMessage(message) ? HTTP_STATUS.badRequest : HTTP_STATUS.internalServerError;
       console.error('[ERROR] Path analysis failed:', error);
       res.status(status).json({ success: false, error: message });
     }
@@ -31,7 +32,7 @@ export function createApiRouter(config: AppConfig): Router {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to list models';
       console.error('[ERROR] Listing LLM models failed:', error);
-      res.status(400).json({ success: false, error: message });
+      res.status(HTTP_STATUS.badRequest).json({ success: false, error: message });
     }
   });
 
@@ -51,22 +52,22 @@ export function createApiRouter(config: AppConfig): Router {
     try {
       const { analysisId, focus } = req.params;
       if (!analysisId || !focus) {
-        return res.status(400).json({ success: false, error: 'analysisId and focus are required' });
+        return res.status(HTTP_STATUS.badRequest).json({ success: false, error: 'analysisId and focus are required' });
       }
       if (!isValidAnalysisId(analysisId) || !isValidFocus(focus)) {
-        return res.status(400).json({ success: false, error: 'analysisId or focus is invalid' });
+        return res.status(HTTP_STATUS.badRequest).json({ success: false, error: 'analysisId or focus is invalid' });
       }
 
       const result = getSavedLlmResult(analysisId, focus, config.paths.output);
       if (!result) {
-        return res.status(404).json({ success: false, error: 'Saved LLM result not found' });
+        return res.status(HTTP_STATUS.notFound).json({ success: false, error: 'Saved LLM result not found' });
       }
 
       return res.json({ success: true, ...result });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load saved LLM result';
       console.error('[ERROR] Loading saved LLM result failed:', error);
-      return res.status(500).json({ success: false, error: message });
+      return res.status(HTTP_STATUS.internalServerError).json({ success: false, error: message });
     }
   });
 
@@ -85,15 +86,15 @@ function resolveLlmErrorStatus(message: string): number {
   if (
     message === 'analysisId is required' ||
     message === 'analysisId is invalid' ||
-    message === 'LLM is disabled. Set CSAP_LLM_ENABLED=true' ||
+    message.startsWith('LLM is disabled.') ||
     message.endsWith('is not set')
   ) {
-    return 400;
+    return HTTP_STATUS.badRequest;
   }
 
   if (message.startsWith('LLM context not found')) {
-    return 404;
+    return HTTP_STATUS.notFound;
   }
 
-  return 500;
+  return HTTP_STATUS.internalServerError;
 }

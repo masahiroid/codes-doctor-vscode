@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { allLanguageFiles } from '../analyzer/languages/catalog';
 import { AnalysisResult } from '../types';
 import { buildModuleMetricsContext, ModuleMetricsContext } from './context/moduleMetricsContext';
 import { buildCallGraphContext, CallGraphContext } from './context/callGraphContext';
@@ -37,7 +38,7 @@ export function buildLlmContext(result: AnalysisResult): LlmContext {
     primaryLanguage: result.detectedLanguages.primaryLanguage,
     moduleMetrics: buildModuleMetricsContext(result.moduleMetrics),
     callGraph: buildCallGraphContext(result.callGraph),
-    dependencyGraph: buildDependencyGraphContext(result.tsFiles, result.phpFiles, result.dartFiles, result.pythonFiles),
+    dependencyGraph: buildDependencyGraphContext(allLanguageFiles(result.files)),
     circularDependencies: buildCircularDependencyContext(result.circularDependencies || []),
     layerHeatmap: buildLayerHeatmapContext(result.layerHeatmap),
     godClasses: buildGodClassContext(result.godClasses || []),

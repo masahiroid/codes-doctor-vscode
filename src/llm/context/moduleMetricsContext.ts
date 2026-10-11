@@ -1,5 +1,5 @@
 import { ModuleMetrics } from '../../types';
-import { percentile } from './percentile';
+import { P50, P90, percentile } from './percentile';
 
 /** Instability above this is reported as "unstable" in the LLM context summary */
 const UNSTABLE_INSTABILITY_THRESHOLD = 0.8;
@@ -118,15 +118,15 @@ export function buildModuleMetricsContext(moduleMetrics: ModuleMetrics[]): Modul
   const instabilityValues = moduleMetrics.map((m) => m.instability);
   const structuralValues = moduleMetrics.map((m) => m.structuralScore);
 
-  const fanInP90 = percentile(fanInValues, 90);
-  const fanOutP90 = percentile(fanOutValues, 90);
-  const instabilityP90 = percentile(instabilityValues, 90);
+  const fanInP90 = percentile(fanInValues, P90);
+  const fanOutP90 = percentile(fanOutValues, P90);
+  const instabilityP90 = percentile(instabilityValues, P90);
   const structuralP10 = percentile(structuralValues, 10);
 
-  const fanInP50 = percentile(fanInValues, 50);
-  const fanOutP50 = percentile(fanOutValues, 50);
-  const instabilityP50 = percentile(instabilityValues, 50);
-  const structuralP50 = percentile(structuralValues, 50);
+  const fanInP50 = percentile(fanInValues, P50);
+  const fanOutP50 = percentile(fanOutValues, P50);
+  const instabilityP50 = percentile(instabilityValues, P50);
+  const structuralP50 = percentile(structuralValues, P50);
 
   const naturalEntrypoints = moduleMetrics
     .filter((metric) => isLightweightEntrypointModule(metric))

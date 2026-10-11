@@ -1,20 +1,17 @@
 import type { AppConfig } from '../../config';
-import type { AnalysisResult, CallGraph } from '../../types';
+import type { AnalysisResult, CallGraph, GodClassResult, LanguageFileMap } from '../../types';
 
 export interface GlobalAnalysisInput {
   repoPath: string;
   config: AppConfig;
   detectedLanguages: AnalysisResult['detectedLanguages'];
-  tsFileInfoList: any[];
-  phpFileInfoList: any[];
-  dartFileInfoList: any[];
-  pythonFileInfoList: any[];
-  allGodClasses: any[];
+  files: LanguageFileMap;
+  allGodClasses: GodClassResult[];
   callGraph: CallGraph;
 }
 
 export interface GlobalAnalysisOutput {
-  rankedClasses: any[];
+  rankedClasses: GodClassResult[];
   dependencyGraph: string;
   callGraphMermaid: string;
   summary: AnalysisResult['summary'];

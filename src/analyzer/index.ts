@@ -5,7 +5,7 @@ import { executeAnalysis } from './runner';
  * Main analysis engine - orchestrates all analyzers.
  * @param repoPath - Path to repository
  * @param analysisId - Unique analysis identifier
- * @param forcedLanguage - Force analysis language: 'typescript' | 'javascript' | 'php' | 'dart' | 'auto' (default: 'auto')
+ * @param forcedLanguage - Force analysis language (any ANALYSIS_LANGUAGES value; default: 'auto')
  */
 export async function runAnalysis(
   repoPath: string,

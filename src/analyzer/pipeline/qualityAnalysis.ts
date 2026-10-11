@@ -2,10 +2,13 @@ import { rankClasses } from '../typescript/godScore';
 import { calculateTechnicalDebt } from '../technicalDebt';
 import { calculateSecurityScore } from '../securityScore';
 import { generateLayerHeatmap } from '../layerAnalysis';
-import type { AnalysisResult } from '../../types';
+import type { AnalysisResult, GodClassResult, LanguageFileMap } from '../../types';
+import { LANGUAGES, allLanguageFiles } from '../languages/catalog';
+import type { SecurityScanTarget } from '../securityScore';
+import type { LayerSource } from '../layerAnalysis';
 
 export interface QualityAnalysisResult {
-  rankedClasses: any[];
+  rankedClasses: GodClassResult[];
   summary: AnalysisResult['summary'];
   technicalDebt: NonNullable<AnalysisResult['technicalDebt']>;
   securityScore: NonNullable<AnalysisResult['securityScore']>;
@@ -15,38 +18,18 @@ export interface QualityAnalysisResult {
 export async function runQualityAnalysis(input: {
   repoPath: string;
   detectedLanguages: AnalysisResult['detectedLanguages'];
-  tsFileInfoList: any[];
-  phpFileInfoList: any[];
-  dartFileInfoList: any[];
-  pythonFileInfoList: any[];
-  allGodClasses: any[];
+  files: LanguageFileMap;
+  allGodClasses: GodClassResult[];
   moduleMetrics: AnalysisResult['moduleMetrics'];
   circularDependencies: AnalysisResult['circularDependencies'];
 }): Promise<QualityAnalysisResult> {
-  const {
-    repoPath,
-    detectedLanguages,
-    tsFileInfoList,
-    phpFileInfoList,
-    dartFileInfoList,
-    pythonFileInfoList,
-    allGodClasses,
-    moduleMetrics,
-    circularDependencies,
-  } = input;
+  const { repoPath, detectedLanguages, files, allGodClasses, moduleMetrics, circularDependencies } = input;
 
   console.log('\n[Step 5] Ranking God Classes...');
   const rankedClasses = rankClasses(allGodClasses);
   console.log(`   [OK] Ranked ${rankedClasses.length} classes`);
 
-  const summary = buildSummary(
-    detectedLanguages,
-    rankedClasses,
-    tsFileInfoList,
-    phpFileInfoList,
-    dartFileInfoList,
-    pythonFileInfoList
-  );
+  const summary = buildSummary(detectedLanguages, rankedClasses, files);
 
   console.log('\n[Step 11] Calculating Technical Debt Score...');
   const technicalDebt = calculateTechnicalDebt(
@@ -61,14 +44,14 @@ export async function runQualityAnalysis(input: {
   );
 
   console.log('\n[Step 12] Calculating Security Score...');
-  const securityScore = await calculateSecurityScore(tsFileInfoList, phpFileInfoList, repoPath, pythonFileInfoList);
+  const securityScore = await calculateSecurityScore(securityTargets(files), repoPath);
   console.log(`   [OK] Security Score: ${securityScore.overallScore}/100 (Grade: ${securityScore.grade})`);
   console.log(
     `   Issues: Critical=${securityScore.summary.critical}, High=${securityScore.summary.high}, Medium=${securityScore.summary.medium}`
   );
 
   console.log('\n[Step 13] Generating Layer Heatmap...');
-  const layerHeatmap = generateLayerHeatmap(tsFileInfoList, phpFileInfoList, rankedClasses, pythonFileInfoList);
+  const layerHeatmap = generateLayerHeatmap(layerSources(files), rankedClasses, repoPath);
   console.log(`   [OK] Identified ${layerHeatmap.layers.length} architectural layers`);
   layerHeatmap.layers.forEach((layer) => {
     console.log(`   - ${layer.name}: ${layer.fileCount} files, ${layer.classCount} classes`);
@@ -83,44 +66,46 @@ export async function runQualityAnalysis(input: {
   };
 }
 
+/** Languages that have a security pattern family, with their parsed files. */
+function securityTargets(files: LanguageFileMap): SecurityScanTarget[] {
+  return LANGUAGES.flatMap((language) =>
+    'security' in language ? [{ language: language.security, files: files[language.id] }] : []
+  );
+}
+
+/** Languages that participate in the layer heatmap, with their parsed files. */
+function layerSources(files: LanguageFileMap): LayerSource[] {
+  return LANGUAGES.flatMap((language) =>
+    'layerDependencies' in language ? [{ dependencyStyle: language.layerDependencies, files: files[language.id] }] : []
+  );
+}
+
 function buildSummary(
   detectedLanguages: AnalysisResult['detectedLanguages'],
-  rankedClasses: any[],
-  tsFileInfoList: any[],
-  phpFileInfoList: any[],
-  dartFileInfoList: any[],
-  pythonFileInfoList: any[]
+  rankedClasses: GodClassResult[],
+  files: LanguageFileMap
 ): AnalysisResult['summary'] {
   console.log('\n[Step 8] Computing summary statistics...');
 
-  const allFileInfoLists = [tsFileInfoList, phpFileInfoList, dartFileInfoList, pythonFileInfoList];
-  const totalFiles = detectedLanguages.fileCount.total;
-  const totalClasses = allFileInfoLists.reduce((sum, list) => sum + countClasses(list), 0);
-  const totalMethods = allFileInfoLists.reduce((sum, list) => sum + countMethods(list), 0);
+  const parsedFiles = allLanguageFiles(files);
+  const totalFiles = detectedLanguages.totalFiles;
+  const totalClasses = countClasses(parsedFiles);
+  const totalMethods = countMethods(parsedFiles);
   const avgGodScore =
     rankedClasses.length > 0
       ? Math.round(rankedClasses.reduce((sum, result) => sum + result.godScore, 0) / rankedClasses.length)
       : 0;
 
-  return {
-    totalFiles,
-    tsFiles: detectedLanguages.fileCount.ts,
-    phpFiles: detectedLanguages.fileCount.php,
-    dartFiles: detectedLanguages.fileCount.dart,
-    pythonFiles: detectedLanguages.fileCount.python,
-    totalClasses,
-    totalMethods,
-    avgGodScore,
-  };
+  return { totalFiles, totalClasses, totalMethods, avgGodScore };
 }
 
-function countClasses(fileInfoList: any[]): number {
+function countClasses(fileInfoList: ReadonlyArray<{ classes: unknown[] }>): number {
   return fileInfoList.reduce((sum, file) => sum + file.classes.length, 0);
 }
 
-function countMethods(fileInfoList: any[]): number {
+function countMethods(fileInfoList: ReadonlyArray<{ classes: Array<{ methodCount: number }> }>): number {
   return fileInfoList.reduce(
-    (sum, file) => sum + file.classes.reduce((classSum: number, classInfo: any) => classSum + classInfo.methodCount, 0),
+    (sum, file) => sum + file.classes.reduce((classSum, classInfo) => classSum + classInfo.methodCount, 0),
     0
   );
 }

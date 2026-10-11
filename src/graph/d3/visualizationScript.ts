@@ -1,6 +1,22 @@
 import { D3Graph, D3_GRAPH_GROUPS } from './buildDependencyGraph';
 
 const GRAPH_HEIGHT_PX = 600;
+/** Force-layout and legend tuning for the in-browser graph (embedded into the script as `layout`). */
+const D3_LAYOUT = {
+  zoomExtent: [0.1, 4],
+  linkDistance: 100,
+  linkStrength: 0.5,
+  chargeStrength: -300,
+  collisionPadding: 5,
+  arrowOffset: 20,
+  dragAlphaTarget: 0.3,
+  legendWidth: 150,
+  legendTop: 20,
+  legendRowHeight: 20,
+  legendSwatchSize: 15,
+  legendTextOffset: 20,
+  legendTextBaseline: 12,
+};
 const GROUP_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6b7280'];
 
 /**
@@ -17,6 +33,7 @@ export function generateD3VisualizationScript(graph: D3Graph): string {
 (function() {
   const graphData = ${JSON.stringify(graph)};
   const groups = ${JSON.stringify(D3_GRAPH_GROUPS)};
+  const layout = ${JSON.stringify(D3_LAYOUT)};
 
   const width = document.getElementById('d3-graph').clientWidth;
   const height = ${GRAPH_HEIGHT_PX};
@@ -34,7 +51,7 @@ export function generateD3VisualizationScript(graph: D3Graph): string {
   const g = svg.append('g');
 
   svg.call(d3.zoom()
-    .scaleExtent([0.1, 4])
+    .scaleExtent(layout.zoomExtent)
     .on('zoom', (event) => {
       g.attr('transform', event.transform);
     }));
@@ -42,18 +59,18 @@ export function generateD3VisualizationScript(graph: D3Graph): string {
   const simulation = d3.forceSimulation(graphData.nodes)
     .force('link', d3.forceLink(graphData.links)
       .id(d => d.id)
-      .distance(100)
-      .strength(0.5))
-    .force('charge', d3.forceManyBody().strength(-300))
+      .distance(layout.linkDistance)
+      .strength(layout.linkStrength))
+    .force('charge', d3.forceManyBody().strength(layout.chargeStrength))
     .force('center', d3.forceCenter(width / 2, height / 2))
-    .force('collision', d3.forceCollide().radius(d => Math.sqrt(d.size) + 5));
+    .force('collision', d3.forceCollide().radius(d => Math.sqrt(d.size) + layout.collisionPadding));
 
   svg.append('defs').selectAll('marker')
     .data(['arrow'])
     .enter().append('marker')
     .attr('id', 'arrow')
     .attr('viewBox', '0 -5 10 10')
-    .attr('refX', 20)
+    .attr('refX', layout.arrowOffset)
     .attr('refY', 0)
     .attr('markerWidth', 6)
     .attr('markerHeight', 6)
@@ -115,7 +132,7 @@ export function generateD3VisualizationScript(graph: D3Graph): string {
   });
 
   function dragstarted(event, d) {
-    if (!event.active) simulation.alphaTarget(0.3).restart();
+    if (!event.active) simulation.alphaTarget(layout.dragAlphaTarget).restart();
     d.fx = d.x;
     d.fy = d.y;
   }
@@ -132,23 +149,23 @@ export function generateD3VisualizationScript(graph: D3Graph): string {
   }
 
   const legend = svg.append('g')
-    .attr('transform', \`translate(\${width - 150}, 20)\`);
+    .attr('transform', \`translate(\${width - layout.legendWidth}, \${layout.legendTop})\`);
 
   legend.selectAll('rect')
     .data(groups)
     .enter().append('rect')
     .attr('x', 0)
-    .attr('y', (d, i) => i * 20)
-    .attr('width', 15)
-    .attr('height', 15)
+    .attr('y', (d, i) => i * layout.legendRowHeight)
+    .attr('width', layout.legendSwatchSize)
+    .attr('height', layout.legendSwatchSize)
     .attr('fill', d => colorScale(d))
     .attr('stroke', '#ccc');
 
   legend.selectAll('text')
     .data(groups)
     .enter().append('text')
-    .attr('x', 20)
-    .attr('y', (d, i) => i * 20 + 12)
+    .attr('x', layout.legendTextOffset)
+    .attr('y', (d, i) => i * layout.legendRowHeight + layout.legendTextBaseline)
     .text(d => d)
     .attr('font-size', 12);
 })();

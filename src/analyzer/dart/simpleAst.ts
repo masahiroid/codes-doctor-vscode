@@ -1,21 +1,17 @@
-import path from 'path';
+import path from 'node:path';
 import { readFileContent } from '../../fileWalker';
-import { DartClassInfo, DartFileInfo, DartFunctionInfo } from '../../types';
+import type { SimpleClassInfo, SimpleFileInfo, SimpleFunctionInfo } from '../../types';
+import { captureAll, countLines, unique } from '../parsing/sourceText';
 
-function countLines(content: string): number {
-  return content.split('\n').length;
-}
+const IMPORT_REGEX = /^\s*(?:import|export|part)\s+['"]([^'"]+)['"]/gm;
+const CLASS_REGEX = /\b(class|mixin|extension|enum)\s+([A-Za-z_][A-Za-z0-9_]*)/g;
+const METHOD_REGEX = /(?:^|\n)\s*(?:@[A-Za-z0-9_().,\s]+)?\s*(?:static\s+)?(?:[A-Za-z_<>{}\[\]?]+\s+)+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
+const FUNCTION_REGEX = /(?:^|\n)\s*(?:@[A-Za-z0-9_().,\s]+)?\s*(?:[A-Za-z_<>{}\[\]?]+\s+)+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*(?:async\s*)?(?:=>|\{)/g;
+/** Control-flow keywords that FUNCTION_REGEX can mistake for function names. */
+const NON_FUNCTION_KEYWORDS = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', 'new']);
 
 function extractImports(content: string): string[] {
-  const imports: string[] = [];
-  const importRegex = /^\s*(import|export|part)\s+['"]([^'"]+)['"]/gm;
-  let match: RegExpExecArray | null = null;
-
-  while ((match = importRegex.exec(content)) !== null) {
-    imports.push(match[2]);
-  }
-
-  return Array.from(new Set(imports));
+  return unique(captureAll(IMPORT_REGEX, content));
 }
 
 function findBlockEnd(content: string, openIndex: number): number {
@@ -35,11 +31,7 @@ function extractMethods(block: string, className: string): { methods: string[]; 
   const methods: string[] = [];
   let constructorExists = false;
 
-  const methodRegex = /(?:^|\n)\s*(?:@[A-Za-z0-9_().,\s]+)?\s*(?:static\s+)?(?:[A-Za-z_<>{}\[\]?]+\s+)+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
-  let match: RegExpExecArray | null = null;
-
-  while ((match = methodRegex.exec(block)) !== null) {
-    const name = match[1];
+  for (const name of captureAll(METHOD_REGEX, block)) {
     if (name === className) {
       constructorExists = true;
       continue;
@@ -54,7 +46,7 @@ function extractMethods(block: string, className: string): { methods: string[]; 
   return { methods: Array.from(new Set(methods)), constructorExists };
 }
 
-export async function parseDartFile(filePath: string): Promise<DartFileInfo> {
+export async function parseDartFile(filePath: string): Promise<SimpleFileInfo> {
   const content = await readFileContent(filePath);
   if (!content) {
     return {
@@ -69,13 +61,10 @@ export async function parseDartFile(filePath: string): Promise<DartFileInfo> {
 
   const lineCount = countLines(content);
   const imports = extractImports(content);
-  const classes: DartClassInfo[] = [];
+  const classes: SimpleClassInfo[] = [];
   const classRanges: Array<{ start: number; end: number }> = [];
 
-  const classRegex = /\b(class|mixin|extension|enum)\s+([A-Za-z_][A-Za-z0-9_]*)/g;
-  let classMatch: RegExpExecArray | null = null;
-
-  while ((classMatch = classRegex.exec(content)) !== null) {
+  for (const classMatch of content.matchAll(CLASS_REGEX)) {
     const className = classMatch[2];
     const braceIndex = content.indexOf('{', classMatch.index);
     if (braceIndex === -1) continue;
@@ -101,18 +90,15 @@ export async function parseDartFile(filePath: string): Promise<DartFileInfo> {
     classRanges.push({ start: classMatch.index, end: endIndex });
   }
 
-  const functions: DartFunctionInfo[] = [];
-  const functionRegex = /(?:^|\n)\s*(?:@[A-Za-z0-9_().,\s]+)?\s*(?:[A-Za-z_<>{}\[\]?]+\s+)+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*(?:async\s*)?(?:=>|\{)/g;
-  let functionMatch: RegExpExecArray | null = null;
-
-  while ((functionMatch = functionRegex.exec(content)) !== null) {
+  const functions: SimpleFunctionInfo[] = [];
+  for (const functionMatch of content.matchAll(FUNCTION_REGEX)) {
     const startIndex = functionMatch.index;
     if (classRanges.some((r) => startIndex >= r.start && startIndex <= r.end)) {
       continue;
     }
 
     const name = functionMatch[1];
-    if (!name || ['if', 'for', 'while', 'switch', 'catch', 'return', 'new'].includes(name)) {
+    if (!name || NON_FUNCTION_KEYWORDS.has(name)) {
       continue;
     }
 
@@ -139,8 +125,8 @@ export async function parseDartFile(filePath: string): Promise<DartFileInfo> {
   };
 }
 
-export async function analyzeDirectory(files: string[]): Promise<DartFileInfo[]> {
-  const results: DartFileInfo[] = [];
+export async function analyzeDirectory(files: string[]): Promise<SimpleFileInfo[]> {
+  const results: SimpleFileInfo[] = [];
 
   for (const file of files) {
     try {

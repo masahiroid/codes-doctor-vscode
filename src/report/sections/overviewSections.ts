@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type { AnalysisResult } from '../../types';
 import { isThinOrchestrationModule } from '../../analyzer/moduleClassification';
+import { LANGUAGES } from '../../analyzer/languages/catalog';
 
 /** Instability above this is reported as "unstable" in the report table */
 const UNSTABLE_INSTABILITY_THRESHOLD = 0.8;
@@ -20,8 +21,12 @@ const FILE_SIZE_HISTOGRAM_BINS = [100, 300, 500, 1000];
 /** File path display truncation length in the module metrics table */
 const MODULE_PATH_DISPLAY_MAX_LENGTH = 50;
 
+/** Comma-separated list of supported language names, for the "no supported files found" banner. */
+const SUPPORTED_LANGUAGE_NAMES = LANGUAGES.map((language) => language.label).join('、');
+
 export function summarySection(result: AnalysisResult): string {
   const critical = result.godClasses.filter((godClass) => godClass.rank === 'critical').length;
+  const noSupportedFiles = result.summary.totalFiles === 0;
   const techDebtScore = result.technicalDebt?.overallScore || 0;
   const techDebtGrade = result.technicalDebt?.grade || 'N/A';
   const techDebtCritical = result.technicalDebt?.issues?.critical || 0;
@@ -36,9 +41,26 @@ export function summarySection(result: AnalysisResult): string {
   const sbomVulnHigh = result.vulnerabilityScan?.high || 0;
   const sbomVulnIssues = sbomVulnCritical + sbomVulnHigh;
 
+  const noFilesBanner = noSupportedFiles
+    ? `
+    <div class="box" style="border-left-color: #dc2626; background: #fef2f2; margin-bottom: 20px;">
+      <div style="font-weight: 600; margin-bottom: 6px; color: #991b1b;">対応言語のファイルが見つかりませんでした</div>
+      <div style="color: #7f1d1d;">
+        このワークスペースには、現在対応している言語（${SUPPORTED_LANGUAGE_NAMES}）のファイルがありませんでした。
+        以下のスコアは「問題なし」ではなく「解析対象がなかった」ことを示しています。未対応の言語を使用している可能性があります。
+      </div>
+    </div>`
+    : '';
+
+  const techDebtScoreDisplay = noSupportedFiles ? 'N/A' : `${techDebtScore}/100`;
+  const techDebtGradeDisplay = noSupportedFiles ? '—' : `Grade: ${techDebtGrade}`;
+  const securityScoreDisplay = noSupportedFiles ? 'N/A' : `${securityScore}/100`;
+  const securityGradeDisplay = noSupportedFiles ? '—' : `Grade: ${securityGrade}`;
+
   return `
   <section>
     <h2>概要</h2>
+    ${noFilesBanner}
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
       <div style="background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; text-align: center;">
         <div style="color: #6b7280; font-size: 0.9em; margin-bottom: 8px;">総ファイル数</div>
@@ -61,8 +83,8 @@ export function summarySection(result: AnalysisResult): string {
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 25px; color: white; text-align: center;">
         <div style="color: rgba(255,255,255,0.9); font-size: 0.9em; margin-bottom: 8px;">技術負債スコア</div>
-        <div style="font-size: 2.5em; font-weight: bold;">${techDebtScore}/100</div>
-        <div style="font-size: 1.5em; margin-top: -10px;">Grade: ${techDebtGrade}</div>
+        <div style="font-size: 2.5em; font-weight: bold;">${techDebtScoreDisplay}</div>
+        <div style="font-size: 1.5em; margin-top: -10px;">${techDebtGradeDisplay}</div>
       </div>
       <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); border-radius: 8px; padding: 25px; color: white; text-align: center;">
         <div style="color: rgba(255,255,255,0.9); font-size: 0.9em; margin-bottom: 8px;">検出課題 (TECH DEBT)</div>
@@ -71,8 +93,8 @@ export function summarySection(result: AnalysisResult): string {
       </div>
       <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 8px; padding: 25px; color: white; text-align: center;">
         <div style="color: rgba(255,255,255,0.9); font-size: 0.9em; margin-bottom: 8px;">セキュリティスコア</div>
-        <div style="font-size: 2.5em; font-weight: bold;">${securityScore}/100</div>
-        <div style="font-size: 1.5em; margin-top: -10px;">Grade: ${securityGrade}</div>
+        <div style="font-size: 2.5em; font-weight: bold;">${securityScoreDisplay}</div>
+        <div style="font-size: 1.5em; margin-top: -10px;">${securityGradeDisplay}</div>
       </div>
       <div style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); border-radius: 8px; padding: 25px; color: white; text-align: center;">
         <div style="color: rgba(255,255,255,0.9); font-size: 0.9em; margin-bottom: 8px;">セキュリティ課題</div>
@@ -248,21 +270,16 @@ export function layerSection(result: AnalysisResult): string {
 }
 
 export function fileStatsSection(result: AnalysisResult): string {
-  if (
-    !result.tsFiles.length &&
-    !result.phpFiles.length &&
-    !result.dartFiles.length &&
-    !result.pythonFiles.length
-  ) {
-    return '';
-  }
+  const files = LANGUAGES.flatMap((language) =>
+    result.files[language.id].map((fileInfo) => ({
+      name: path.basename(fileInfo.filePath),
+      lang: language.label,
+      classes: fileInfo.classes.length,
+      lineCount: fileInfo.lineCount,
+    }))
+  );
+  if (files.length === 0) return '';
 
-  const files = [
-    ...result.tsFiles.map((fileInfo) => ({ name: path.basename(fileInfo.filePath), lang: 'TypeScript', classes: fileInfo.classes.length, lineCount: fileInfo.lineCount })),
-    ...result.phpFiles.map((fileInfo) => ({ name: path.basename(fileInfo.filePath), lang: 'PHP', classes: fileInfo.classes.length, lineCount: fileInfo.lineCount })),
-    ...result.dartFiles.map((fileInfo) => ({ name: path.basename(fileInfo.filePath), lang: 'Dart', classes: fileInfo.classes.length, lineCount: fileInfo.lineCount })),
-    ...result.pythonFiles.map((fileInfo) => ({ name: path.basename(fileInfo.filePath), lang: 'Python', classes: fileInfo.classes.length, lineCount: fileInfo.lineCount })),
-  ];
   const chartData = JSON.stringify(files.map((fileInfo) => fileInfo.lineCount));
 
   return `

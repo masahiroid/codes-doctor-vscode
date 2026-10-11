@@ -1,5 +1,6 @@
 import type { Express, NextFunction, Request, Response } from 'express';
 import type { AppConfig } from '../config';
+import { HTTP_STATUS, toMegabytes } from './httpStatus';
 
 export function registerCommonMiddleware(app: Express): void {
   app.use((req, res, next) => {
@@ -18,7 +19,7 @@ export function registerCommonMiddleware(app: Express): void {
 
 export function registerErrorHandlers(app: Express, config: AppConfig): void {
   app.use((req: Request, res: Response) => {
-    res.status(404).json({ success: false, error: 'Not found' });
+    res.status(HTTP_STATUS.notFound).json({ success: false, error: 'Not found' });
   });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction): void => {
@@ -26,22 +27,22 @@ export function registerErrorHandlers(app: Express, config: AppConfig): void {
 
     if (err?.code === 'LIMIT_FILE_SIZE') {
       const maxSize = config.limits.maxFileSize;
-      res.status(413).json({
+      res.status(HTTP_STATUS.payloadTooLarge).json({
         success: false,
-        error: `File too large. Maximum file size: ${Math.round(maxSize / 1024 / 1024)}MB`,
+        error: `File too large. Maximum file size: ${toMegabytes(maxSize)}MB`,
       });
       return;
     }
 
     if (err?.code === 'LIMIT_FILE_COUNT') {
-      res.status(400).json({
+      res.status(HTTP_STATUS.badRequest).json({
         success: false,
         error: 'Too many files. Upload one file at a time.',
       });
       return;
     }
 
-    res.status(500).json({
+    res.status(HTTP_STATUS.internalServerError).json({
       success: false,
       error: 'Internal server error',
       message: process.env.NODE_ENV === 'development' ? err?.message : undefined,

@@ -1,4 +1,4 @@
-import { FileInfo, PHPFileInfo, DartFileInfo, ModuleMetrics, CircularDependency } from '../types';
+import { ParsedFile, ModuleMetrics, CircularDependency } from '../types';
 import path from 'node:path';
 
 /** Percentile used to cap fan-in normalization, so a single outlier module doesn't
@@ -30,7 +30,7 @@ const SIZE_SCORE_EMPTY = 0.5;
 /**
  * Build adjacency graph from dependencies
  */
-function buildGraph(files: (FileInfo | PHPFileInfo | DartFileInfo)[]): Map<string, Set<string>> {
+function buildGraph(files: ParsedFile[]): Map<string, Set<string>> {
   const graph = new Map<string, Set<string>>();
   
   const getModuleName = (filePath: string): string => {
@@ -166,7 +166,7 @@ function calculateBetweennessCentrality(
  * Calculate fan-in, fan-out, and instability metrics for each module
  */
 export function calculateModuleMetrics(
-  files: (FileInfo | PHPFileInfo | DartFileInfo)[]
+  files: ParsedFile[]
 ): ModuleMetrics[] {
   const metrics: ModuleMetrics[] = [];
   
@@ -288,7 +288,7 @@ function calculateSizeScore(lineCount: number): number {
  * Detect circular dependencies using DFS
  */
 export function detectCircularDependencies(
-  files: (FileInfo | PHPFileInfo | DartFileInfo)[]
+  files: ParsedFile[]
 ): CircularDependency[] {
   const cycles: CircularDependency[] = [];
   

@@ -6,6 +6,8 @@ import { getConfig } from './config';
 import { extractZip } from './zipExtractor';
 import { cleanupDir } from './fileWalker';
 import fs from 'node:fs';
+import { toAnalysisLanguage } from './analyzer/languages/catalog';
+import { HTTP_STATUS, toMegabytes } from './app/httpStatus';
 
 const router = Router();
 
@@ -46,16 +48,16 @@ const upload = multer({
 
 /**
  * POST /api/upload - Handle ZIP file upload
- * Query params: ?language=typescript|javascript|php|dart|python (default: auto)
+ * Query params: ?language=<any ANALYSIS_LANGUAGES value> (default: auto)
  */
 router.post('/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, error: 'No file uploaded' });
+      return res.status(HTTP_STATUS.badRequest).json({ success: false, error: 'No file uploaded' });
     }
 
     const analysisId = req.body.analysisId;
-    const language = (req.query.language as string) || 'auto';
+    const language = toAnalysisLanguage(req.query.language);
     const config = getConfig();
     const zipPath = req.file.path;
     const extractedPath = path.join(config.paths.temp, analysisId);
@@ -76,7 +78,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       } catch (e) {
         console.warn('Failed to delete ZIP file:', e);
       }
-      return res.status(500).json({ success: false, error: 'Failed to extract ZIP' });
+      return res.status(HTTP_STATUS.internalServerError).json({ success: false, error: 'Failed to extract ZIP' });
     }
 
     // Delete original ZIP after extraction
@@ -95,7 +97,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     });
   } catch (error) {
     console.error('[ERROR] Upload error:', error);
-    return res.status(500).json({
+    return res.status(HTTP_STATUS.internalServerError).json({
       success: false,
       error: error instanceof Error ? error.message : 'Upload failed',
     });
@@ -111,19 +113,19 @@ router.use((err: any, req: express.Request, res: express.Response, next: express
     
     if (err.code === 'LIMIT_FILE_SIZE') {
       const maxSize = getConfig().limits.maxFileSize;
-      res.status(413).json({
+      res.status(HTTP_STATUS.payloadTooLarge).json({
         success: false,
-        error: `File too large. Maximum file size: ${Math.round(maxSize / 1024 / 1024)}MB`,
+        error: `File too large. Maximum file size: ${toMegabytes(maxSize)}MB`,
       });
       return;
     } else if (err.code === 'LIMIT_FILE_COUNT') {
-      res.status(400).json({
+      res.status(HTTP_STATUS.badRequest).json({
         success: false,
         error: 'Too many files. Upload one file at a time.',
       });
       return;
     } else {
-      res.status(400).json({
+      res.status(HTTP_STATUS.badRequest).json({
         success: false,
         error: `Upload error: ${err.message}`,
       });
@@ -133,7 +135,7 @@ router.use((err: any, req: express.Request, res: express.Response, next: express
   
   if (err instanceof Error) {
     console.error('[ERROR] Upload middleware error:', err.message);
-    res.status(400).json({
+    res.status(HTTP_STATUS.badRequest).json({
       success: false,
       error: err.message,
     });

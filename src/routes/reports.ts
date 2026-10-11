@@ -3,12 +3,14 @@ import { Router as createRouter } from 'express';
 import path from 'node:path';
 import fs from 'node:fs';
 import { runAnalysis } from '../analyzer';
-import { type AnalysisLanguage, type AppConfig } from '../types';
+import { type AppConfig } from '../types';
+import { toAnalysisLanguage } from '../analyzer/languages/catalog';
 import { generateHTMLReport } from '../report/htmlBuilder';
 import { getReportPath } from '../report/output';
 import { generatePDFReport } from '../report/pdfOutput';
 import { renderAnalysisErrorPage, renderReportNotFoundPage } from '../web/pages';
 import { isValidAnalysisId } from '../validation';
+import { HTTP_STATUS } from '../app/httpStatus';
 
 export function createReportsRouter(config: AppConfig): Router {
   const router = createRouter();
@@ -16,10 +18,16 @@ export function createReportsRouter(config: AppConfig): Router {
   router.get('/:analysisId', (req: Request, res: Response) => {
     const { analysisId } = req.params;
     if (!isValidAnalysisId(analysisId)) {
-      res.status(400).send(renderReportNotFoundPage(analysisId));
+      res.status(HTTP_STATUS.badRequest).send(renderReportNotFoundPage(analysisId));
       return;
     }
-    const language = (req.query.language as string) || 'auto';
+    let language;
+    try {
+      language = toAnalysisLanguage(req.query.language);
+    } catch (error) {
+      res.status(HTTP_STATUS.badRequest).send(renderAnalysisErrorPage(error instanceof Error ? error.message : 'Invalid language'));
+      return;
+    }
     const reportPath = getReportPath(analysisId, config.paths.output);
 
     if (!fs.existsSync(reportPath)) {
@@ -28,7 +36,7 @@ export function createReportsRouter(config: AppConfig): Router {
         console.log(`\n⏳ Report not found, running analysis for ${analysisId}...`);
         console.log(`   Language mode: ${language}`);
 
-        runAnalysis(extractedPath, analysisId, language as AnalysisLanguage)
+        runAnalysis(extractedPath, analysisId, language)
           .then((result) => generateHTMLReport(result, reportPath))
           .then(() => {
             const html = fs.readFileSync(reportPath, 'utf-8');
@@ -36,12 +44,12 @@ export function createReportsRouter(config: AppConfig): Router {
           })
           .catch((error) => {
             console.error('[ERROR] Analysis failed:', error);
-            res.status(500).send(renderAnalysisErrorPage(error instanceof Error ? error.message : 'Unknown error'));
+            res.status(HTTP_STATUS.internalServerError).send(renderAnalysisErrorPage(error instanceof Error ? error.message : 'Unknown error'));
           });
         return;
       }
 
-      res.status(404).send(renderReportNotFoundPage(analysisId));
+      res.status(HTTP_STATUS.notFound).send(renderReportNotFoundPage(analysisId));
       return;
     }
 
@@ -53,14 +61,14 @@ export function createReportsRouter(config: AppConfig): Router {
     try {
       const { analysisId } = req.params;
       if (!isValidAnalysisId(analysisId)) {
-        res.status(400).json({ success: false, error: 'analysisId is invalid' });
+        res.status(HTTP_STATUS.badRequest).json({ success: false, error: 'analysisId is invalid' });
         return;
       }
       const htmlPath = getReportPath(analysisId, config.paths.output);
       const pdfPath = htmlPath.replace(/\.html$/, '.pdf');
 
       if (!fs.existsSync(htmlPath)) {
-        res.status(404).json({ success: false, error: 'Report not found' });
+        res.status(HTTP_STATUS.notFound).json({ success: false, error: 'Report not found' });
         return;
       }
 
@@ -69,7 +77,7 @@ export function createReportsRouter(config: AppConfig): Router {
       res.download(pdfPath, `code-doctor-report-${analysisId}.pdf`);
     } catch (error) {
       console.error('[ERROR] PDF generation failed:', error);
-      res.status(500).json({
+      res.status(HTTP_STATUS.internalServerError).json({
         success: false,
         error: error instanceof Error ? error.message : 'PDF generation failed',
       });

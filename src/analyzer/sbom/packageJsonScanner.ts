@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { SBOMComponent, SBOMDependency } from '../../types';
 
 export interface PackageScanResult {
@@ -111,7 +111,7 @@ function addTransitiveDependencies(
 
 function detectTrivyVersion(): string | undefined {
   try {
-    const output = execSync('trivy --version', { encoding: 'utf-8' });
+    const output = execFileSync('trivy', ['--version'], { encoding: 'utf-8' });
     const match = output.match(/Version:\s*([0-9]+\.[0-9]+\.[0-9]+)/i);
     return match?.[1];
   } catch {

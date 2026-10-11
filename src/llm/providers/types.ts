@@ -30,4 +30,6 @@ export interface LlmProvider {
   listModels(apiKey: string): Promise<LlmModelInfo[]>;
   analyzeFull(context: LlmContext, focus: string, options: LlmCallOptions): Promise<string>;
   analyzeAstOnly(context: AstOnlyLlmContext, focus: string, options: LlmCallOptions): Promise<string>;
+  /** Write a ready-to-paste task prompt for an AI coding agent from the full structural context. */
+  generateAgentPrompt(context: LlmContext, options: LlmCallOptions): Promise<string>;
 }

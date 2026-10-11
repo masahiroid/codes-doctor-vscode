@@ -1,4 +1,4 @@
-import { FileInfo, PHPFileInfo, DartFileInfo, PythonFileInfo } from '../../types';
+import type { ParsedFile } from '../../types';
 
 const TOP_DEPENDENTS_LIST_SIZE = 10;
 
@@ -8,13 +8,7 @@ export interface DependencyGraphContext {
   topDependents: Array<{ filePath: string; depCount: number }>;
 }
 
-export function buildDependencyGraphContext(
-  tsFiles: FileInfo[],
-  phpFiles: PHPFileInfo[],
-  dartFiles: DartFileInfo[],
-  pythonFiles: PythonFileInfo[] = []
-): DependencyGraphContext {
-  const allFiles = [...tsFiles, ...phpFiles, ...dartFiles, ...pythonFiles];
+export function buildDependencyGraphContext(allFiles: readonly ParsedFile[]): DependencyGraphContext {
   const depCounts = allFiles.map((f) => {
     const deps = 'dependencies' in f ? f.dependencies : f.imports;
     return { filePath: f.filePath, depCount: deps.length };

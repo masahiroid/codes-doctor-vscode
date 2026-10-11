@@ -1,105 +1,37 @@
 import { AppConfig } from '../../config';
-import { DetectionResult, AnalysisLanguage, GodClassResult, CallGraph, PythonFileInfo } from '../../types';
+import type { CallGraph, DetectionResult, GodClassResult, LanguageFileMap } from '../../types';
 import { detectLanguages } from '../languageDetector';
-import { analyzeTypeScriptAndJavaScript } from './tsLanguageAnalysis';
-import { analyzePhp } from './phpLanguageAnalysis';
-import { analyzeDart } from './dartLanguageAnalysis';
-import { analyzePython } from './pythonLanguageAnalysis';
+import { AnalysisLanguage, LANGUAGES, LanguageId, emptyLanguageFiles } from '../languages/catalog';
+import { LANGUAGE_ANALYZERS, LanguageAnalysisContext } from '../languages/analyzers';
 
 export interface LanguageAnalysisResult {
   detectedLanguages: DetectionResult;
-  tsFileInfoList: any[];
-  phpFileInfoList: any[];
-  dartFileInfoList: any[];
-  pythonFileInfoList: PythonFileInfo[];
+  files: LanguageFileMap;
   allGodClasses: GodClassResult[];
   callGraph: CallGraph;
 }
 
-export async function runLanguageAnalysis(
-  repoPath: string,
-  forcedLanguage: AnalysisLanguage,
-  config: AppConfig
-): Promise<LanguageAnalysisResult> {
-  const detectedLanguages = await detectAndPrepareLanguages(repoPath, forcedLanguage);
-
-  const tsResult = await analyzeTypeScriptAndJavaScript(
-    repoPath,
-    detectedLanguages.hasTypeScript,
-    detectedLanguages.hasJavaScript,
-    config
-  );
-  const phpResult = await analyzePhp(
-    repoPath,
-    detectedLanguages.hasPHP,
-    config,
-    tsResult.callGraph
-  );
-  const dartFileInfoList = await analyzeDart(repoPath, detectedLanguages.hasDart);
-  const pythonResult = await analyzePython(repoPath, detectedLanguages.hasPython);
-
-  return {
-    detectedLanguages,
-    tsFileInfoList: tsResult.tsFileInfoList,
-    phpFileInfoList: phpResult.phpFileInfoList,
-    dartFileInfoList,
-    pythonFileInfoList: pythonResult.pythonFileInfoList,
-    allGodClasses: [...tsResult.godClasses, ...phpResult.godClasses, ...pythonResult.godClasses],
-    callGraph: phpResult.callGraph,
-  };
+async function analyzeLanguage<K extends LanguageId>(id: K, context: LanguageAnalysisContext, files: LanguageFileMap) {
+  const output = await LANGUAGE_ANALYZERS[id](context);
+  files[id] = output.files;
+  return output;
 }
 
-async function detectAndPrepareLanguages(
-  repoPath: string,
-  forcedLanguage: AnalysisLanguage
-): Promise<DetectionResult> {
+/** Detect languages, then run each language's analyzer in catalog order. */
+export async function runLanguageAnalysis(repoPath: string, mode: AnalysisLanguage, config: AppConfig): Promise<LanguageAnalysisResult> {
   console.log('[Step 1] Detecting languages...');
+  const { detection, sourceFiles } = await detectLanguages(repoPath, mode);
+  const counts = Object.entries(detection.fileCounts).map(([id, count]) => `${id}=${count}`).join(', ');
+  console.log(`   Found: ${counts} (mode: ${mode})`);
 
-  let detectedLanguages: DetectionResult;
-  try {
-    detectedLanguages = await detectLanguages(repoPath);
-    console.log(
-      `   Found: TS=${detectedLanguages.fileCount.ts}, JS=${detectedLanguages.fileCount.js}, PHP=${detectedLanguages.fileCount.php}, Dart=${detectedLanguages.fileCount.dart}, Python=${detectedLanguages.fileCount.python}`
-    );
-  } catch (error) {
-    console.error('   [ERROR] Language detection failed:', error);
-    throw error;
+  const files = emptyLanguageFiles();
+  const allGodClasses: GodClassResult[] = [];
+  let callGraph: CallGraph = { edges: [], nodes: [] };
+  for (const { id } of LANGUAGES) {
+    const output = await analyzeLanguage(id, { repoPath, config, sourceFiles, callGraph }, files);
+    allGodClasses.push(...output.godClasses);
+    callGraph = output.callGraph ?? callGraph;
   }
 
-  if (forcedLanguage !== 'auto') {
-    applyForcedLanguageOverride(detectedLanguages, forcedLanguage);
-  }
-
-  return detectedLanguages;
-}
-
-/** Which detection flags a forced language mode should enable; all others are disabled. */
-const FORCED_LANGUAGE_FLAGS: Record<Exclude<AnalysisLanguage, 'auto'>, Array<keyof DetectionResult>> = {
-  typescript: ['hasTypeScript'],
-  javascript: ['hasJavaScript'],
-  php: ['hasPHP'],
-  dart: ['hasDart'],
-  python: ['hasPython'],
-};
-
-const ALL_LANGUAGE_FLAGS: Array<keyof DetectionResult> = [
-  'hasTypeScript',
-  'hasJavaScript',
-  'hasPHP',
-  'hasDart',
-  'hasPython',
-];
-
-function applyForcedLanguageOverride(
-  detectedLanguages: DetectionResult,
-  forcedLanguage: AnalysisLanguage
-): void {
-  if (forcedLanguage === 'auto') return;
-
-  console.log(`[Language Override] Forcing analysis to: ${forcedLanguage}`);
-
-  const flagsToEnable = FORCED_LANGUAGE_FLAGS[forcedLanguage];
-  for (const flag of ALL_LANGUAGE_FLAGS) {
-    (detectedLanguages[flag] as boolean) = flagsToEnable.includes(flag);
-  }
+  return { detectedLanguages: detection, files, allGodClasses, callGraph };
 }

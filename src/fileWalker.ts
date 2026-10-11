@@ -127,11 +127,19 @@ function shouldExclude(itemName: string, fullPath: string, repoPath: string, git
 }
 
 /**
- * Recursively list all files matching given extensions.
+ * Recursively list files in a single directory walk, bucketed by extension group.
  * Excludes standard build/dependency directories and respects .gitignore patterns.
+ * Files inside each bucket keep directory-walk order.
  */
-export async function listFiles(dirPath: string, extensions: string[]): Promise<string[]> {
-  const files: string[] = [];
+export async function listFilesByExtension<K extends string>(
+  dirPath: string,
+  groups: ReadonlyArray<{ id: K; extensions: readonly string[] }>
+): Promise<Record<K, string[]>> {
+  const buckets = Object.fromEntries(groups.map((group) => [group.id, [] as string[]])) as Record<K, string[]>;
+  const groupByExtension = new Map<string, K>();
+  for (const group of groups) {
+    for (const extension of group.extensions) groupByExtension.set(extension, group.id);
+  }
   const gitignorePatterns = parseGitignore(dirPath);
 
   function walkDir(currentPath: string): void {
@@ -139,31 +147,24 @@ export async function listFiles(dirPath: string, extensions: string[]): Promise<
       return;
     }
 
-    const items = fs.readdirSync(currentPath);
-
-    for (const item of items) {
+    for (const item of fs.readdirSync(currentPath)) {
       const fullPath = path.join(currentPath, item);
-
-      // Skip if excluded
       if (shouldExclude(item, fullPath, dirPath, gitignorePatterns)) {
         continue;
       }
 
       const stats = fs.statSync(fullPath);
-
       if (stats.isDirectory()) {
         walkDir(fullPath);
       } else if (stats.isFile()) {
-        const ext = path.extname(item).toLowerCase();
-        if (extensions.includes(ext)) {
-          files.push(fullPath);
-        }
+        const group = groupByExtension.get(path.extname(item).toLowerCase());
+        if (group) buckets[group].push(fullPath);
       }
     }
   }
 
   walkDir(dirPath);
-  return files;
+  return buckets;
 }
 
 /**

@@ -1,7 +1,12 @@
-import { SecurityScore, SecurityIssue, FileInfo, PHPFileInfo, PythonFileInfo } from '../types';
+import { SecurityScore, SecurityIssue } from '../types';
+import type { SecurityLanguage } from './languages/catalog';
+import { SECURITY_PATTERNS } from './security/patterns';
 import fs from 'node:fs';
 import path from 'node:path';
 import { scoreToGrade, GradeThresholds } from './grading';
+
+/** Score of a codebase with no detected issues. */
+const PERFECT_SCORE = 100;
 
 const SECURITY_GRADE_THRESHOLDS: GradeThresholds = { a: 90, b: 80, c: 70, d: 60 };
 
@@ -23,202 +28,19 @@ const TOP_RISK_FILE_LIMIT = 3;
 const PENALTY_LOG_SCALE_DIVISOR = 10;
 
 /**
- * Security patterns to detect common vulnerabilities
- */
-const SECURITY_PATTERNS = {
-  // TypeScript/JavaScript patterns
-  typescript: [
-    {
-      pattern: /eval\s*\(/gi,
-      type: 'critical' as const,
-      category: 'Code Injection',
-      description: 'eval()の使用が検出されました',
-      recommendation: '安全な代替手段を使用してください（new Function、JSON.parseなど）',
-    },
-    {
-      pattern: /dangerouslySetInnerHTML/gi,
-      type: 'high' as const,
-      category: 'XSS',
-      description: 'dangerouslySetInnerHTMLの使用が検出されました',
-      recommendation: 'ユーザー入力を適切にサニタイズしてください',
-    },
-    {
-      pattern: /\.innerHTML\s*=/gi,
-      type: 'high' as const,
-      category: 'XSS',
-      description: 'innerHTML代入が検出されました（XSSリスク）',
-      recommendation: 'textContentまたはDOM APIを使用してください',
-    },
-    {
-      pattern: /document\.write/gi,
-      type: 'medium' as const,
-      category: 'XSS',
-      description: 'document.writeの使用が検出されました',
-      recommendation: '安全なDOM操作メソッドを使用してください',
-    },
-    {
-      pattern: /(password|secret|api[_-]?key|token)\s*=\s*['"][^'"]+['"]/gi,
-      type: 'critical' as const,
-      category: 'Hardcoded Secrets',
-      description: 'ハードコードされた認証情報の可能性',
-      recommendation: '環境変数または設定ファイルを使用してください',
-    },
-    {
-      pattern: /Math\.random\(\)/gi,
-      type: 'medium' as const,
-      category: 'Weak Randomness',
-      description: 'Math.random()の使用（セキュリティ用途には不適切）',
-      recommendation: 'crypto.getRandomValues()またはcrypto.randomBytes()を使用してください',
-    },
-    {
-      pattern: /process\.env\./gi,
-      type: 'info' as const,
-      category: 'Environment Variables',
-      description: '環境変数の使用が検出されました',
-      recommendation: '環境変数が適切に保護されていることを確認してください',
-    },
-    {
-      pattern: /new\s+Function\s*\(/gi,
-      type: 'high' as const,
-      category: 'Code Injection',
-      description: 'Function constructorの使用が検出されました',
-      recommendation: '可能な限り避け、入力を検証してください',
-    },
-    {
-      pattern: /exec\s*\(|execSync\s*\(/gi,
-      type: 'critical' as const,
-      category: 'Command Injection',
-      description: 'シェルコマンド実行が検出されました',
-      recommendation: '入力を適切にエスケープし、execFileまたはspawnを使用してください',
-    },
-  ],
-  // PHP patterns
-  php: [
-    {
-      pattern: /\$_(GET|POST|REQUEST|COOKIE)\[/gi,
-      type: 'high' as const,
-      category: 'Input Validation',
-      description: 'ユーザー入力の直接使用が検出されました',
-      recommendation: '入力を検証・サニタイズしてください',
-    },
-    {
-      pattern: /mysqli?_query\s*\([^)]*\$_(GET|POST|REQUEST)/gi,
-      type: 'critical' as const,
-      category: 'SQL Injection',
-      description: 'SQLインジェクションの可能性',
-      recommendation: 'プリペアドステートメントを使用してください',
-    },
-    {
-      pattern: /eval\s*\(/gi,
-      type: 'critical' as const,
-      category: 'Code Injection',
-      description: 'eval()の使用が検出されました',
-      recommendation: '安全な代替手段を使用してください',
-    },
-    {
-      pattern: /exec\s*\(|shell_exec\s*\(|system\s*\(|passthru\s*\(/gi,
-      type: 'critical' as const,
-      category: 'Command Injection',
-      description: 'シェルコマンド実行が検出されました',
-      recommendation: '入力を適切にエスケープしてください',
-    },
-    {
-      pattern: /serialize\s*\(|unserialize\s*\(/gi,
-      type: 'high' as const,
-      category: 'Insecure Deserialization',
-      description: 'シリアライゼーションの使用が検出されました',
-      recommendation: 'JSON形式の使用を検討してください',
-    },
-    {
-      pattern: /md5\s*\(|sha1\s*\(/gi,
-      type: 'medium' as const,
-      category: 'Weak Cryptography',
-      description: '脆弱なハッシュアルゴリズムの使用',
-      recommendation: 'password_hash()またはbcryptを使用してください',
-    },
-  ],
-  // Python patterns
-  python: [
-    {
-      pattern: /\beval\s*\(/g,
-      type: 'critical' as const,
-      category: 'Code Injection',
-      description: 'eval()の使用が検出されました',
-      recommendation: 'ast.literal_eval()や安全な代替手段を使用してください',
-    },
-    {
-      pattern: /\bexec\s*\(/g,
-      type: 'critical' as const,
-      category: 'Code Injection',
-      description: 'exec()の使用が検出されました',
-      recommendation: '動的コード実行を避けてください',
-    },
-    {
-      pattern: /subprocess\.(call|run|Popen)\([^)]*shell\s*=\s*True/gi,
-      type: 'critical' as const,
-      category: 'Command Injection',
-      description: 'shell=True でのサブプロセス実行が検出されました',
-      recommendation: 'shell=False にし、引数をリストで渡してください',
-    },
-    {
-      pattern: /\bos\.system\s*\(/g,
-      type: 'critical' as const,
-      category: 'Command Injection',
-      description: 'os.system()の使用が検出されました',
-      recommendation: 'subprocess モジュールを shell=False で使用してください',
-    },
-    {
-      pattern: /pickle\.(loads|load)\s*\(/g,
-      type: 'high' as const,
-      category: 'Insecure Deserialization',
-      description: 'pickle によるデシリアライゼーションが検出されました',
-      recommendation: '信頼できないデータには json 等の安全な形式を使用してください',
-    },
-    {
-      pattern: /\byaml\.load\s*\((?!.*Loader=yaml\.SafeLoader)/g,
-      type: 'high' as const,
-      category: 'Insecure Deserialization',
-      description: 'yaml.load() が安全な Loader なしで使用されています',
-      recommendation: 'yaml.safe_load() を使用してください',
-    },
-    {
-      pattern: /hashlib\.(md5|sha1)\s*\(/g,
-      type: 'medium' as const,
-      category: 'Weak Cryptography',
-      description: '脆弱なハッシュアルゴリズムの使用',
-      recommendation: 'hashlib.sha256 以上、またはパスワード用途には bcrypt を使用してください',
-    },
-    {
-      pattern: /(password|secret|api[_-]?key|token)\s*=\s*['"][^'"]+['"]/gi,
-      type: 'critical' as const,
-      category: 'Hardcoded Secrets',
-      description: 'ハードコードされた認証情報の可能性',
-      recommendation: '環境変数または設定ファイルを使用してください',
-    },
-    {
-      pattern: /\.format\([^)]*\)\s*%|%\s*\([^)]*\)\s*(?=.*(SELECT|INSERT|UPDATE|DELETE)\b)/gi,
-      type: 'high' as const,
-      category: 'SQL Injection',
-      description: '文字列フォーマットによる SQL クエリ構築の可能性',
-      recommendation: 'パラメータ化クエリ（プレースホルダ）を使用してください',
-    },
-  ],
-};
-
-/**
  * Calculate security score and detect issues
  */
-export async function calculateSecurityScore(
-  tsFiles: FileInfo[],
-  phpFiles: PHPFileInfo[],
-  repoPath: string,
-  pythonFiles: PythonFileInfo[] = []
-): Promise<SecurityScore> {
-  const issues: SecurityIssue[] = [];
+/** One language's parsed files, scanned with that language's pattern family. */
+export interface SecurityScanTarget {
+  language: SecurityLanguage;
+  files: ReadonlyArray<{ filePath: string }>;
+}
 
-  scanFiles(tsFiles, repoPath, 'typescript', issues);
-  scanFiles(phpFiles, repoPath, 'php', issues);
-  scanFiles(pythonFiles, repoPath, 'python', issues);
+export async function calculateSecurityScore(targets: readonly SecurityScanTarget[], repoPath: string): Promise<SecurityScore> {
+  const issues: SecurityIssue[] = [];
+  for (const target of targets) {
+    scanFiles(target.files, repoPath, target.language, issues);
+  }
 
   // Count issues by severity
   const summary = {
@@ -230,7 +52,7 @@ export async function calculateSecurityScore(
   };
 
   // Calculate overall score (0-100, higher is better)
-  const totalFiles = tsFiles.length + phpFiles.length + pythonFiles.length;
+  const totalFiles = targets.reduce((sum, target) => sum + target.files.length, 0);
   const overallScore = calculateScore(summary, totalFiles);
   const grade = scoreToGrade(overallScore, SECURITY_GRADE_THRESHOLDS);
 
@@ -402,15 +224,15 @@ function generateTopRisks(issues: SecurityIssue[], summary: SecurityScore['summa
 
 /**
  * Scan a batch of files (one language) for security issues, appending results into `issues`.
- * `fileInfo.filePath` is already absolute (fileWalker.listFiles returns absolute paths),
+ * `fileInfo.filePath` is already absolute (fileWalker returns absolute paths),
  * so it's used as-is rather than re-joined with repoPath — path.join would silently
  * produce a non-existent path if given an absolute second argument, making every
  * file in the batch fail to read and be skipped without surfacing an error.
  */
 function scanFiles(
-  files: Array<{ filePath: string }>,
+  files: ReadonlyArray<{ filePath: string }>,
   repoPath: string,
-  language: 'typescript' | 'php' | 'python',
+  language: SecurityLanguage,
   issues: SecurityIssue[]
 ): void {
   for (const fileInfo of files) {
@@ -432,7 +254,7 @@ function scanFiles(
 function scanFileForIssues(
   content: string,
   filePath: string,
-  language: 'typescript' | 'php' | 'python'
+  language: SecurityLanguage
 ): SecurityIssue[] {
   const issues: SecurityIssue[] = [];
   const patterns = SECURITY_PATTERNS[language];
@@ -469,7 +291,7 @@ function scanFileForIssues(
 /**
  * Check if a line is a comment
  */
-function isInComment(line: string, language: 'typescript' | 'php' | 'python'): boolean {
+function isInComment(line: string, language: SecurityLanguage): boolean {
   const trimmed = line.trim();
 
   if (language === 'typescript') {
@@ -488,13 +310,13 @@ function calculateScore(
   summary: SecurityScore['summary'],
   totalFiles: number
 ): number {
-  if (totalFiles === 0) return 100;
+  if (totalFiles === 0) return PERFECT_SCORE;
 
   // Total issues detected
   const totalIssues = summary.critical + summary.high + summary.medium + summary.low + summary.info;
 
   // If no issues detected, return perfect score
-  if (totalIssues === 0) return 100;
+  if (totalIssues === 0) return PERFECT_SCORE;
 
   // Weighted penalty for each severity level
   const penalty =
@@ -507,8 +329,8 @@ function calculateScore(
   // Normalize by file count and issue density
   // Prevents artificial inflation for projects with few files
   const issueIntensity = totalIssues / totalFiles;
-  const normalizedPenalty = Math.min(100, (penalty * Math.log(issueIntensity + 1)) / PENALTY_LOG_SCALE_DIVISOR);
-  const score = Math.max(0, 100 - normalizedPenalty);
+  const normalizedPenalty = Math.min(PERFECT_SCORE, (penalty * Math.log(issueIntensity + 1)) / PENALTY_LOG_SCALE_DIVISOR);
+  const score = Math.max(0, PERFECT_SCORE - normalizedPenalty);
 
   return Math.round(score);
 }

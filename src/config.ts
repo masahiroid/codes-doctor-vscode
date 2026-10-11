@@ -1,5 +1,8 @@
 import path from 'path';
 
+const BYTES_PER_MEGABYTE = 1024 * 1024;
+const MAX_UPLOAD_MEGABYTES = 500;
+
 export interface AppConfig {
   features: {
     llm: boolean;
@@ -45,7 +48,7 @@ export const defaultConfig: AppConfig = {
     temperature: 0.2,
   },
   limits: {
-    maxFileSize: 500 * 1024 * 1024, // 500MB
+    maxFileSize: MAX_UPLOAD_MEGABYTES * BYTES_PER_MEGABYTE,
     maxFilesPerRepo: 10000,
     maxClassesInReport: 50,
     maxMermaidNodes: 30,
