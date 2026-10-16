@@ -21,7 +21,11 @@ const OPTION_LABELS: Record<EnumSettingKey, Record<string, string>> = {
     rust: 'Rust',
     cpp: 'C++',
   },
-  llmProvider: { openai: 'OpenAI', anthropic: 'Anthropic (Claude)' },
+  llmProvider: {
+    openai: 'OpenAI',
+    anthropic: 'Anthropic (Claude)',
+    'vscode-lm': 'VS Code Built-in AI (Copilot / No API Key)',
+  },
   llmOutputMode: { review: 'Review report', agentPrompt: 'AI coding agent prompt' },
   displayLanguage: { en: 'English', ja: '日本語' },
 };

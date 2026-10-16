@@ -16,9 +16,11 @@ const summary_1 = require("./summary");
 const diagnostics_1 = require("./diagnostics");
 const ignoreComments_1 = require("./ignoreComments");
 const gitDiff_1 = require("./gitDiff");
+const aiFixPreview_1 = require("./aiFixPreview");
 const PROVIDER_LABELS = {
     openai: 'OpenAI',
     anthropic: 'Anthropic (Claude)',
+    'vscode-lm': 'VS Code Built-in AI',
 };
 function createCommands(vscode, context, diagnosticCollection) {
     const t = (0, i18n_1.translator)(vscode);
@@ -214,6 +216,10 @@ function createCommands(vscode, context, diagnosticCollection) {
     }
     async function setLlmApiKey() {
         const provider = (0, config_1.getLlmProvider)(vscode);
+        if (provider === 'vscode-lm') {
+            vscode.window.showInformationMessage(t('VS Code Built-in AI (vscode.lm) uses your signed-in editor account (such as GitHub Copilot) and does not require an API key.'));
+            return;
+        }
         const providerLabel = PROVIDER_LABELS[provider] || provider;
         const apiKey = await vscode.window.showInputBox({
             title: t('Set {provider} API Key', { provider: providerLabel }),
@@ -233,6 +239,9 @@ function createCommands(vscode, context, diagnosticCollection) {
             vscode.window.showInformationMessage(t('{provider} API key cleared.', { provider: providerLabel }));
         }
     }
+    async function previewAiFix(options) {
+        return (0, aiFixPreview_1.previewAndApplyAiFix)(vscode, context, options);
+    }
     return {
         analyzeCurrentWorkspace,
         analyzeGitChanges,
@@ -242,6 +251,7 @@ function createCommands(vscode, context, diagnosticCollection) {
         openLastReport,
         clearDiagnostics,
         openFindingLocation,
+        previewAiFix,
     };
 }
 module.exports = {

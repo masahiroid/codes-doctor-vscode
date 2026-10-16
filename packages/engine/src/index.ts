@@ -4,7 +4,13 @@
  */
 export { analyzePathRequest, analyzeRepository } from './services/pathAnalysis';
 export type { RepositoryAnalysis } from './services/pathAnalysis';
-export { analyzeLlmRequest, getSavedLlmResult, listLlmModels } from './services/llmService';
+export {
+  analyzeLlmRequest,
+  buildLlmPromptMessages,
+  getSavedLlmResult,
+  listLlmModels,
+  saveExternalLlmResult,
+} from './services/llmService';
 export { runAnalysis } from './analyzer';
 export { generateHTMLReport } from './report/htmlBuilder';
 export type { ReportOptions } from './report/htmlBuilder';

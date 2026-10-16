@@ -1,5 +1,10 @@
 # Codes Doctor
 
+[![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/masahirocom.codes-doctor?label=Visual%20Studio%20Marketplace&color=brightgreen)](https://marketplace.visualstudio.com/items?itemName=masahirocom.codes-doctor)
+[![Downloads](https://img.shields.io/visual-studio-marketplace/d/masahirocom.codes-doctor?color=brightgreen)](https://marketplace.visualstudio.com/items?itemName=masahirocom.codes-doctor)
+[![Rating](https://img.shields.io/visual-studio-marketplace/stars/masahirocom.codes-doctor?color=brightgreen)](https://marketplace.visualstudio.com/items?itemName=masahirocom.codes-doctor&ssr=false#review-details)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/masahiroid/codes-doctor-vscode/blob/main/LICENSE)
+
 - English: [README.md](README.md)
 - 日本語: [README.ja.md](README.ja.md)
 

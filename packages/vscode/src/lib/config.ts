@@ -23,10 +23,12 @@ export function getDisplayLanguage(vscode: typeof import('vscode')) {
   return language === 'ja' ? 'ja' : 'en';
 }
 
-export function getLlmProvider(vscode: typeof import('vscode')) {
+export function getLlmProvider(vscode: typeof import('vscode')): 'openai' | 'anthropic' | 'vscode-lm' {
   const config = getExtensionConfig(vscode);
   const provider = config.get('llmProvider', setting('llmProvider').default);
-  return provider === 'anthropic' ? 'anthropic' : 'openai';
+  if (provider === 'anthropic') return 'anthropic';
+  if (provider === 'vscode-lm') return 'vscode-lm';
+  return 'openai';
 }
 
 export function getLlmOutputMode(vscode: typeof import('vscode')) {

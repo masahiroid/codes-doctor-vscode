@@ -2,7 +2,7 @@
   "name": "codes-doctor",
   "displayName": "Codes Doctor",
   "description": "%extension.description%",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "publisher": "masahirocom",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -89,6 +89,37 @@
       {
         "command": "codeDoctor.analyzeGitChanges",
         "title": "%codeDoctor.analyzeGitChanges%"
+      },
+      {
+        "command": "codeDoctor.previewAiFix",
+        "title": "%codeDoctor.previewAiFix%"
+      }
+    ],
+    "chatParticipants": [
+      {
+        "id": "codeDoctor.participant",
+        "name": "codedoctor",
+        "fullName": "Codes Doctor",
+        "description": "%chatParticipant.description%",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "analyze",
+            "description": "%chatParticipant.cmd.analyze%"
+          },
+          {
+            "name": "security",
+            "description": "%chatParticipant.cmd.security%"
+          },
+          {
+            "name": "refactor",
+            "description": "%chatParticipant.cmd.refactor%"
+          },
+          {
+            "name": "fix",
+            "description": "%chatParticipant.cmd.fix%"
+          }
+        ]
       }
     ],
     "menus": {
@@ -163,11 +194,13 @@
           "type": "string",
           "enum": [
             "openai",
-            "anthropic"
+            "anthropic",
+            "vscode-lm"
           ],
           "enumDescriptions": [
             "%config.llmProvider.option.0%",
-            "%config.llmProvider.option.1%"
+            "%config.llmProvider.option.1%",
+            "%config.llmProvider.option.2%"
           ],
           "default": "openai",
           "description": "%config.llmProvider.description%"

@@ -155,6 +155,15 @@ function createIgnoreCodeActionProvider(vscode) {
                     action.diagnostics = [diag];
                     actions.push(action);
                 }
+                const aiFixAction = new vscode.CodeAction(t('Codes Doctor: Generate & Preview AI Fix ({category})', { category: codeStr || 'issue' }), vscode.CodeActionKind?.QuickFix);
+                aiFixAction.command = {
+                    command: 'codeDoctor.previewAiFix',
+                    title: t('Codes Doctor: Generate & Preview AI Fix ({category})', { category: codeStr || 'issue' }),
+                    arguments: [{ documentUri: document.uri, diagnostic: diag }],
+                };
+                aiFixAction.diagnostics = [diag];
+                aiFixAction.isPreferred = true;
+                actions.push(aiFixAction);
             }
             return actions;
         },

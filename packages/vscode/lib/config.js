@@ -36,7 +36,11 @@ function getDisplayLanguage(vscode) {
 function getLlmProvider(vscode) {
     const config = getExtensionConfig(vscode);
     const provider = config.get('llmProvider', (0, settingsSchema_1.setting)('llmProvider').default);
-    return provider === 'anthropic' ? 'anthropic' : 'openai';
+    if (provider === 'anthropic')
+        return 'anthropic';
+    if (provider === 'vscode-lm')
+        return 'vscode-lm';
+    return 'openai';
 }
 function getLlmOutputMode(vscode) {
     const mode = getExtensionConfig(vscode).get('llmOutputMode', (0, settingsSchema_1.setting)('llmOutputMode').default);

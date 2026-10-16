@@ -37,6 +37,8 @@ exports.activate = activate;
 exports.deactivate = deactivate;
 const settingsSchema_1 = require("./lib/settingsSchema");
 const vscode = __importStar(require("vscode"));
+const aiFixPreview_1 = require("./lib/aiFixPreview");
+const chatParticipant_1 = require("./lib/chatParticipant");
 const commands_1 = require("./lib/commands");
 const dashboardView_1 = require("./lib/dashboardView");
 const findingsTreeView_1 = require("./lib/findingsTreeView");
@@ -51,10 +53,13 @@ function activate(context) {
     const statusBar = (0, statusBar_1.createStatusBarController)(vscode);
     const commands = (0, commands_1.createCommands)(vscode, context, diagnosticCollection);
     const onSaveController = (0, onSaveWatcher_1.createOnSaveController)(vscode, context, diagnosticCollection);
+    const aiPreviewProvider = (0, aiFixPreview_1.registerAiPreviewContentProvider)(vscode);
+    const chatParticipant = (0, chatParticipant_1.registerChatParticipant)(vscode, context);
     const disposables = [
         diagnosticCollection,
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.analyzeCurrentWorkspace, commands.analyzeCurrentWorkspace),
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.analyzeGitChanges, commands.analyzeGitChanges),
+        vscode.commands.registerCommand(settingsSchema_1.COMMANDS.previewAiFix, commands.previewAiFix),
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.setLlmApiKey, commands.setLlmApiKey),
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.copySummary, commands.copySummary),
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.copySummaryJson, commands.copySummaryJson),
@@ -69,6 +74,8 @@ function activate(context) {
         findingsProvider,
         statusBar,
         onSaveController,
+        aiPreviewProvider,
+        chatParticipant,
     ];
     context.subscriptions.push(...disposables);
 }

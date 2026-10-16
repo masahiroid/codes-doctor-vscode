@@ -152,13 +152,15 @@ test('createIgnoreCodeActionProvider: provides Quick Fix actions for Codes Docto
   };
 
   const actions = provider.provideCodeActions(document, {}, context);
-  assert.equal(actions.length, 2);
+  assert.equal(actions.length, 4);
   assert.match(actions[0].title, /SQL Injection/);
   assert.equal(actions[0].edit.inserts[0].pos.line, 4);
   assert.equal(actions[0].edit.inserts[0].text, '    // code-doctor-ignore-next-line SQL Injection\n');
-  assert.match(actions[1].title, /Ignore God Class/);
-  assert.equal(actions[1].edit.inserts[0].pos.line, 0);
-  assert.equal(actions[1].edit.inserts[0].text, '// code-doctor-ignore-file\n');
+  assert.equal(actions[1].command.command, 'codeDoctor.previewAiFix');
+  assert.match(actions[2].title, /Ignore God Class/);
+  assert.equal(actions[2].edit.inserts[0].pos.line, 0);
+  assert.equal(actions[2].edit.inserts[0].text, '// code-doctor-ignore-file\n');
+  assert.equal(actions[3].command.command, 'codeDoctor.previewAiFix');
 });
 
 test('parseGitStatusPorcelain and filterResultByChangedFiles: extracts modified/renamed files and filters results', () => {

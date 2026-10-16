@@ -1,8 +1,17 @@
 import { getLlmProvider, type LlmCallOptions, type LlmProvider } from '../llm/providers';
 import { readLlmContext, readLlmResult, writeLlmResult } from '../llm/artifacts';
 import { updateReportReview } from '../report/liveUpdate';
-import type { LlmRun } from '../llm/focus';
+import { resolveLlmRun, type LlmMode, type LlmRun } from '../llm/focus';
+import {
+  buildFullAnalysisSystemPrompt,
+  buildFullAnalysisPrompt,
+  buildAstOnlySystemPrompt,
+  buildAstOnlyPrompt,
+  buildAgentPromptSystemPrompt,
+  buildAgentPromptUserPrompt,
+} from '../llm/openai/prompts';
 import type { AppConfig } from '../types';
+import { isValidAnalysisId } from '../validation';
 import { isLlmProviderId, LlmRequestBody, resolveLlmRequest } from './llmRequest';
 
 export function getSavedLlmResult(
@@ -27,6 +36,78 @@ export async function listLlmModels(providerId: unknown, apiKey: unknown): Promi
     throw new Error('apiKey is required');
   }
   return getLlmProvider(providerId).listModels(apiKey);
+}
+
+/**
+ * Build the system + user prompts for a saved analysis context so host-provided
+ * language models (such as VS Code's `vscode.lm` API) can execute the exact same
+ * structural review or AI coding agent prompt without external API keys.
+ */
+export function buildLlmPromptMessages(
+  analysisId: string,
+  options: { focus?: unknown; astOnlyMode?: unknown; outputDir: string }
+): { mode: LlmMode; focus: string; systemPrompt: string; userPrompt: string } {
+  if (!analysisId || typeof analysisId !== 'string' || !isValidAnalysisId(analysisId)) {
+    throw new Error('analysisId is invalid');
+  }
+  const run = resolveLlmRun(options.focus, options.astOnlyMode);
+  const context = readLlmContext(analysisId, run.mode, options.outputDir) as any;
+
+  if (run.mode === 'ast-only') {
+    return {
+      mode: run.mode,
+      focus: run.focus,
+      systemPrompt: buildAstOnlySystemPrompt(),
+      userPrompt: buildAstOnlyPrompt(context, run.focus),
+    };
+  }
+  if (run.mode === 'agent-prompt') {
+    return {
+      mode: run.mode,
+      focus: run.focus,
+      systemPrompt: buildAgentPromptSystemPrompt(),
+      userPrompt: buildAgentPromptUserPrompt(context),
+    };
+  }
+  return {
+    mode: run.mode,
+    focus: run.focus,
+    systemPrompt: buildFullAnalysisSystemPrompt(),
+    userPrompt: buildFullAnalysisPrompt(context, run.focus),
+  };
+}
+
+/**
+ * Persist an LLM result produced by a host-managed model (e.g. `vscode.lm`) and
+ * patch the saved HTML report in place.
+ */
+export function saveExternalLlmResult(
+  payload: {
+    analysisId: string;
+    focus: string;
+    mode: LlmMode;
+    provider: string;
+    model: string;
+    result: string;
+  },
+  outputDir: string
+): void {
+  if (!isValidAnalysisId(payload.analysisId)) {
+    throw new Error('analysisId is invalid');
+  }
+  writeLlmResult(
+    {
+      analysisId: payload.analysisId,
+      focus: payload.focus,
+      mode: payload.mode,
+      provider: payload.provider,
+      model: payload.model,
+      result: payload.result,
+      createdAt: new Date().toISOString(),
+    },
+    outputDir
+  );
+  updateReportReview(payload.analysisId, payload.mode, payload.result, outputDir);
 }
 
 /** Run (or reuse) an LLM analysis, save it next to the report, and update the saved report. */

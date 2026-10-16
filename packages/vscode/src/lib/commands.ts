@@ -17,10 +17,12 @@ import { summarize, formatSummary } from './summary';
 import { updateDiagnostics } from './diagnostics';
 import { applyIgnoreComments } from './ignoreComments';
 import { getGitChangedFiles, filterResultByChangedFiles } from './gitDiff';
+import { previewAndApplyAiFix, type AiFixOptions } from './aiFixPreview';
 
 const PROVIDER_LABELS: Record<string, string> = {
   openai: 'OpenAI',
   anthropic: 'Anthropic (Claude)',
+  'vscode-lm': 'VS Code Built-in AI',
 };
 
 export function createCommands(
@@ -250,6 +252,12 @@ export function createCommands(
 
   async function setLlmApiKey() {
     const provider = getLlmProvider(vscode);
+    if (provider === 'vscode-lm') {
+      vscode.window.showInformationMessage(
+        t('VS Code Built-in AI (vscode.lm) uses your signed-in editor account (such as GitHub Copilot) and does not require an API key.')
+      );
+      return;
+    }
     const providerLabel = PROVIDER_LABELS[provider] || provider;
 
     const apiKey = await vscode.window.showInputBox({
@@ -272,6 +280,10 @@ export function createCommands(
     }
   }
 
+  async function previewAiFix(options?: AiFixOptions) {
+    return previewAndApplyAiFix(vscode, context, options);
+  }
+
   return {
     analyzeCurrentWorkspace,
     analyzeGitChanges,
@@ -281,6 +293,7 @@ export function createCommands(
     openLastReport,
     clearDiagnostics,
     openFindingLocation,
+    previewAiFix,
   };
 }
 

@@ -8,6 +8,7 @@ const settingsSchema_1 = require("../settingsSchema");
 const config_1 = require("../config");
 const secrets_1 = require("../secrets");
 const analyzer_1 = require("../analyzer");
+const vscodeLm_1 = require("../vscodeLm");
 const lastAnalysisState_1 = require("../lastAnalysisState");
 const reportViewer_1 = require("../reportViewer");
 async function handleDashboardMessage(dashboard, input) {
@@ -66,6 +67,20 @@ async function handleDashboardMessage(dashboard, input) {
 }
 async function fetchDashboardModels(dashboard) {
     const provider = (0, config_1.getLlmProvider)(dashboard.vscode);
+    if (provider === 'vscode-lm') {
+        dashboard.modelFetchError = dashboard.t("Fetching models...");
+        dashboard.render();
+        try {
+            dashboard.fetchedModels = await (0, vscodeLm_1.listVsCodeLmModels)(dashboard.vscode);
+            dashboard.modelFetchError = null;
+        }
+        catch (error) {
+            dashboard.fetchedModels = [];
+            dashboard.modelFetchError = error instanceof Error ? error.message : String(error);
+        }
+        dashboard.render();
+        return;
+    }
     const apiKey = await (0, secrets_1.getApiKey)(dashboard.context, provider);
     if (!apiKey) {
         dashboard.modelFetchError = dashboard.t('No API key set for {provider}. Run "Codes Doctor: Set LLM API Key" first.', { provider });

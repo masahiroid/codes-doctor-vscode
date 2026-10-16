@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.0.0
+
+- Add VS Code Language Model API (vscode.lm) provider option to run AI reviews and prompts without external API keys
+- Add @codedoctor VS Code Chat Participant (/analyze, /security, /refactor, /fix) grounded in Codes Doctor analysis results
+- Add 1-click AI Fix Diff Preview & Apply (codeDoctor.previewAiFix and editor Quick Fix lightbulb action)
+- Add Marketplace version, downloads, rating, and license badges to README files
+
 ## 5.0.0
 
 - Add Analyze Git Changes command (codeDoctor.analyzeGitChanges) and Dashboard button to focus diagnostics and Findings tree on uncommitted or last-commit changed files

@@ -2,6 +2,7 @@ import { getLlmProvider, getLlmModel, getLlmMaxOutputTokens, getLlmOutputMode, g
 
 import { getApiKey } from './secrets';
 import { runLlmAnalysis, getReportLanguage, LLM_FOCUS } from './analyzer';
+import { runVsCodeLmReview } from './vscodeLm';
 import { getLastAnalysis } from './lastAnalysisState';
 import { openReport } from './reportViewer';
 
@@ -16,10 +17,13 @@ export async function executeDashboardReview(dashboard: import('./dashboard/cont
     }
 
     const provider = getLlmProvider(dashboard.vscode);
-    const apiKey = await getApiKey(dashboard.context, provider);
-    if (!apiKey) {
-      dashboard.vscode.window.showErrorMessage(dashboard.t('No API key set for {provider}. Run "Codes Doctor: Set LLM API Key" first.', { provider }));
-      return;
+    let apiKey: string | undefined;
+    if (provider !== 'vscode-lm') {
+      apiKey = await getApiKey(dashboard.context, provider);
+      if (!apiKey) {
+        dashboard.vscode.window.showErrorMessage(dashboard.t('No API key set for {provider}. Run "Codes Doctor: Set LLM API Key" first.', { provider }));
+        return;
+      }
     }
 
     const model = getLlmModel(dashboard.vscode);
@@ -37,17 +41,28 @@ export async function executeDashboardReview(dashboard: import('./dashboard/cont
       },
       async () => {
         try {
-          await runLlmAnalysis({
-            analysisId: lastAnalysis.analysisId,
-            outputDir: lastAnalysis.outputDir,
-            provider,
-            apiKey,
-            model: model || undefined,
-            focus: agentPrompt ? LLM_FOCUS.agentPrompt : undefined,
-            maxOutputTokens: getLlmMaxOutputTokens(dashboard.vscode),
-            displayLanguage: getReportLanguage(lastAnalysis.reportPath),
-          });
-          dashboard.llmAnalysisStatus = { kind: 'done', provider, model };
+          if (provider === 'vscode-lm') {
+            const lmRes = await runVsCodeLmReview(dashboard.vscode, {
+              analysisId: lastAnalysis.analysisId,
+              outputDir: lastAnalysis.outputDir,
+              model: model || undefined,
+              focus: agentPrompt ? LLM_FOCUS.agentPrompt : undefined,
+              displayLanguage: getReportLanguage(lastAnalysis.reportPath),
+            });
+            dashboard.llmAnalysisStatus = { kind: 'done', provider, model: lmRes.modelId };
+          } else {
+            await runLlmAnalysis({
+              analysisId: lastAnalysis.analysisId,
+              outputDir: lastAnalysis.outputDir,
+              provider,
+              apiKey: apiKey!,
+              model: model || undefined,
+              focus: agentPrompt ? LLM_FOCUS.agentPrompt : undefined,
+              maxOutputTokens: getLlmMaxOutputTokens(dashboard.vscode),
+              displayLanguage: getReportLanguage(lastAnalysis.reportPath),
+            });
+            dashboard.llmAnalysisStatus = { kind: 'done', provider, model };
+          }
           // The review is patched into the saved report file in place, but an already-open
           // tab/panel won't pick that up on its own — reopen it so the result is visible
           // without the user having to find and manually reload that tab.

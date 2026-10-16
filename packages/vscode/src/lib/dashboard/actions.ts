@@ -4,6 +4,7 @@ import { COMMANDS, CONFIGURATION_SECTION, isValidTokenLimit } from '../settingsS
 import { getExtensionConfig, getLlmProvider } from '../config';
 import { getApiKey } from '../secrets';
 import { listModels, listReports, getDefaultOutputDir } from '../analyzer';
+import { listVsCodeLmModels } from '../vscodeLm';
 import { setLastAnalysis } from '../lastAnalysisState';
 import { openReport } from '../reportViewer';
 
@@ -66,6 +67,20 @@ export async function handleDashboardMessage(dashboard: DashboardHost, input: un
 
 export async function fetchDashboardModels(dashboard: DashboardHost) {
     const provider = getLlmProvider(dashboard.vscode);
+    if (provider === 'vscode-lm') {
+      dashboard.modelFetchError = dashboard.t("Fetching models...");
+      dashboard.render();
+      try {
+        dashboard.fetchedModels = await listVsCodeLmModels(dashboard.vscode);
+        dashboard.modelFetchError = null;
+      } catch (error) {
+        dashboard.fetchedModels = [];
+        dashboard.modelFetchError = error instanceof Error ? error.message : String(error);
+      }
+      dashboard.render();
+      return;
+    }
+
     const apiKey = await getApiKey(dashboard.context, provider);
     if (!apiKey) {
       dashboard.modelFetchError = dashboard.t('No API key set for {provider}. Run "Codes Doctor: Set LLM API Key" first.', { provider });

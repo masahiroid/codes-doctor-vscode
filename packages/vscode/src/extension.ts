@@ -1,5 +1,7 @@
 import { COMMANDS, DASHBOARD_VIEW_ID, FINDINGS_VIEW_ID } from './lib/settingsSchema';
 import * as vscode from 'vscode';
+import { registerAiPreviewContentProvider } from './lib/aiFixPreview';
+import { registerChatParticipant } from './lib/chatParticipant';
 import { createCommands } from './lib/commands';
 import { CodeDoctorDashboardViewProvider } from './lib/dashboardView';
 import { FindingsTreeDataProvider } from './lib/findingsTreeView';
@@ -15,11 +17,14 @@ export function activate(context: import('vscode').ExtensionContext) {
   const statusBar = createStatusBarController(vscode);
   const commands = createCommands(vscode, context, diagnosticCollection);
   const onSaveController = createOnSaveController(vscode, context, diagnosticCollection);
+  const aiPreviewProvider = registerAiPreviewContentProvider(vscode);
+  const chatParticipant = registerChatParticipant(vscode, context);
 
   const disposables = [
     diagnosticCollection,
     vscode.commands.registerCommand(COMMANDS.analyzeCurrentWorkspace, commands.analyzeCurrentWorkspace),
     vscode.commands.registerCommand(COMMANDS.analyzeGitChanges, commands.analyzeGitChanges),
+    vscode.commands.registerCommand(COMMANDS.previewAiFix, commands.previewAiFix),
     vscode.commands.registerCommand(COMMANDS.setLlmApiKey, commands.setLlmApiKey),
     vscode.commands.registerCommand(COMMANDS.copySummary, commands.copySummary),
     vscode.commands.registerCommand(COMMANDS.copySummaryJson, commands.copySummaryJson),
@@ -38,6 +43,8 @@ export function activate(context: import('vscode').ExtensionContext) {
     findingsProvider,
     statusBar,
     onSaveController,
+    aiPreviewProvider,
+    chatParticipant,
   ];
 
   context.subscriptions.push(...disposables);
