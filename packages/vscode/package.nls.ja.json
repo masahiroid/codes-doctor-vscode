@@ -34,9 +34,11 @@
   "codeDoctor.openLastReport": "Codes Doctor: 最新のレポートを開く",
   "codeDoctor.clearDiagnostics": "Codes Doctor: エディタの診断波線を消去",
   "codeDoctor.openFindingLocation": "Codes Doctor: 指摘箇所を開く",
+  "codeDoctor.analyzeGitChanges": "Codes Doctor: Gitの変更差分を解析",
   "view.findings": "検出結果",
   "config.llmMaxOutputTokens.description": "LLMレビューの初回リクエストで生成するトークン数の上限（入力トークンは別）。OpenAIの推論モデルでは推論分も含みます。目安：非推論モデルは4,000〜8,000、推論モデルは16,000〜32,000。既定値は16,000。選択モデルの出力上限内で設定してください。OpenAIで上限到達により本文が空の場合は、最大値（設定値の2倍、16,000）で1回再試行するため、費用が増える場合があります。",
   "config.minSecurity.description": "セキュリティスコアがこの最低基準（0-100）を下回った場合に警告します。0で無効。",
   "config.minTechnicalDebt.description": "技術負債スコアがこの最低基準（0-100）を下回った場合に警告します。0で無効。",
-  "config.outputDirectory.description": "レポートの出力先フォルダー。空の場合は拡張機能の既定のグローバルストレージを使用します。"
+  "config.outputDirectory.description": "レポートの出力先フォルダー。空の場合は拡張機能の既定のグローバルストレージを使用します。",
+  "config.analyzeOnSave.description": "ファイル保存時にバックグラウンドで解析を再実行し、エディタの診断波線を自動更新します。"
 }

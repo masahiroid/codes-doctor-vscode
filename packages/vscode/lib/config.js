@@ -11,6 +11,7 @@ exports.getLlmMaxOutputTokens = getLlmMaxOutputTokens;
 exports.getMinSecurity = getMinSecurity;
 exports.getMinTechnicalDebt = getMinTechnicalDebt;
 exports.getCustomOutputDir = getCustomOutputDir;
+exports.getAnalyzeOnSave = getAnalyzeOnSave;
 const settingsSchema_1 = require("./settingsSchema");
 function getExtensionConfig(vscode) {
     return vscode.workspace.getConfiguration(settingsSchema_1.CONFIGURATION_SECTION);
@@ -29,7 +30,7 @@ function getDisplayLanguage(vscode) {
     const config = getExtensionConfig(vscode);
     // The dashboard saves this application-wide preference in user settings.
     // Older workspace settings must not override the user's saved selection.
-    const language = config.inspect('displayLanguage')?.globalValue ?? config.get('displayLanguage', (0, settingsSchema_1.setting)('displayLanguage').default);
+    const language = config.inspect?.('displayLanguage')?.globalValue ?? config.get('displayLanguage', (0, settingsSchema_1.setting)('displayLanguage').default);
     return language === 'ja' ? 'ja' : 'en';
 }
 function getLlmProvider(vscode) {
@@ -62,6 +63,10 @@ function getCustomOutputDir(vscode) {
     const value = getExtensionConfig(vscode).get('outputDirectory', (0, settingsSchema_1.setting)('outputDirectory').default);
     return typeof value === 'string' ? value.trim() : '';
 }
+function getAnalyzeOnSave(vscode) {
+    const value = getExtensionConfig(vscode).get('analyzeOnSave', (0, settingsSchema_1.setting)('analyzeOnSave').default);
+    return Boolean(value);
+}
 module.exports = {
     getLlmMaxOutputTokens,
     getExtensionConfig,
@@ -74,4 +79,5 @@ module.exports = {
     getMinSecurity,
     getMinTechnicalDebt,
     getCustomOutputDir,
+    getAnalyzeOnSave,
 };

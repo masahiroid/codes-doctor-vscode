@@ -65,6 +65,7 @@ function buildHtml(view) {
   </div>
 
   <button data-command="${settingsSchema_1.COMMANDS.analyzeCurrentWorkspace}">${view.t("Analyze Current Workspace")}</button>
+  <button class="secondary" data-command="${settingsSchema_1.COMMANDS.analyzeGitChanges}">${view.t("Analyze Git Changes")}</button>
 
   <div class="card">
     <div class="field">

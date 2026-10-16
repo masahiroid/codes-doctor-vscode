@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.0.0
+
+- Add Analyze Git Changes command (codeDoctor.analyzeGitChanges) and Dashboard button to focus diagnostics and Findings tree on uncommitted or last-commit changed files
+- Add inline ignore comment support (code-doctor-ignore-next-line, code-doctor-ignore, code-doctor-ignore-file) with Quick Fix CodeActionProvider in the editor
+- Add immediate ignore comment re-evaluation on file save and optional background analysis on save (codeDoctor.analyzeOnSave)
+
 ## 4.0.2
 
 - Add inline editor diagnostics in the Problems panel for security findings (with traced data-flow steps) and God Classes

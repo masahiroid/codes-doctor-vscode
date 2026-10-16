@@ -2,7 +2,7 @@
   "name": "codes-doctor",
   "displayName": "Codes Doctor",
   "description": "%extension.description%",
-  "version": "4.0.2",
+  "version": "5.0.0",
   "publisher": "masahirocom",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -85,6 +85,10 @@
       {
         "command": "codeDoctor.openFindingLocation",
         "title": "%codeDoctor.openFindingLocation%"
+      },
+      {
+        "command": "codeDoctor.analyzeGitChanges",
+        "title": "%codeDoctor.analyzeGitChanges%"
       }
     ],
     "menus": {
@@ -225,6 +229,11 @@
           "type": "string",
           "default": "",
           "description": "%config.outputDirectory.description%"
+        },
+        "codeDoctor.analyzeOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "%config.analyzeOnSave.description%"
         }
       }
     }

@@ -41,6 +41,8 @@ const commands_1 = require("./lib/commands");
 const dashboardView_1 = require("./lib/dashboardView");
 const findingsTreeView_1 = require("./lib/findingsTreeView");
 const hoverProvider_1 = require("./lib/hoverProvider");
+const ignoreComments_1 = require("./lib/ignoreComments");
+const onSaveWatcher_1 = require("./lib/onSaveWatcher");
 const statusBar_1 = require("./lib/statusBar");
 function activate(context) {
     const diagnosticCollection = vscode.languages.createDiagnosticCollection('codeDoctor');
@@ -48,9 +50,11 @@ function activate(context) {
     const findingsProvider = new findingsTreeView_1.FindingsTreeDataProvider(vscode);
     const statusBar = (0, statusBar_1.createStatusBarController)(vscode);
     const commands = (0, commands_1.createCommands)(vscode, context, diagnosticCollection);
+    const onSaveController = (0, onSaveWatcher_1.createOnSaveController)(vscode, context, diagnosticCollection);
     const disposables = [
         diagnosticCollection,
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.analyzeCurrentWorkspace, commands.analyzeCurrentWorkspace),
+        vscode.commands.registerCommand(settingsSchema_1.COMMANDS.analyzeGitChanges, commands.analyzeGitChanges),
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.setLlmApiKey, commands.setLlmApiKey),
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.copySummary, commands.copySummary),
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.copySummaryJson, commands.copySummaryJson),
@@ -60,9 +64,11 @@ function activate(context) {
         vscode.window.registerWebviewViewProvider(settingsSchema_1.DASHBOARD_VIEW_ID, dashboardViewProvider),
         vscode.window.registerTreeDataProvider(settingsSchema_1.FINDINGS_VIEW_ID, findingsProvider),
         vscode.languages.registerHoverProvider({ scheme: 'file' }, (0, hoverProvider_1.createHoverProvider)(vscode)),
+        vscode.languages.registerCodeActionsProvider({ scheme: 'file' }, (0, ignoreComments_1.createIgnoreCodeActionProvider)(vscode), vscode.CodeActionKind ? { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] } : undefined),
         dashboardViewProvider,
         findingsProvider,
         statusBar,
+        onSaveController,
     ];
     context.subscriptions.push(...disposables);
 }

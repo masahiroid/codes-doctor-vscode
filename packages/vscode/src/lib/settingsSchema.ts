@@ -9,6 +9,7 @@ interface SettingValues {
   minSecurity: number;
   minTechnicalDebt: number;
   outputDirectory: string;
+  analyzeOnSave: boolean;
 }
 type SettingDefinition<T> = { default: T } & (T extends number ? { minimum: number; maximum: number } : { enum?: string[] });
 type ConfigurationProperties = {
@@ -30,8 +31,9 @@ export const PRODUCT_NAME: string = manifest.displayName;
 export const CONFIGURATION_SECTION = 'codeDoctor';
 const properties = manifest.contributes.configuration.properties;
 export function setting(key: 'llmMaxOutputTokens' | 'minSecurity' | 'minTechnicalDebt'): SettingDefinition<number>;
-export function setting(key: Exclude<keyof SettingValues, 'llmMaxOutputTokens' | 'minSecurity' | 'minTechnicalDebt'>): SettingDefinition<string>;
-export function setting(key: keyof SettingValues): SettingDefinition<number> | SettingDefinition<string> {
+export function setting(key: 'analyzeOnSave'): SettingDefinition<boolean>;
+export function setting(key: Exclude<keyof SettingValues, 'llmMaxOutputTokens' | 'minSecurity' | 'minTechnicalDebt' | 'analyzeOnSave'>): SettingDefinition<string>;
+export function setting(key: keyof SettingValues): SettingDefinition<number> | SettingDefinition<boolean> | SettingDefinition<string> {
   return properties[`${CONFIGURATION_SECTION}.${key}`];
 }
 

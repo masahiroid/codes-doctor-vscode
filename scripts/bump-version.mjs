@@ -21,16 +21,26 @@ function writeJson(file, value) {
   fs.writeFileSync(file, JSON.stringify(value, null, 2) + '\n');
 }
 
-function nextPatch(version) {
+function nextVersion(version, mode) {
   const [major, minor, patch] = version.split('.').map(Number);
+  if (mode === 'major') return `${major + 1}.0.0`;
+  if (mode === 'minor') return `${major}.${minor + 1}.0`;
   return `${major}.${minor}.${patch + 1}`;
 }
 
-const lines = process.argv.slice(2).filter(Boolean);
+const rawArgs = process.argv.slice(2).filter(Boolean);
+let mode = 'patch';
+const lines = [];
+for (const arg of rawArgs) {
+  if (arg === '--major') mode = 'major';
+  else if (arg === '--minor') mode = 'minor';
+  else if (arg === '--patch') mode = 'patch';
+  else lines.push(arg);
+}
 if (lines.length === 0) throw new Error('At least one changelog line is required');
 
 const current = readJson(path.join(ROOT, 'packages', 'vscode', 'package.json')).version;
-const next = nextPatch(current);
+const next = nextVersion(current, mode);
 
 for (const dir of PACKAGES) {
   const manifestPath = path.join(dir, 'package.json');

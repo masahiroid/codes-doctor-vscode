@@ -57,6 +57,7 @@ export function buildHtml(view: DashboardHost) {
   </div>
 
   <button data-command="${COMMANDS.analyzeCurrentWorkspace}">${view.t("Analyze Current Workspace")}</button>
+  <button class="secondary" data-command="${COMMANDS.analyzeGitChanges}">${view.t("Analyze Git Changes")}</button>
 
   <div class="card">
     <div class="field">

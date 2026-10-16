@@ -34,9 +34,11 @@
   "codeDoctor.openLastReport": "Codes Doctor: Open Latest Report",
   "codeDoctor.clearDiagnostics": "Codes Doctor: Clear Editor Diagnostics",
   "codeDoctor.openFindingLocation": "Codes Doctor: Open Finding Location",
+  "codeDoctor.analyzeGitChanges": "Codes Doctor: Analyze Git Changes",
   "view.findings": "Findings",
   "config.llmMaxOutputTokens.description": "Maximum generated tokens per initial LLM review request (input tokens are separate). Includes reasoning for OpenAI reasoning models. Starting points: 4,000–8,000 for non-reasoning models; 16,000–32,000 for reasoning models. Default: 16,000. Stay within the selected model’s output limit. Empty OpenAI output caused by the limit is retried once with max(2 × this value, 16,000); this can increase cost.",
   "config.minSecurity.description": "Warn if the security score is below this minimum (0-100). Set to 0 to disable.",
   "config.minTechnicalDebt.description": "Warn if the technical debt score is below this minimum (0-100). Set to 0 to disable.",
-  "config.outputDirectory.description": "Custom directory for reports. Leave empty to use default extension global storage."
+  "config.outputDirectory.description": "Custom directory for reports. Leave empty to use default extension global storage.",
+  "config.analyzeOnSave.description": "Automatically re-run background analysis and update editor diagnostics when a file is saved."
 }

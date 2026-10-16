@@ -77,5 +77,11 @@
   "Security Issues": "セキュリティ指摘",
   "God Classes": "God Class",
   "Circular Dependencies": "循環参照",
-  "Editor diagnostics cleared.": "エディタの診断波線を消去しました。"
+  "Editor diagnostics cleared.": "エディタの診断波線を消去しました。",
+  "Codes Doctor: Ignore God Class in this file": "Codes Doctor: このファイルのGod Class指摘を除外",
+  "Codes Doctor: Ignore on this line ({category})": "Codes Doctor: この行の指摘を除外（{category}）",
+  "No changed files detected in Git.": "Gitで変更されたファイルが見つかりませんでした。",
+  "Git changes analysis ready ({count} changed files, {summary})": "Git変更差分の解析が完了しました（変更{count}ファイル、{summary}）",
+  "Could not inspect Git changes: {message}": "Gitの変更差分を取得できませんでした: {message}",
+  "Analyze Git Changes": "Git変更差分を解析"
 }
