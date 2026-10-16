@@ -1,13 +1,16 @@
 name: Release
 
 # Publishes the extension to the Visual Studio Marketplace.
-# - Pushing a `v*` tag releases exactly that version.
+# - Pushing to `main` when `packages/vscode/package.json` has an untagged version
+#   automatically tags `v<version>`, creates a GitHub release, and publishes to Marketplace.
+# - Pushing a `v*` tag directly also releases that version (if not already released).
 # - Weekly (and on manual runs): if dependencies changed since the last `v*` tag, bump
 #   the patch version, record the updates in the CHANGELOG, tag, and release.
-# Every release runs the tests, builds the VSIX, attaches it to a GitHub release and
-# publishes it with the VSCE_PAT secret.
+# Authenticates to Marketplace via Microsoft Entra ID OIDC (AZURE_CLIENT_ID / AZURE_TENANT_ID)
+# with fallback to VSCE_PAT.
 on:
   push:
+    branches: [main]
     tags: ["v*"]
   schedule:
     - cron: "0 1 * * 5" # Friday 10:00 JST
@@ -20,6 +23,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency: release
 
@@ -39,19 +43,40 @@ jobs:
 
       - name: Decide what to release
         id: plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          manifest=$(node -p "require('./packages/vscode/package.json').version")
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             version="${GITHUB_REF_NAME#v}"
-            manifest=$(node -p "require('./packages/vscode/package.json').version")
             if [ "$version" != "$manifest" ]; then
               echo "Tag $GITHUB_REF_NAME does not match packages/vscode/package.json ($manifest)" >&2
               exit 1
             fi
+            if gh release view "v$version" >/dev/null 2>&1; then
+              echo "Release v$version already exists; skipping."
+              exit 0
+            fi
             echo "Release $GITHUB_REF_NAME" > notes.txt
             echo "version=$version" >> "$GITHUB_OUTPUT"
             echo "bump=false" >> "$GITHUB_OUTPUT"
+            echo "tag=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            if ! git rev-parse -q --verify "refs/tags/v$manifest" >/dev/null; then
+              echo "New untagged version $manifest on main; preparing release v$manifest."
+              echo "Release v$manifest" > notes.txt
+              echo "version=$manifest" >> "$GITHUB_OUTPUT"
+              echo "bump=false" >> "$GITHUB_OUTPUT"
+              echo "tag=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "Version v$manifest is already tagged; nothing to release."
+            fi
+            exit 0
+          fi
+
           last=$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -1)
           git log "$last"..HEAD --format='%s' -- 'packages/*/package.json' 'packages/*/package-lock.json' \
             | grep -iE '^(bump|build\(deps)' | sed 's/ (#[0-9]*)$//' | sort -u > notes.txt || true
@@ -71,6 +96,13 @@ jobs:
           npm test --prefix packages/cli
           npm run vendor:csap --prefix packages/vscode
           npm test --prefix packages/vscode
+
+      - name: Tag untagged version on main
+        if: steps.plan.outputs.tag == 'true'
+        run: |
+          version="${{ steps.plan.outputs.version }}"
+          git tag "v$version"
+          git push origin "v$version"
 
       - name: Bump version and tag
         id: bump
@@ -101,9 +133,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Azure login (OIDC)
+        id: azure
+        if: steps.vsix.outputs.version && vars.AZURE_CLIENT_ID != '' && vars.AZURE_TENANT_ID != ''
+        continue-on-error: true
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
       - name: Publish to the Visual Studio Marketplace
         if: steps.vsix.outputs.version
         working-directory: packages/vscode
-        run: npx vsce publish --packagePath "codes-doctor-${{ steps.vsix.outputs.version }}.vsix"
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          if [ "${{ steps.azure.outcome }}" = "success" ]; then
+            npx vsce publish --azure-credential --packagePath "codes-doctor-${{ steps.vsix.outputs.version }}.vsix"
+          else
+            npx vsce publish --packagePath "codes-doctor-${{ steps.vsix.outputs.version }}.vsix"
+          fi
+
