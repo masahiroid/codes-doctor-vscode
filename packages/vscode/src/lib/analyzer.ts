@@ -10,11 +10,11 @@ import { Engine, loadEngine } from './engine';
  * @param {string} outputDir Absolute path where the report (and LLM context
  * files) should be written.
  * @param {'en'|'ja'} displayLanguage UI and report language (English by default).
- * @returns {Promise<{ analysisId: string, repoPath: string, reportPath: string }>}
+ * @returns {Promise<{ analysisId: string, repoPath: string, reportPath: string, result: import('./engine').AnalysisResult }>}
  */
 export async function analyzeWorkspace(repoPath: string, language: string, outputDir: string, displayLanguage: 'en' | 'ja' = 'en') {
-  const { analyzePathRequest } = loadEngine(displayLanguage);
-  return analyzePathRequest(repoPath, language, outputDir, { generatorVersion: EXTENSION_VERSION });
+  const { analyzeRepository } = loadEngine(displayLanguage);
+  return analyzeRepository(repoPath, language, outputDir, { generatorVersion: EXTENSION_VERSION });
 }
 
 /**

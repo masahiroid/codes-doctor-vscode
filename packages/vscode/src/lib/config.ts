@@ -45,6 +45,21 @@ export function getLlmMaxOutputTokens(vscode: typeof import('vscode')) {
   return isValidTokenLimit(value) ? value : TOKEN_LIMITS.defaultValue;
 }
 
+export function getMinSecurity(vscode: typeof import('vscode')): number {
+  const value = getExtensionConfig(vscode).get('minSecurity', setting('minSecurity').default);
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100 ? value : 0;
+}
+
+export function getMinTechnicalDebt(vscode: typeof import('vscode')): number {
+  const value = getExtensionConfig(vscode).get('minTechnicalDebt', setting('minTechnicalDebt').default);
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100 ? value : 0;
+}
+
+export function getCustomOutputDir(vscode: typeof import('vscode')): string {
+  const value = getExtensionConfig(vscode).get('outputDirectory', setting('outputDirectory').default);
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 module.exports = {
   getLlmMaxOutputTokens,
   getExtensionConfig,
@@ -54,4 +69,7 @@ module.exports = {
   getLlmProvider,
   getLlmOutputMode,
   getLlmModel,
+  getMinSecurity,
+  getMinTechnicalDebt,
+  getCustomOutputDir,
 };

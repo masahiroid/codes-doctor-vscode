@@ -2,6 +2,7 @@ import path from 'node:path';
 
 export type Engine = typeof import('../../vendor/csap');
 export type ReportLanguage = 'en' | 'ja';
+export type AnalysisResult = import('../../vendor/csap').AnalysisResult;
 
 /** Set by the esbuild bundle (scripts/bundle.mjs); undefined when running the tsc output. */
 declare const CODE_DOCTOR_BUNDLED: boolean | undefined;

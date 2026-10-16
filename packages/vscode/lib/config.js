@@ -8,6 +8,9 @@ exports.getLlmProvider = getLlmProvider;
 exports.getLlmOutputMode = getLlmOutputMode;
 exports.getLlmModel = getLlmModel;
 exports.getLlmMaxOutputTokens = getLlmMaxOutputTokens;
+exports.getMinSecurity = getMinSecurity;
+exports.getMinTechnicalDebt = getMinTechnicalDebt;
+exports.getCustomOutputDir = getCustomOutputDir;
 const settingsSchema_1 = require("./settingsSchema");
 function getExtensionConfig(vscode) {
     return vscode.workspace.getConfiguration(settingsSchema_1.CONFIGURATION_SECTION);
@@ -47,6 +50,18 @@ function getLlmMaxOutputTokens(vscode) {
     const value = getExtensionConfig(vscode).get('llmMaxOutputTokens', (0, settingsSchema_1.setting)('llmMaxOutputTokens').default);
     return (0, settingsSchema_1.isValidTokenLimit)(value) ? value : settingsSchema_1.TOKEN_LIMITS.defaultValue;
 }
+function getMinSecurity(vscode) {
+    const value = getExtensionConfig(vscode).get('minSecurity', (0, settingsSchema_1.setting)('minSecurity').default);
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100 ? value : 0;
+}
+function getMinTechnicalDebt(vscode) {
+    const value = getExtensionConfig(vscode).get('minTechnicalDebt', (0, settingsSchema_1.setting)('minTechnicalDebt').default);
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100 ? value : 0;
+}
+function getCustomOutputDir(vscode) {
+    const value = getExtensionConfig(vscode).get('outputDirectory', (0, settingsSchema_1.setting)('outputDirectory').default);
+    return typeof value === 'string' ? value.trim() : '';
+}
 module.exports = {
     getLlmMaxOutputTokens,
     getExtensionConfig,
@@ -56,4 +71,7 @@ module.exports = {
     getLlmProvider,
     getLlmOutputMode,
     getLlmModel,
+    getMinSecurity,
+    getMinTechnicalDebt,
+    getCustomOutputDir,
 };

@@ -6,6 +6,9 @@ interface SettingValues {
   llmOutputMode: string;
   llmModel: string;
   llmMaxOutputTokens: number;
+  minSecurity: number;
+  minTechnicalDebt: number;
+  outputDirectory: string;
 }
 type SettingDefinition<T> = { default: T } & (T extends number ? { minimum: number; maximum: number } : { enum?: string[] });
 type ConfigurationProperties = {
@@ -26,8 +29,8 @@ export const EXTENSION_VERSION: string = manifest.version;
 export const PRODUCT_NAME: string = manifest.displayName;
 export const CONFIGURATION_SECTION = 'codeDoctor';
 const properties = manifest.contributes.configuration.properties;
-export function setting(key: 'llmMaxOutputTokens'): SettingDefinition<number>;
-export function setting(key: Exclude<keyof SettingValues, 'llmMaxOutputTokens'>): SettingDefinition<string>;
+export function setting(key: 'llmMaxOutputTokens' | 'minSecurity' | 'minTechnicalDebt'): SettingDefinition<number>;
+export function setting(key: Exclude<keyof SettingValues, 'llmMaxOutputTokens' | 'minSecurity' | 'minTechnicalDebt'>): SettingDefinition<string>;
 export function setting(key: keyof SettingValues): SettingDefinition<number> | SettingDefinition<string> {
   return properties[`${CONFIGURATION_SECTION}.${key}`];
 }
@@ -44,4 +47,5 @@ export const LLM_DEFAULTS = Object.freeze({ fullReviewTokens: 3000, astReviewTok
 export const REPORT_STORAGE = Object.freeze({ directory: 'reports' });
 export const COMMANDS = Object.freeze(Object.fromEntries(manifest.contributes.commands.map(({ command }) => [command.slice(CONFIGURATION_SECTION.length + 1), command])));
 export const DASHBOARD_VIEW_ID = manifest.contributes.views[CONFIGURATION_SECTION][0].id;
-module.exports = { EXTENSION_VERSION, PRODUCT_NAME, CONFIGURATION_SECTION, setting, TOKEN_LIMITS, isValidTokenLimit, LLM_DEFAULTS, REPORT_STORAGE, COMMANDS, DASHBOARD_VIEW_ID };
+export const FINDINGS_VIEW_ID = manifest.contributes.views[CONFIGURATION_SECTION][1].id;
+module.exports = { EXTENSION_VERSION, PRODUCT_NAME, CONFIGURATION_SECTION, setting, TOKEN_LIMITS, isValidTokenLimit, LLM_DEFAULTS, REPORT_STORAGE, COMMANDS, DASHBOARD_VIEW_ID, FINDINGS_VIEW_ID };

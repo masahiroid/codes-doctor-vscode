@@ -2,7 +2,7 @@
   "name": "codes-doctor",
   "displayName": "Codes Doctor",
   "description": "%extension.description%",
-  "version": "4.0.0",
+  "version": "4.0.2",
   "publisher": "masahirocom",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -49,6 +49,11 @@
           "name": "%view.dashboard%",
           "type": "webview",
           "icon": "media/csap.svg"
+        },
+        {
+          "id": "codeDoctor.findings",
+          "name": "%view.findings%",
+          "icon": "media/csap.svg"
         }
       ]
     },
@@ -60,9 +65,35 @@
       {
         "command": "codeDoctor.setLlmApiKey",
         "title": "%codeDoctor.setLlmApiKey%"
+      },
+      {
+        "command": "codeDoctor.copySummary",
+        "title": "%codeDoctor.copySummary%"
+      },
+      {
+        "command": "codeDoctor.copySummaryJson",
+        "title": "%codeDoctor.copySummaryJson%"
+      },
+      {
+        "command": "codeDoctor.openLastReport",
+        "title": "%codeDoctor.openLastReport%"
+      },
+      {
+        "command": "codeDoctor.clearDiagnostics",
+        "title": "%codeDoctor.clearDiagnostics%"
+      },
+      {
+        "command": "codeDoctor.openFindingLocation",
+        "title": "%codeDoctor.openFindingLocation%"
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "codeDoctor.openFindingLocation",
+          "when": "false"
+        }
+      ],
       "view/title": [
         {
           "command": "codeDoctor.analyzeCurrentWorkspace",
@@ -175,6 +206,25 @@
           "maximum": 1000000,
           "default": 16000,
           "description": "%config.llmMaxOutputTokens.description%"
+        },
+        "codeDoctor.minSecurity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 0,
+          "description": "%config.minSecurity.description%"
+        },
+        "codeDoctor.minTechnicalDebt": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 0,
+          "description": "%config.minTechnicalDebt.description%"
+        },
+        "codeDoctor.outputDirectory": {
+          "type": "string",
+          "default": "",
+          "description": "%config.outputDirectory.description%"
         }
       }
     }

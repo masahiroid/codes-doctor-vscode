@@ -39,14 +39,30 @@ const settingsSchema_1 = require("./lib/settingsSchema");
 const vscode = __importStar(require("vscode"));
 const commands_1 = require("./lib/commands");
 const dashboardView_1 = require("./lib/dashboardView");
+const findingsTreeView_1 = require("./lib/findingsTreeView");
+const hoverProvider_1 = require("./lib/hoverProvider");
+const statusBar_1 = require("./lib/statusBar");
 function activate(context) {
+    const diagnosticCollection = vscode.languages.createDiagnosticCollection('codeDoctor');
     const dashboardViewProvider = new dashboardView_1.CodeDoctorDashboardViewProvider(vscode, context);
-    const commands = (0, commands_1.createCommands)(vscode, context);
+    const findingsProvider = new findingsTreeView_1.FindingsTreeDataProvider(vscode);
+    const statusBar = (0, statusBar_1.createStatusBarController)(vscode);
+    const commands = (0, commands_1.createCommands)(vscode, context, diagnosticCollection);
     const disposables = [
+        diagnosticCollection,
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.analyzeCurrentWorkspace, commands.analyzeCurrentWorkspace),
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.setLlmApiKey, commands.setLlmApiKey),
+        vscode.commands.registerCommand(settingsSchema_1.COMMANDS.copySummary, commands.copySummary),
+        vscode.commands.registerCommand(settingsSchema_1.COMMANDS.copySummaryJson, commands.copySummaryJson),
+        vscode.commands.registerCommand(settingsSchema_1.COMMANDS.openLastReport, commands.openLastReport),
+        vscode.commands.registerCommand(settingsSchema_1.COMMANDS.clearDiagnostics, commands.clearDiagnostics),
+        vscode.commands.registerCommand(settingsSchema_1.COMMANDS.openFindingLocation, commands.openFindingLocation),
         vscode.window.registerWebviewViewProvider(settingsSchema_1.DASHBOARD_VIEW_ID, dashboardViewProvider),
+        vscode.window.registerTreeDataProvider(settingsSchema_1.FINDINGS_VIEW_ID, findingsProvider),
+        vscode.languages.registerHoverProvider({ scheme: 'file' }, (0, hoverProvider_1.createHoverProvider)(vscode)),
         dashboardViewProvider,
+        findingsProvider,
+        statusBar,
     ];
     context.subscriptions.push(...disposables);
 }

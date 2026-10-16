@@ -2,6 +2,8 @@ export interface AnalysisReference {
   analysisId: string;
   outputDir: string;
   reportPath?: string;
+  summary?: import('./summary').AnalysisSummary;
+  result?: import('./engine').AnalysisResult;
 }
 export type ReviewStatus =
   | { kind: 'running' | 'done'; provider: string; model: string }

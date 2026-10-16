@@ -18,11 +18,11 @@ const engine_1 = require("./engine");
  * @param {string} outputDir Absolute path where the report (and LLM context
  * files) should be written.
  * @param {'en'|'ja'} displayLanguage UI and report language (English by default).
- * @returns {Promise<{ analysisId: string, repoPath: string, reportPath: string }>}
+ * @returns {Promise<{ analysisId: string, repoPath: string, reportPath: string, result: import('./engine').AnalysisResult }>}
  */
 async function analyzeWorkspace(repoPath, language, outputDir, displayLanguage = 'en') {
-    const { analyzePathRequest } = (0, engine_1.loadEngine)(displayLanguage);
-    return analyzePathRequest(repoPath, language, outputDir, { generatorVersion: settingsSchema_1.EXTENSION_VERSION });
+    const { analyzeRepository } = (0, engine_1.loadEngine)(displayLanguage);
+    return analyzeRepository(repoPath, language, outputDir, { generatorVersion: settingsSchema_1.EXTENSION_VERSION });
 }
 /**
  * Fetch the live list of models available for a provider, using the given API key.

@@ -1,5 +1,18 @@
 # Changelog
 
+## 4.0.2
+
+- Add inline editor diagnostics in the Problems panel for security findings (with traced data-flow steps) and God Classes
+- Add hover provider with security explanations, remediation advice, and traced flow paths
+- Add status bar indicator showing live Security and Technical Debt scores with quality gate warnings
+- Add Findings tree view in the Activity Bar to drill down and jump directly to source lines
+
+## 4.0.1
+
+- Add Quality Gate score threshold warnings (minSecurity, minTechnicalDebt) aligned with CLI
+- Add commands to copy analysis summary as formatted text and JSON
+- Support configurable outputDirectory setting
+
 ## 4.0.0
 
 - **Syntax-tree analysis for Python, Go, Java, C#, Rust and C++.** These languages are now parsed with Tree-sitter instead of a regex scan. Classes, methods, fields, functions and imports are read from the syntax tree, so code inside strings and comments is no longer mistaken for declarations, local classes inside functions are found, Go and Rust methods are attached to their types, and C++ methods declared in a class body are counted. Swift, Kotlin and Dart keep the lightweight scan.
