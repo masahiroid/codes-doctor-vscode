@@ -29,7 +29,8 @@ for (const language of ['en', 'ja']) {
       await page.locator('[data-action="fetchModels"]').click();
       await page.locator('[data-action="runLlmAnalysis"]').click();
       await page.locator('[data-action="setApiKey"]').click();
-      await page.locator('[data-command]').click();
+      await page.locator('[data-command="codeDoctor.analyzeCurrentWorkspace"]').click();
+      await page.locator('[data-command="codeDoctor.analyzeGitChanges"]').click();
       const messages = await page.evaluate(() => (window as unknown as { messages: unknown[] }).messages);
       expect(messages).toEqual([
         { type: 'setSetting', key: 'analysisLanguage', value: 'typescript' },
@@ -38,6 +39,7 @@ for (const language of ['en', 'ja']) {
         { type: 'fetchModels' }, { type: 'runLlmAnalysis' },
         { type: 'command', command: 'codeDoctor.setLlmApiKey' },
         { type: 'command', command: 'codeDoctor.analyzeCurrentWorkspace' },
+        { type: 'command', command: 'codeDoctor.analyzeGitChanges' },
       ]);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });

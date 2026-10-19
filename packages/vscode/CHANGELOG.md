@@ -1,5 +1,10 @@
 # Changelog
 
+## 6.0.1
+
+- Add SECURITY.md, CONTRIBUTING.md and a CodeQL code scanning workflow
+- Fix the dashboard browser test to cover both the Analyze Current Workspace and Analyze Git Changes buttons
+
 ## 6.0.0
 
 - Add VS Code Language Model API (vscode.lm) provider option to run AI reviews and prompts without external API keys
