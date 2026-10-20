@@ -294,14 +294,14 @@
     "bundle": "node scripts/bundle.mjs"
   },
   "dependencies": {
-    "@typescript-eslint/typescript-estree": "^8.71.1",
+    "@typescript-eslint/typescript-estree": "^8.71.2",
     "@vscode/tree-sitter-wasm": "^0.3.1",
     "php-parser": "^3.7.0",
     "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.0",
-    "@types/node": "^26.6.4",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
     "@types/vscode": "~1.90.0",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
