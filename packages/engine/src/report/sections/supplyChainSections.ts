@@ -1,9 +1,16 @@
 import type { AnalysisResult } from '../../types';
 import { escapeHtml } from '../../html';
-import { badge, countCard, notice, panel, section, severityTone, stat, table } from '../ui';
+import { badge, countCard, filterableTable, notice, panel, section, severityTone, stat, table } from '../ui';
 
 const SBOM_COMPONENT_TABLE_ROW_LIMIT = 50;
 const VULNERABILITY_TABLE_ROW_LIMIT = 60;
+
+const VULN_SEVERITY_ORDER: Record<string, number> = {
+  critical: 0,
+  high: 1,
+  moderate: 2,
+  low: 3,
+};
 const NVD_DETAIL_URL = 'https://nvd.nist.gov/vuln/detail/';
 const CVE_PATTERN = /CVE-\d{4}-\d{4,7}/i;
 
@@ -67,15 +74,46 @@ export function generateVulnerabilityScanSection(result: AnalysisResult): string
   const status = scan.totalVulnerabilities > 0
     ? notice('rose', `${scan.totalVulnerabilities}件の脆弱性が検出されました`, `<p>修正可能パッケージ: ${scan.fixable}件 / Source: ${escapeHtml(scan.source)}</p>`)
     : notice('mint', '脆弱性は検出されませんでした', `<p>Source: ${escapeHtml(scan.source)}</p>`);
-  const rows = scan.vulnerabilities.slice(0, VULNERABILITY_TABLE_ROW_LIMIT).map((vulnerability) => `<tr>
-    <td><code>${escapeHtml(vulnerability.packageName)}</code></td>
-    <td class="mono muted">${escapeHtml(vulnerability.currentVersion || vulnerability.affectedRange || '-')}</td>
-    <td class="mono">${escapeHtml(vulnerability.fixedVersions || (vulnerability.fixable ? '利用可能' : '-'))}</td>
-    <td>${formatCve(vulnerability)}</td>
-    <td>${badge(vulnerability.severity, severityTone(vulnerability.severity), { upper: true })}</td>
-  </tr>`);
+  const sortedVulns = [...scan.vulnerabilities].sort((a, b) => {
+    const diff = (VULN_SEVERITY_ORDER[a.severity] ?? 99) - (VULN_SEVERITY_ORDER[b.severity] ?? 99);
+    if (diff !== 0) return diff;
+    return a.packageName.localeCompare(b.packageName);
+  });
+
+  const vulnCounts: Record<string, number> = { critical: 0, high: 0, moderate: 0, low: 0 };
+  for (const v of sortedVulns) {
+    vulnCounts[v.severity] = (vulnCounts[v.severity] || 0) + 1;
+  }
+
+  const rows = sortedVulns.map((vulnerability, index) => {
+    const isHidden = index >= VULNERABILITY_TABLE_ROW_LIMIT;
+    const hideAttr = isHidden ? ' style="display:none;"' : '';
+    return `<tr data-severity="${escapeHtml(vulnerability.severity)}"${hideAttr}>
+      <td><code>${escapeHtml(vulnerability.packageName)}</code></td>
+      <td class="mono muted">${escapeHtml(vulnerability.currentVersion || vulnerability.affectedRange || '-')}</td>
+      <td class="mono">${escapeHtml(vulnerability.fixedVersions || (vulnerability.fixable ? '利用可能' : '-'))}</td>
+      <td>${formatCve(vulnerability)}</td>
+      <td>${badge(vulnerability.severity, severityTone(vulnerability.severity), { upper: true })}</td>
+    </tr>`;
+  });
   const scanner = scan.source === 'trivy' ? 'Trivy を使用して脆弱性をスキャンしています。' : 'npm audit を使用して脆弱性をスキャンしています。';
   const about = `<p>${scanner}<br>CVE ID は脆弱性データベース（NVD、Aqua Security等）にリンクしており、クリックすると詳細情報が表示されます。</p>`;
+
+  const tablePanel = rows.length
+    ? panel(
+        filterableTable(['パッケージ', '現在のバージョン', '修正バージョン', 'CVE ID', '重大度'], rows, {
+          filterId: 'dependency-vulnerabilities',
+          limit: VULNERABILITY_TABLE_ROW_LIMIT,
+          severities: [
+            { id: 'critical', label: 'Critical', count: vulnCounts.critical, tone: 'rose' },
+            { id: 'high', label: 'High', count: vulnCounts.high, tone: 'peach' },
+            { id: 'moderate', label: 'Moderate', count: vulnCounts.moderate, tone: 'butter' },
+            { id: 'low', label: 'Low', count: vulnCounts.low, tone: 'sky' },
+          ],
+        }),
+        { title: '脆弱性の詳細' }
+      )
+    : '';
 
   return section('脆弱性スキャン', `
     ${countCard('重要度別分布', [
@@ -85,6 +123,6 @@ export function generateVulnerabilityScanSection(result: AnalysisResult): string
       { label: 'Low', count: scan.low, tone: 'sky' },
     ], { empty: '既知の脆弱性なし' })}
     ${status}
-    ${rows.length ? panel(table(['パッケージ', '現在のバージョン', '修正バージョン', 'CVE ID', '重大度'], rows), { title: '脆弱性の詳細' }) : ''}
+    ${tablePanel}
     ${notice('sky', '脆弱性スキャンについて', about)}`);
 }

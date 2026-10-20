@@ -180,6 +180,23 @@ export const REPORT_STYLES = `
   .cell-sub { font-family: var(--mono); font-size: 0.76rem; color: var(--muted); word-break: break-all; }
   .more { margin-top: 10px; font-size: 0.8rem; color: var(--muted); text-align: center; }
 
+  /* Filterable tables */
+  .table-filterable { position: relative; }
+  .table-filter-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; padding: 8px 12px; background: var(--well); border-radius: var(--radius-sm); border: 1px solid var(--hairline); }
+  .table-filter-group { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .filter-title { font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); margin-right: 4px; }
+  .filter-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 0.76rem; font-weight: 500; padding: 3px 10px; border-radius: 999px; cursor: pointer; user-select: none;
+    border: 1px solid color-mix(in srgb, var(--tone, var(--hairline)) 50%, transparent); background: color-mix(in srgb, var(--tone, var(--hairline)) 16%, transparent); color: var(--tone-ink, var(--ink)); transition: opacity 0.15s, background 0.15s; }
+  .filter-chip:hover:not(.is-disabled) { background: color-mix(in srgb, var(--tone, var(--hairline)) 26%, transparent); }
+  .filter-chip input[type="checkbox"] { margin: 0; cursor: pointer; accent-color: var(--tone, var(--lavender)); }
+  .filter-chip .count { font-size: 0.7rem; opacity: 0.8; font-weight: 600; }
+  .filter-chip.is-disabled { opacity: 0.45; cursor: not-allowed; }
+  .table-filter-actions { display: flex; gap: 6px; }
+  .btn-sm { font: inherit; font-size: 0.74rem; padding: 2px 8px; border-radius: var(--radius-sm); cursor: pointer; color: var(--ink-soft); background: var(--surface-strong); border: 1px solid var(--hairline); }
+  .btn-sm:hover { color: var(--ink); }
+  .table-expand-row { margin-top: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .table-empty-notice { padding: 18px; text-align: center; color: var(--muted); font-size: 0.86rem; }
+
   /* Charts and diagrams */
   .chart { position: relative; }
   .diagram { padding: 16px; overflow: auto; min-height: 220px; }

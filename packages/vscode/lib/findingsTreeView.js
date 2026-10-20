@@ -95,7 +95,10 @@ class FindingsTreeDataProvider {
         if (!result) {
             return element ? [] : [{ kind: 'empty' }];
         }
-        const securityIssues = (result.securityScore?.issues || []).filter((i) => i.type !== 'info');
+        const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+        const securityIssues = (result.securityScore?.issues || [])
+            .filter((i) => i.type !== 'info')
+            .sort((a, b) => (SEVERITY_ORDER[a.type] ?? 99) - (SEVERITY_ORDER[b.type] ?? 99));
         const godClasses = (result.godClasses || []).filter((g) => g.rank === 'critical' || g.rank === 'high' || g.rank === 'medium');
         const circularDeps = result.circularDependencies || [];
         if (!element) {

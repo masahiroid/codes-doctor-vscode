@@ -6,6 +6,7 @@ import { renderTabNav, renderTabPanels } from './sections';
 import { escapeHtml } from '../html';
 import { reportLibraryScript } from './browser/libraries';
 import { installReportTabs, TAB_SCRIPT_ID } from './browser/reportTabs';
+import { installTableFilter, TABLE_FILTER_SCRIPT_ID } from './browser/tableFilter';
 import { reviewCopySource } from './browser/reviewCopy';
 import { installJapaneseStrong } from './browser/markdown';
 import { BRAND_MARK_SVG, PRODUCT_NAME } from './branding';
@@ -119,6 +120,7 @@ ${renderTabPanels(result, savedReviews)}
     });
   </script>
   <script id="${TAB_SCRIPT_ID}">(${installReportTabs.toString()})();</script>
+  <script id="${TABLE_FILTER_SCRIPT_ID}">(${installTableFilter.toString()})();</script>
 </body>
 </html>`;
 

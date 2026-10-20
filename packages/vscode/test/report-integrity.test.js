@@ -145,4 +145,174 @@ for (const folder of ['csap', 'csap-en']) {
       assert.equal(button.removed, true);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });
+
+  test(`${folder}: security table sorts Critical first, filters by severity checkbox, and supports expanding all`, () => {
+    const { securitySection } = require(`../vendor/${folder}/report/sections/riskSections`);
+    const issues = [
+      { type: 'info', category: 'Info finding', filePath: 'src/a.ts', lineNumber: 1, description: 'info', recommendation: '' },
+      { type: 'low', category: 'Low finding', filePath: 'src/b.ts', lineNumber: 2, description: 'low', recommendation: '' },
+      ...Array.from({ length: 45 }, (_, i) => ({
+        type: 'low',
+        category: `Low ${i}`,
+        filePath: `src/low_${i}.ts`,
+        lineNumber: 10,
+        description: 'low desc',
+        recommendation: '',
+      })),
+      { type: 'critical', category: 'SQL Injection', filePath: 'src/critical.ts', lineNumber: 99, description: 'critical sql', recommendation: 'sanitize' },
+      { type: 'high', category: 'XSS', filePath: 'src/high.ts', lineNumber: 50, description: 'high xss', recommendation: 'escape' },
+    ];
+    const mockResult = {
+      securityScore: {
+        overallScore: 50,
+        grade: 'F',
+        summary: { critical: 1, high: 1, medium: 0, low: 46, info: 1 },
+        explanation: 'Critical: 1',
+        topRisks: ['Critical risk'],
+        issues,
+      },
+      repoPath: '/workspace',
+      godClasses: [],
+      circularDependencies: [],
+    };
+
+    const html = securitySection(mockResult);
+
+    // Filter toolbar is rendered
+    assert.match(html, /data-table-filter="security-issues"/);
+    assert.match(html, /data-filter-severity="critical"/);
+    assert.match(html, /data-filter-severity="high"/);
+    assert.match(html, /data-filter-severity="medium"/);
+    assert.match(html, /data-filter-severity="low"/);
+    assert.match(html, /data-filter-severity="info"/);
+
+    if (folder === 'csap') {
+      assert.match(html, /フィルター:/);
+      assert.match(html, /全選択/);
+      assert.match(html, /全解除/);
+      assert.match(html, /全件表示/);
+    } else {
+      assert.match(html, /Filter:/);
+      assert.match(html, /Select all/);
+      assert.match(html, /Deselect all/);
+      assert.match(html, /Show all/);
+    }
+
+    // Critical issue is sorted first in the table body despite being at the end of the input array
+    const firstRowMatch = html.match(/<tbody[^>]*>\s*<tr data-severity="([^"]+)"/);
+    assert.ok(firstRowMatch, 'should have tbody rows');
+    assert.equal(firstRowMatch[1], 'critical');
+
+    // Expand button is rendered because 49 total issues > 40 limit
+    assert.match(html, /data-table-expand/);
+    assert.doesNotMatch(html, /data-table-expand[^>]*style="display:none;"/);
+
+    // First 40 rows are visible initially, remaining are style="display:none;"
+    const rows = [...html.matchAll(/<tr data-severity="([^"]+)"([^>]*)>/g)];
+    assert.equal(rows.length, 49);
+    for (let i = 0; i < 40; i++) {
+      assert.doesNotMatch(rows[i][2], /display:none/);
+    }
+    for (let i = 40; i < rows.length; i++) {
+      assert.match(rows[i][2], /display:none/);
+    }
+  });
+
+  test(`${folder}: installTableFilter and injectTableFilter work dynamically`, () => {
+    const { injectTableFilter } = require(`../vendor/${folder}`);
+    const htmlWithTable = '<div data-table-filter="test"></div></body></html>';
+    const upgraded = injectTableFilter(htmlWithTable);
+    assert.match(upgraded, /id="code-doctor-table-filter"/);
+    assert.match(upgraded, /data-table-filter/);
+
+    // Test installTableFilter in a simulated DOM
+    const { installTableFilter } = require(`../vendor/${folder}/report/browser/tableFilter`);
+    class MockElement {
+      constructor(tag = 'div', attrs = {}) {
+        this.tagName = tag;
+        this.attributes = attrs;
+        this.dataset = {};
+        this.style = {};
+        this.children = [];
+        this.listeners = {};
+        this.textContent = '';
+      }
+      getAttribute(k) { return this.attributes[k] ?? null; }
+      setAttribute(k, v) { this.attributes[k] = v; }
+      addEventListener(event, fn) { (this.listeners[event] = this.listeners[event] || []).push(fn); }
+      dispatchEvent(event) { (this.listeners[event] || []).forEach(fn => fn()); }
+      querySelector(selector) {
+        return this.querySelectorAll(selector)[0] || null;
+      }
+      querySelectorAll(selector) {
+        const results = [];
+        const check = (node) => {
+          if (selector === 'input[data-filter-severity]' && node.tagName === 'input' && node.attributes['data-filter-severity']) results.push(node);
+          if (selector === '[data-filter-action="all"]' && node.attributes['data-filter-action'] === 'all') results.push(node);
+          if (selector === '[data-filter-action="none"]' && node.attributes['data-filter-action'] === 'none') results.push(node);
+          if (selector === 'tbody tr[data-severity]' && node.tagName === 'tr' && node.attributes['data-severity']) results.push(node);
+          if (selector === '[data-table-expand]' && node.attributes['data-table-expand'] !== undefined) results.push(node);
+          if (selector === '[data-table-empty]' && node.attributes['data-table-empty'] !== undefined) results.push(node);
+          for (const child of node.children) check(child);
+        };
+        check(this);
+        return results;
+      }
+    }
+
+    const container = new MockElement('div', { 'data-table-filter': 'test', 'data-table-limit': '2' });
+    const cbCritical = new MockElement('input', { 'data-filter-severity': 'critical' }); cbCritical.checked = true;
+    const cbInfo = new MockElement('input', { 'data-filter-severity': 'info' }); cbInfo.checked = true;
+    const btnAll = new MockElement('button', { 'data-filter-action': 'all' });
+    const btnNone = new MockElement('button', { 'data-filter-action': 'none' });
+    const tr1 = new MockElement('tr', { 'data-severity': 'critical' });
+    const tr2 = new MockElement('tr', { 'data-severity': 'critical' });
+    const tr3 = new MockElement('tr', { 'data-severity': 'info' });
+    const expandBtn = new MockElement('button', { 'data-table-expand': '' });
+    const emptyNotice = new MockElement('div', { 'data-table-empty': '' });
+
+    container.children.push(cbCritical, cbInfo, btnAll, btnNone, tr1, tr2, tr3, expandBtn, emptyNotice);
+
+    // Run install in simulated environment
+    const fakeDoc = {
+      documentElement: { lang: folder === 'csap' ? 'ja' : 'en' },
+      querySelectorAll: (sel) => sel === '[data-table-filter]' ? [container] : [],
+    };
+    vm.runInNewContext(`(${installTableFilter.toString()})()`, { document: fakeDoc });
+
+    // Initial state: limit is 2, so tr1 & tr2 visible, tr3 hidden, expandBtn visible
+    assert.equal(tr1.style.display, '');
+    assert.equal(tr2.style.display, '');
+    assert.equal(tr3.style.display, 'none');
+    assert.equal(expandBtn.style.display, '');
+    assert.match(expandBtn.textContent, /1/);
+
+    // Expand
+    expandBtn.dispatchEvent('click');
+    assert.equal(tr1.style.display, '');
+    assert.equal(tr2.style.display, '');
+    assert.equal(tr3.style.display, '');
+    assert.match(expandBtn.textContent, /2/);
+
+    // Uncheck info
+    cbInfo.checked = false;
+    cbInfo.dispatchEvent('change');
+    assert.equal(tr1.style.display, '');
+    assert.equal(tr2.style.display, '');
+    assert.equal(tr3.style.display, 'none');
+
+    // Deselect all
+    btnNone.dispatchEvent('click');
+    assert.equal(tr1.style.display, 'none');
+    assert.equal(tr2.style.display, 'none');
+    assert.equal(tr3.style.display, 'none');
+    assert.equal(emptyNotice.style.display, '');
+
+    // Select all
+    btnAll.dispatchEvent('click');
+    assert.equal(cbCritical.checked, true);
+    assert.equal(cbInfo.checked, true);
+    assert.equal(tr1.style.display, '');
+    assert.equal(tr2.style.display, '');
+  });
 }

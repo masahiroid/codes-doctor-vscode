@@ -3,9 +3,17 @@ import type { AnalysisResult, SecurityIssue } from '../../types';
 import { ISSUE_SEVERITY_SCORE_THRESHOLDS, CYCLE_LENGTH_THRESHOLDS } from '../../analyzer/technicalDebt';
 import { escapeHtml } from '../../html';
 import { debtHeadline, securityFindingCounts, securityHeadline } from './verdicts';
-import { badge, bulletList, countCard, gradeTone, meter, notice, panel, scoreCard, scoreTone, section, severityTone, stat, table } from '../ui';
+import { badge, bulletList, countCard, filterableTable, gradeTone, meter, notice, panel, scoreCard, scoreTone, section, severityTone, stat, table } from '../ui';
 
 const SECURITY_ISSUE_TABLE_ROW_LIMIT = 40;
+
+const SEVERITY_ORDER: Record<string, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+  info: 4,
+};
 
 /** Marks findings in test code, which are listed but do not count toward the score. */
 const TEST_CODE_BADGE = badge('テストコード', 'lavender', { title: 'スコアには含めません' });
@@ -111,10 +119,12 @@ function confidenceBadge(issue: SecurityIssue): string {
   return issue.confidence === 'pattern' ? ` ${UNTRACED_BADGE}` : '';
 }
 
-function renderSecurityIssueRow(issue: SecurityIssue): string {
+function renderSecurityIssueRow(issue: SecurityIssue, index: number, limit: number): string {
   const line = issue.lineNumber ? ':' + issue.lineNumber : '';
   const location = escapeHtml(path.basename(issue.filePath)) + line;
-  return `<tr>
+  const isHidden = index >= limit;
+  const hideAttr = isHidden ? ' style="display:none;"' : '';
+  return `<tr data-severity="${escapeHtml(issue.type)}"${hideAttr}>
     <td>${badge(issue.type, severityTone(issue.type), { upper: true })}</td>
     <td class="cell-main">${issue.category}${confidenceBadge(issue)}${issue.inTest ? ` ${TEST_CODE_BADGE}` : ''}</td>
     <td>${issue.description}${issue.flow ? flowPath(issue.flow) : ''}</td>
@@ -131,9 +141,36 @@ export function securitySection(result: AnalysisResult): string {
   const risks = securityScoreData.topRisks?.length
     ? notice('peach', '主要なリスク', bulletList(securityScoreData.topRisks))
     : '';
-  const hidden = securityScoreData.issues.length - SECURITY_ISSUE_TABLE_ROW_LIMIT;
-  const issues = securityScoreData.issues.length
-    ? panel(table(['種別', 'カテゴリ', '内容', 'ファイル', '対策'], securityScoreData.issues.slice(0, SECURITY_ISSUE_TABLE_ROW_LIMIT).map(renderSecurityIssueRow), { more: hidden > 0 ? '他 ' + hidden + ' 件を除外表示' : undefined }), { title: '検出された脆弱性の詳細' })
+
+  const sortedIssues = [...securityScoreData.issues].sort((a, b) => {
+    const diff = (SEVERITY_ORDER[a.type] ?? 99) - (SEVERITY_ORDER[b.type] ?? 99);
+    if (diff !== 0) return diff;
+    const fileDiff = a.filePath.localeCompare(b.filePath);
+    if (fileDiff !== 0) return fileDiff;
+    return (a.lineNumber || 0) - (b.lineNumber || 0);
+  });
+
+  const counts: Record<string, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+  for (const issue of sortedIssues) {
+    counts[issue.type] = (counts[issue.type] || 0) + 1;
+  }
+
+  const rows = sortedIssues.map((issue, index) => renderSecurityIssueRow(issue, index, SECURITY_ISSUE_TABLE_ROW_LIMIT));
+  const issues = sortedIssues.length
+    ? panel(
+        filterableTable(['種別', 'カテゴリ', '内容', 'ファイル', '対策'], rows, {
+          filterId: 'security-issues',
+          limit: SECURITY_ISSUE_TABLE_ROW_LIMIT,
+          severities: [
+            { id: 'critical', label: 'Critical', count: counts.critical, tone: 'rose' },
+            { id: 'high', label: 'High', count: counts.high, tone: 'peach' },
+            { id: 'medium', label: 'Medium', count: counts.medium, tone: 'butter' },
+            { id: 'low', label: 'Low', count: counts.low, tone: 'sky' },
+            { id: 'info', label: 'Info', count: counts.info, tone: 'lavender' },
+          ],
+        }),
+        { title: '検出された脆弱性の詳細' }
+      )
     : notice('mint', 'セキュリティ上の重大な問題は検出されませんでした', '');
 
   return section('セキュリティスコア', `

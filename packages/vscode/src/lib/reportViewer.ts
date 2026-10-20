@@ -2,7 +2,7 @@ import { secureWebviewHtml } from './webviewSecurity';
 import { upgradeReportLibraries } from './reports/libraries';
 import { injectReportBranding } from './reports/branding';
 import { hasIncompleteAstMarkup } from './reports/integrity';
-import { injectReportTabs, injectReviewCopy, isReviewTargetId } from './reportScripts';
+import { injectReportTabs, injectReviewCopy, injectTableFilter, isReviewTargetId } from './reportScripts';
 import { translator } from './i18n';
 import fs from 'node:fs';
 import { getReportOpenMode } from './config';
@@ -18,7 +18,7 @@ export async function openReport(vscode: typeof import('vscode'), reportPath: st
     vscode.window.showErrorMessage(translator(vscode)('This saved report has incomplete AST markup. Run "Analyze Current Workspace" to regenerate it. The original report and saved reviews have been kept.'));
     return;
   }
-  const enhancedHtml = injectReportBranding(injectReportTabs(injectReviewCopy(upgradeReportLibraries(originalHtml))));
+  const enhancedHtml = injectReportBranding(injectReportTabs(injectTableFilter(injectReviewCopy(upgradeReportLibraries(originalHtml)))));
   const reportUri = vscode.Uri.file(reportPath);
   const mode = getReportOpenMode(vscode);
 

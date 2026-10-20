@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.0.3
+
+- Add OpenSSF Best Practices badge to README files
+
+## 6.0.2
+
+- Sort security and vulnerability finding tables by severity (Critical first) with severity checkbox filters and expand-all buttons
+
 ## 6.0.1
 
 - Add SECURITY.md, CONTRIBUTING.md and a CodeQL code scanning workflow

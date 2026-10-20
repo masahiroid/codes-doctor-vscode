@@ -23,7 +23,7 @@ async function openReport(vscode, reportPath, analysisId) {
         vscode.window.showErrorMessage((0, i18n_1.translator)(vscode)('This saved report has incomplete AST markup. Run "Analyze Current Workspace" to regenerate it. The original report and saved reviews have been kept.'));
         return;
     }
-    const enhancedHtml = (0, branding_1.injectReportBranding)((0, reportScripts_1.injectReportTabs)((0, reportScripts_1.injectReviewCopy)((0, libraries_1.upgradeReportLibraries)(originalHtml))));
+    const enhancedHtml = (0, branding_1.injectReportBranding)((0, reportScripts_1.injectReportTabs)((0, reportScripts_1.injectTableFilter)((0, reportScripts_1.injectReviewCopy)((0, libraries_1.upgradeReportLibraries)(originalHtml)))));
     const reportUri = vscode.Uri.file(reportPath);
     const mode = (0, config_1.getReportOpenMode)(vscode);
     if (mode === 'vscode') {

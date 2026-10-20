@@ -23,6 +23,7 @@ export type { AnalysisLanguage, LanguageId } from './analyzer/languages/catalog'
 export type { AnalysisResult } from './types';
 export { injectReviewCopy, isReviewTargetId, reviewCopySource } from './report/browser/reviewCopy';
 export { injectReportTabs } from './report/browser/reportTabs';
+export { injectTableFilter } from './report/browser/tableFilter';
 export { reportLibraryScript } from './report/browser/libraries';
 export type { ReportLibrary } from './report/browser/libraries';
 export { BRAND_MARK_SVG, PRODUCT_NAME } from './report/branding';

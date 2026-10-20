@@ -6,5 +6,5 @@ import { loadEngine } from './engine';
  */
 const engine = loadEngine('ja');
 
-export const { injectReviewCopy, isReviewTargetId, injectReportTabs, reportLibraryScript } = engine;
+export const { injectReviewCopy, isReviewTargetId, injectReportTabs, injectTableFilter, reportLibraryScript } = engine;
 export type ReportLibrary = import('../../vendor/csap').ReportLibrary;

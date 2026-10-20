@@ -117,6 +117,56 @@ export function table(headers: string[], rows: string[], options: { more?: strin
   return `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${rows.join('')}</tbody></table></div>${options.more ? `<div class="more">${options.more}</div>` : ''}`;
 }
 
+export interface FilterSeverityOption {
+  id: string;
+  label: string;
+  count: number;
+  tone: Tone;
+}
+
+export interface FilterableTableOptions {
+  filterId: string;
+  limit?: number;
+  severities: FilterSeverityOption[];
+  emptyMessage?: string;
+}
+
+export function filterableTable(headers: string[], rows: string[], options: FilterableTableOptions): string {
+  const limit = options.limit ?? 40;
+  const severitiesHtml = options.severities.map((s) => {
+    const disabledAttr = s.count === 0 ? ' disabled' : '';
+    const checkedAttr = s.count > 0 ? ' checked' : '';
+    const disabledClass = s.count === 0 ? ' is-disabled' : '';
+    return `<label class="filter-chip tone-${s.tone}${disabledClass}"><input type="checkbox" data-filter-severity="${escapeHtml(s.id)}"${checkedAttr}${disabledAttr} /><span>${escapeHtml(s.label)}</span><span class="count">${s.count}</span></label>`;
+  }).join('');
+
+  const filterBar = `<div class="table-filter-bar">
+    <div class="table-filter-group">
+      <span class="filter-title">フィルター:</span>
+      ${severitiesHtml}
+    </div>
+    <div class="table-filter-actions">
+      <button type="button" class="btn-sm" data-filter-action="all">全選択</button>
+      <button type="button" class="btn-sm" data-filter-action="none">全解除</button>
+    </div>
+  </div>`;
+
+  const head = headers.map((header) => header.startsWith('#') ? `<th class="num">${header.slice(1)}</th>` : `<th>${header}</th>`).join('');
+  const tableHtml = `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+
+  const emptyMsg = options.emptyMessage || '該当する脆弱性はありません';
+  const expandBtnHtml = `<button type="button" class="btn table-expand-btn" data-table-expand${rows.length > limit ? '' : ' style="display:none;"'}>全件表示</button>`;
+
+  return `<div class="table-filterable" data-table-filter="${escapeHtml(options.filterId)}" data-table-limit="${limit}">
+    ${filterBar}
+    ${tableHtml}
+    <div class="table-expand-row">
+      ${expandBtnHtml}
+      <div class="table-empty-notice" data-table-empty style="display:none;">${emptyMsg}</div>
+    </div>
+  </div>`;
+}
+
 /** A name with a monospace path under it, for table cells. */
 export function nameWithPath(name: string, filePath: string): string {
   return `<div class="cell-main">${escapeHtml(name)}</div><div class="cell-sub">${escapeHtml(filePath)}</div>`;
