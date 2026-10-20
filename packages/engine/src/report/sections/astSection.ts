@@ -40,6 +40,9 @@ interface LanguageBlocks {
   raw: string;
 }
 
+const MAX_RAW_SOURCE_BYTES = 50 * 1024;
+const MAX_RAW_OUTPUT_CHARS = 50 * 1024;
+
 export function astSection(result: AnalysisResult, savedAstResult?: string): string {
   const languages = LANGUAGES.map((language): LanguageBlocks | null => {
     const files: readonly ParsedFile[] = result.files[language.id];
@@ -131,11 +134,26 @@ function renderRawBlock(filePath: string, language: LanguageId, label: string): 
   let astOutput: string;
   try {
     const content = readSource(filePath);
+    if (content.length > MAX_RAW_SOURCE_BYTES) {
+      astOutput = JSON.stringify(
+        {
+          filePath,
+          note: `${label}（省略）: ファイルサイズ超過`,
+          size: content.length,
+        },
+        null,
+        2
+      );
+      return renderDetails(filePath, astOutput);
+    }
     const parseRaw = (RAW_AST_PARSERS as Partial<Record<LanguageId, (content: string, filePath: string) => unknown>>)[language];
     const raw = parseRaw
       ? parseRaw(content, filePath)
       : { note: `${label}の完全なAST解析は未対応です`, filePath, preview: content };
     astOutput = JSON.stringify(raw, null, 2);
+    if (astOutput.length > MAX_RAW_OUTPUT_CHARS) {
+      astOutput = `${astOutput.slice(0, MAX_RAW_OUTPUT_CHARS)}\n\n// （省略）`;
+    }
   } catch (error) {
     astOutput = JSON.stringify({ filePath, error: error instanceof Error ? error.message : 'ASTの解析に失敗しました' }, null, 2);
   }

@@ -105,5 +105,7 @@
   "Propose a refactoring plan for God Classes": "God Classの分割・リファクタリング案を提案して",
   "🏛️ God Class Refactoring": "🏛️ God Class分割案",
   "Generate a fix for the current file": "現在のファイルの修正案を生成して",
-  "✨ Preview AI Fix": "✨ AI修正プレビュー"
+  "✨ Preview AI Fix": "✨ AI修正プレビュー",
+  "Failed to open report in external browser. Opening in editor instead.": "外部ブラウザーでレポートを開けませんでした。エディタ内で開きます。",
+  "Failed to open report: {message}": "レポートを開けませんでした: {message}"
 }

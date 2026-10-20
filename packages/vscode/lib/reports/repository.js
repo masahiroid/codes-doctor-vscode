@@ -12,7 +12,15 @@ const node_path_1 = __importDefault(require("node:path"));
 const settingsSchema_1 = require("../settingsSchema");
 function getReportLanguage(reportPath) {
     try {
-        return /<html\b[^>]*\blang=["']ja(?:-JP)?["']/i.test(node_fs_1.default.readFileSync(reportPath || '', 'utf-8')) ? 'ja' : 'en';
+        const fd = node_fs_1.default.openSync(reportPath || '', 'r');
+        try {
+            const header = Buffer.alloc(4096);
+            const length = node_fs_1.default.readSync(fd, header, 0, header.length, 0);
+            return /<html\b[^>]*\blang=["']ja(?:-JP)?["']/i.test(header.toString('utf8', 0, length)) ? 'ja' : 'en';
+        }
+        finally {
+            node_fs_1.default.closeSync(fd);
+        }
     }
     catch {
         return 'en';

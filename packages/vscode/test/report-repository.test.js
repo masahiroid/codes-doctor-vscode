@@ -45,3 +45,19 @@ test('history metadata accepts only string fields and isolates invalid JSON shap
     assert.ok(repository.listLlmResults('example', root).every(item => !['null', 'array'].includes(item.focus)));
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('report language is read from a bounded header even for a very large report', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'codes-language-header-'));
+  const reportPath = path.join(root, 'large.html');
+  const fd = fs.openSync(reportPath, 'w');
+  fs.writeSync(fd, '<!doctype html><html lang="ja">');
+  fs.ftruncateSync(fd, 364 * 1024 * 1024);
+  fs.closeSync(fd);
+  const readFileSync = fs.readFileSync;
+  fs.readFileSync = () => { throw new Error('Must not read entire report'); };
+  try { assert.equal(repository.getReportLanguage(reportPath), 'ja'); }
+  finally {
+    fs.readFileSync = readFileSync;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

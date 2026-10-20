@@ -423,6 +423,7 @@
   "解析は未対応です": " parsing is not supported",
   "の解析に失敗しました": " parsing failed",
   "（省略）": " (truncated)",
+  "ファイルサイズ超過": "file size limit exceeded",
   "エラー": "error",
   "構造の抽出に失敗しました": "Failed to build structure",
   "件省略": " more",

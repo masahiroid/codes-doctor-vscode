@@ -4,7 +4,12 @@ import { REPORT_STORAGE } from '../settingsSchema';
 
 export function getReportLanguage(reportPath: string | undefined) {
   try {
-    return /<html\b[^>]*\blang=["']ja(?:-JP)?["']/i.test(fs.readFileSync(reportPath || '', 'utf-8')) ? 'ja' : 'en';
+    const fd = fs.openSync(reportPath || '', 'r');
+    try {
+      const header = Buffer.alloc(4096);
+      const length = fs.readSync(fd, header, 0, header.length, 0);
+      return /<html\b[^>]*\blang=["']ja(?:-JP)?["']/i.test(header.toString('utf8', 0, length)) ? 'ja' : 'en';
+    } finally { fs.closeSync(fd); }
   } catch {
     return 'en';
   }

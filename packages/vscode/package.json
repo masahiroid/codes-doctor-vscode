@@ -2,7 +2,7 @@
   "name": "codes-doctor",
   "displayName": "Codes Doctor",
   "description": "%extension.description%",
-  "version": "6.0.3",
+  "version": "6.0.4",
   "publisher": "masahirocom",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -52,6 +52,7 @@
         },
         {
           "id": "codeDoctor.findings",
+          "visibility": "hidden",
           "name": "%view.findings%",
           "icon": "media/csap.svg"
         }

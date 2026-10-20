@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.0.4
+
+- Exclude TypeScript declaration files (`.d.ts`), minified and pre-bundled distribution files (`.min.js`, `.bundle.js`), sourcemaps, and build artifacts from workspace analysis.
+- Exclude `lib` compiler output directories when sibling `src` directories exist, and respect hierarchical `.gitignore` files in subdirectories.
+- Cap raw AST output size per file to prevent generating oversized HTML reports that freeze external browsers and exhaust extension-host memory.
+- Add error handling and fallback notifications when opening reports in the external browser or webview.
+- Avoid extension-host memory exhaustion when opening large reports by passing external reports directly to the browser; bound report-language reads and open oversized webviews externally.
+
 ## 6.0.3
 
 - Add OpenSSF Best Practices badge to README files

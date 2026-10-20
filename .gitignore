@@ -2,6 +2,13 @@
 node_modules/
 vendor/
 
+dist/
+dist-en/
+packages/*/dist/
+packages/*/dist-en/
+releases/
+
 test-results/
 playwright-report/
+
 

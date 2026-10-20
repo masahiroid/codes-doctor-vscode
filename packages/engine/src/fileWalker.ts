@@ -54,11 +54,11 @@ function parseGitignore(repoPath: string): Set<string> {
  * - ** matches zero or more directories
  */
 function patternToRegex(pattern: string): RegExp {
-  // Escape special regex characters except *, ?, and /
-  let regexStr = pattern
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')  // Escape regex special chars
-    .replace(/\\\*/g, '[^/]*')              // * becomes [^/]*
-    .replace(/\\\?/g, '[^/]');              // ? becomes [^/]
+  const regexStr = pattern
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*\*/g, '.*')
+    .replace(/(?<!\.)\*/g, '[^/]*')
+    .replace(/\?/g, '[^/]');
 
   // If pattern doesn't have /, match only filename
   if (!pattern.includes('/')) {
@@ -81,20 +81,36 @@ function matchesPattern(pattern: string, name: string): boolean {
   }
 }
 
-function shouldExclude(itemName: string, fullPath: string, repoPath: string, gitignorePatterns: Set<string>): boolean {
+interface GitignoreScope {
+  dir: string;
+  patterns: Set<string>;
+}
+
+function shouldExclude(itemName: string, fullPath: string, scopes: readonly GitignoreScope[]): boolean {
   // Exclude Storybook files (used for UI component development, not production code)
   if (itemName.includes('.stories.')) {
     return true;
   }
 
+  // Exclude TypeScript declaration files and sourcemaps (not executable source code)
+  if (itemName.endsWith('.d.ts') || itemName.endsWith('.d.mts') || itemName.endsWith('.d.cts') || itemName.endsWith('.map')) {
+    return true;
+  }
+
+  // Exclude minified and pre-bundled distribution files
+  if (itemName.endsWith('.min.js') || itemName.endsWith('.min.cjs') || itemName.endsWith('.min.mjs') || itemName.endsWith('.min.css') || itemName.endsWith('.bundle.js')) {
+    return true;
+  }
+
   // Standard exclusions (always ignore these)
   const standardExcludes = [
-    'node_modules', '.git', 'vendor', 'dist', 'build', '.venv', '__pycache__',
+    'node_modules', '.git', 'vendor', 'dist', 'dist-en', 'build', '.venv', '__pycache__',
     '.firebase', '.next', '.nuxt', '.output', 'out', 'coverage', '.cache',
     '.turbo', '.vercel', '.netlify', 'public/build', '.expo', '.expo-shared',
     'android/app/build', 'ios/build', '.gradle', 'Pods', 'DerivedData',
     '.terraform', 'target', 'bin', 'obj', '.vs', '.idea', '.vscode',
-    'tmp', 'temp', '.tmp', '.DS_Store', 'thumbs.db', 'vscode-extension'
+    'tmp', 'temp', '.tmp', '.DS_Store', 'thumbs.db', 'vscode-extension', 'releases',
+    '.parcel-cache', '.docusaurus', '.serverless', '.svelte-kit'
   ];
 
   // Check standard exclusions
@@ -102,23 +118,30 @@ function shouldExclude(itemName: string, fullPath: string, repoPath: string, git
     return true;
   }
 
-  // Check gitignore patterns
-  const relativePath = path.relative(repoPath, fullPath);
-  for (const pattern of gitignorePatterns) {
-    // Skip negation patterns (e.g., !.vscode/extensions.json)
-    if (pattern.startsWith('!')) {
-      continue;
-    }
+  // Exclude 'lib' directory if sibling 'src' directory exists (compiled output)
+  if (itemName === 'lib' && fs.existsSync(path.join(path.dirname(fullPath), 'src'))) {
+    return true;
+  }
 
-    // Exact match on relative path or item name
-    if (itemName === pattern || relativePath === pattern || relativePath.startsWith(pattern + '/')) {
-      return true;
-    }
+  // Check gitignore patterns from all applicable scopes (root down to current directory)
+  for (const scope of scopes) {
+    const relativePath = path.relative(scope.dir, fullPath);
+    for (const pattern of scope.patterns) {
+      // Skip negation patterns (e.g., !.vscode/extensions.json)
+      if (pattern.startsWith('!')) {
+        continue;
+      }
 
-    // Match patterns with wildcards
-    if (pattern.includes('*') || pattern.includes('?')) {
-      if (matchesPattern(pattern, itemName) || matchesPattern(pattern, relativePath)) {
+      // Exact match on relative path or item name
+      if (itemName === pattern || relativePath === pattern || relativePath.startsWith(pattern + '/')) {
         return true;
+      }
+
+      // Match patterns with wildcards
+      if (pattern.includes('*') || pattern.includes('?')) {
+        if (matchesPattern(pattern, itemName) || matchesPattern(pattern, relativePath)) {
+          return true;
+        }
       }
     }
   }
@@ -140,22 +163,30 @@ export async function listFilesByExtension<K extends string>(
   for (const group of groups) {
     for (const extension of group.extensions) groupByExtension.set(extension, group.id);
   }
-  const gitignorePatterns = parseGitignore(dirPath);
 
-  function walkDir(currentPath: string): void {
+  function walkDir(currentPath: string, parentScopes: GitignoreScope[]): void {
     if (!fs.existsSync(currentPath)) {
       return;
     }
 
+    const currentScopes = [...parentScopes];
+    const gitignoreFile = path.join(currentPath, '.gitignore');
+    if (fs.existsSync(gitignoreFile)) {
+      const localPatterns = parseGitignore(currentPath);
+      if (localPatterns.size > 0) {
+        currentScopes.push({ dir: currentPath, patterns: localPatterns });
+      }
+    }
+
     for (const item of fs.readdirSync(currentPath)) {
       const fullPath = path.join(currentPath, item);
-      if (shouldExclude(item, fullPath, dirPath, gitignorePatterns)) {
+      if (shouldExclude(item, fullPath, currentScopes)) {
         continue;
       }
 
       const stats = fs.statSync(fullPath);
       if (stats.isDirectory()) {
-        walkDir(fullPath);
+        walkDir(fullPath, currentScopes);
       } else if (stats.isFile()) {
         const group = groupByExtension.get(path.extname(item).toLowerCase());
         if (group) buckets[group].push(fullPath);
@@ -163,7 +194,7 @@ export async function listFilesByExtension<K extends string>(
     }
   }
 
-  walkDir(dirPath);
+  walkDir(dirPath, []);
   return buckets;
 }
 

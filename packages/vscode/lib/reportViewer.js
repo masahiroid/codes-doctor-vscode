@@ -18,47 +18,54 @@ const config_1 = require("./config");
  * @param analysisId Analysis ID, used only for the panel title.
  */
 async function openReport(vscode, reportPath, analysisId) {
-    const originalHtml = node_fs_1.default.readFileSync(reportPath, 'utf-8');
-    if ((0, integrity_1.hasIncompleteAstMarkup)(originalHtml)) {
-        vscode.window.showErrorMessage((0, i18n_1.translator)(vscode)('This saved report has incomplete AST markup. Run "Analyze Current Workspace" to regenerate it. The original report and saved reviews have been kept.'));
-        return;
-    }
-    const enhancedHtml = (0, branding_1.injectReportBranding)((0, reportScripts_1.injectReportTabs)((0, reportScripts_1.injectTableFilter)((0, reportScripts_1.injectReviewCopy)((0, libraries_1.upgradeReportLibraries)(originalHtml)))));
-    const reportUri = vscode.Uri.file(reportPath);
-    const mode = (0, config_1.getReportOpenMode)(vscode);
-    if (mode === 'vscode') {
-        if (enhancedHtml !== originalHtml)
-            node_fs_1.default.writeFileSync(reportPath, enhancedHtml, 'utf-8');
-        await vscode.commands.executeCommand('vscode.open', reportUri);
-        return;
-    }
-    if (mode === 'external') {
-        if (enhancedHtml !== originalHtml)
-            node_fs_1.default.writeFileSync(reportPath, enhancedHtml, 'utf-8');
-        await vscode.env.openExternal(reportUri);
-        return;
-    }
-    const panel = vscode.window.createWebviewPanel('codeDoctorReport', (0, i18n_1.translator)(vscode)('Codes Doctor Report: {analysisId}', { analysisId }), vscode.ViewColumn.Active, {
-        enableScripts: true,
-        localResourceRoots: [],
-    });
-    panel.webview.onDidReceiveMessage(async (input) => {
-        if (!input || typeof input !== 'object')
+    try {
+        const reportUri = vscode.Uri.file(reportPath);
+        const mode = (0, config_1.getReportOpenMode)(vscode);
+        // Reports already contain their browser assets. Do not load or rewrite them in
+        // the extension host just to hand the file to another application.
+        const stat = await node_fs_1.default.promises.stat(reportPath);
+        if (mode === 'external' || (mode !== 'vscode' && stat.size > 16 * 1024 * 1024)) {
+            if (!await vscode.env.openExternal(reportUri)) {
+                throw new Error(`Could not open report in the default browser: ${reportPath}`);
+            }
             return;
-        const message = input;
-        if (message?.type !== 'copyReview' || !(0, reportScripts_1.isReviewTargetId)(message.id) || typeof message.text !== 'string')
+        }
+        if (mode === 'vscode') {
+            await vscode.commands.executeCommand('vscode.open', reportUri);
             return;
-        let ok = true;
-        try {
-            await vscode.env.clipboard.writeText(message.text);
         }
-        catch {
-            ok = false;
+        const originalHtml = await node_fs_1.default.promises.readFile(reportPath, 'utf-8');
+        if ((0, integrity_1.hasIncompleteAstMarkup)(originalHtml)) {
+            vscode.window.showErrorMessage((0, i18n_1.translator)(vscode)('This saved report has incomplete AST markup. Run "Analyze Current Workspace" to regenerate it. The original report and saved reviews have been kept.'));
+            return;
         }
-        await panel.webview.postMessage({ type: 'reviewCopied', id: message.id, ok });
-    });
-    const reportHtml = enhancedHtml;
-    panel.webview.html = (0, webviewSecurity_1.secureWebviewHtml)(reportHtml, panel.webview.cspSource);
+        const enhancedHtml = (0, branding_1.injectReportBranding)((0, reportScripts_1.injectReportTabs)((0, reportScripts_1.injectTableFilter)((0, reportScripts_1.injectReviewCopy)((0, libraries_1.upgradeReportLibraries)(originalHtml)))));
+        const panel = vscode.window.createWebviewPanel('codeDoctorReport', (0, i18n_1.translator)(vscode)('Codes Doctor Report: {analysisId}', { analysisId }), vscode.ViewColumn.Active, {
+            enableScripts: true,
+            localResourceRoots: [],
+        });
+        panel.webview.onDidReceiveMessage(async (input) => {
+            if (!input || typeof input !== 'object')
+                return;
+            const message = input;
+            if (message?.type !== 'copyReview' || !(0, reportScripts_1.isReviewTargetId)(message.id) || typeof message.text !== 'string')
+                return;
+            let ok = true;
+            try {
+                await vscode.env.clipboard.writeText(message.text);
+            }
+            catch {
+                ok = false;
+            }
+            await panel.webview.postMessage({ type: 'reviewCopied', id: message.id, ok });
+        });
+        const reportHtml = enhancedHtml;
+        panel.webview.html = (0, webviewSecurity_1.secureWebviewHtml)(reportHtml, panel.webview.cspSource);
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage((0, i18n_1.translator)(vscode)('Failed to open report: {message}', { message }));
+    }
 }
 module.exports = {
     openReport,
