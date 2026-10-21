@@ -98,3 +98,74 @@ test('llm context: traced flows carry their path and callers, pattern matches ar
   assert.deepEqual(context.untracedPatterns, [{ category: 'Command Injection', count: 2, examples: [path.join('src', 'app.js') + ':8', path.join('src', 'app.js') + ':9'] }]);
   assert.deepEqual(context.otherFindings.map((finding) => finding.category), ['Weak Cryptography']);
 });
+
+const { compileTaintRule, analyzeTaintRule } = require('../dist/analyzer/flow/ruleTaint');
+
+test('distributed taint rules reuse built-in sinks and add their own sources, sanitizers and sinks', async () => {
+  const sql = compileTaintRule('EMERG-SQLI', { type: 'taint', languages: ['typescript', 'php'], sinks: [{ builtin: 'SQL Injection' }] });
+  const js = `function h(req) {
+  const id = req.params.id;
+  db.query('SELECT * FROM t WHERE id = ' + id);
+  child_process.exec('ls ' + id);
+}`;
+  assert.deepEqual(sinks(await analyzeTaintRule(sql, 'typescript', 'a.ts', js)), ['SQL Injection@3']);
+  assert.deepEqual(sinks(await analyzeTaintRule(sql, 'javascript', 'a.js', js)), ['SQL Injection@3']);
+  assert.deepEqual(sinks(await analyzeTaintRule(sql, 'php', 'a.php', `<?php\n$id = $_GET['id'];\nmysqli_query($c, $id);\n`)), ['SQL Injection@3']);
+  assert.deepEqual(sinks(await analyzeTaintRule(sql, 'php', 'a.php', `<?php\n$id = $_GET['id'];\n$pdo->query("SELECT " . $id);\n`)), ['SQL Injection@3']);
+  assert.equal(await analyzeTaintRule(sql, 'python', 'a.py', 'x = 1'), null);
+
+  const custom = compileTaintRule('EMERG-CUSTOM', {
+    type: 'taint', languages: ['typescript'], builtin_sources: false,
+    sources: ['\\bevent\\.body\\b'], sanitizers: ['assertOwner'], sinks: [{ callee: 'repo\\.find(?:One|ById)', argument: 0 }],
+  });
+  const lambda = `async function handler(event) {
+  const id = event.body;
+  await repo.findById(id);
+  const safe = assertOwner(event.body);
+  await repo.findOne(safe);
+  await repo.findById(req.query.id);
+}`;
+  const flows = await analyzeTaintRule(custom, 'typescript', 'h.ts', lambda);
+  assert.deepEqual(sinks(flows), ['EMERG-CUSTOM@3']);
+  assert.equal(flows[0].source.line, 2);
+});
+
+test('unsafe or malformed distributed taint rules are rejected', () => {
+  assert.throws(() => compileTaintRule('X', { type: 'taint', languages: ['typescript'], sinks: [{ callee: '(a+)+' }] }), /nested quantifiers/);
+  assert.throws(() => compileTaintRule('X', { type: 'taint', languages: ['typescript'], sinks: [{ builtin: 'Nope' }] }), /unknown builtin/);
+  assert.throws(() => compileTaintRule('X', { type: 'taint', languages: ['cobol'], sinks: [{ builtin: 'XSS' }] }), /support flow analysis/);
+  assert.throws(() => compileTaintRule('X', { type: 'regex' }), /unsupported detect type/);
+  assert.throws(() => compileTaintRule('X', { type: 'taint', languages: ['typescript'], sinks: [{ callee: '(' }] }), /Invalid regular expression/);
+});
+
+test('PHP object and static SQL calls are sinks', async () => {
+  const php = `<?php
+$id = $_GET['id'];
+$pdo->query("SELECT * FROM t WHERE id = " . $id);
+DB::select("SELECT * FROM t WHERE id = $id");
+$q->whereRaw("id = " . $id);
+$pdo->prepare("SELECT * FROM t WHERE id = ?");
+`;
+  assert.deepEqual(sinks(await analyzeFlows('php', php)), ['SQL Injection@3', 'SQL Injection@4', 'SQL Injection@5']);
+});
+
+test('several distributed rules share one parse and keep their order', async () => {
+  const { analyzeTaintRules } = require('../dist/analyzer/flow/ruleTaint');
+  const sql = compileTaintRule('SQL', { type: 'taint', languages: ['typescript'], sinks: [{ builtin: 'SQL Injection' }] });
+  const php = compileTaintRule('PHP', { type: 'taint', languages: ['php'], sinks: [{ builtin: 'SQL Injection' }] });
+  const ssrf = compileTaintRule('SSRF', { type: 'taint', languages: ['typescript'], sinks: [{ builtin: 'SSRF' }] });
+  const code = 'function h(req) {\n  db.query("x" + req.query.a);\n  fetch(req.body.u);\n}';
+  const [a, b, c] = await analyzeTaintRules([sql, php, ssrf], 'typescript', 'a.ts', code);
+  assert.deepEqual([sinks(a), b, sinks(c)], [['SQL Injection@2'], null, ['SSRF@3']]);
+});
+
+test('PHP procedural SQL calls check the query after the connection', async () => {
+  const php = `<?php
+$id = $_REQUEST['id'];
+$query = "SELECT * FROM users WHERE user_id = '$id'";
+$result = mysqli_query($GLOBALS["link"], $query);
+pg_query("SELECT * FROM t WHERE id = " . $_GET['n']);
+mysqli_query($link, "SELECT 1");
+`;
+  assert.deepEqual(sinks(await analyzeFlows('php', php)), ['SQL Injection@4', 'SQL Injection@5']);
+});

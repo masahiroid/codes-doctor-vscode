@@ -10,8 +10,8 @@ export interface FlowStep {
 }
 
 /** Untrusted input reaching a dangerous operation, with the lines it passed through. */
-export interface DataFlow {
-  category: SinkCategory;
+export interface DataFlow<C extends string = SinkCategory> {
+  category: C;
   source: FlowStep;
   /** Assignments between the source and the sink, in order. */
   steps: FlowStep[];
@@ -43,12 +43,12 @@ function functionName(scope: Node): string | undefined {
   return undefined;
 }
 
-class FlowAnalysis {
+class FlowAnalysis<C extends string> {
   private readonly lines: string[];
   private currentFunction: string | undefined;
-  readonly flows = new Map<string, DataFlow>();
+  readonly flows = new Map<string, DataFlow<C>>();
 
-  constructor(private readonly spec: FlowSpec, content: string) {
+  constructor(private readonly spec: FlowSpec<C>, content: string) {
     this.lines = content.split('\n');
   }
 
@@ -111,13 +111,13 @@ class FlowAnalysis {
     return [...names];
   }
 
-  private report(category: SinkCategory, taint: Taint, sinkNode: Node): void {
+  private report(category: C, taint: Taint, sinkNode: Node): void {
     const sink = this.step(sinkNode);
     const key = `${category}:${sink.line}`;
     // Steps on the source or sink line add nothing to the path.
     const steps = taint.steps.filter((step) => step.line !== taint.source.line && step.line !== sink.line);
     if (this.flows.has(key)) return;
-    const flow: DataFlow = { category, source: taint.source, steps, sink };
+    const flow: DataFlow<C> = { category, source: taint.source, steps, sink };
     if (this.currentFunction) flow.function = this.currentFunction;
     this.flows.set(key, flow);
   }
@@ -172,8 +172,17 @@ class FlowAnalysis {
  * values or parameters are not followed.
  */
 export async function analyzeFlows(grammar: FlowGrammar, content: string): Promise<DataFlow[]> {
-  const spec = FLOW_SPECS[grammar];
-  return withSyntaxTree(grammar, content, (tree) => {
+  return analyzeFlowsWithSpec(grammar, FLOW_SPECS[grammar], content);
+}
+
+/** The same analysis with a caller-supplied spec, e.g. one compiled from a distributed rule. */
+export async function analyzeFlowsWithSpec<C extends string>(grammar: FlowGrammar, spec: FlowSpec<C>, content: string): Promise<DataFlow<C>[]> {
+  return (await analyzeFlowsWithSpecs(grammar, [spec], content))[0];
+}
+
+/** Several specs over one parse of the file; results are in the order of `specs`. */
+export async function analyzeFlowsWithSpecs<C extends string>(grammar: FlowGrammar, specs: readonly FlowSpec<C>[], content: string): Promise<DataFlow<C>[][]> {
+  return withSyntaxTree(grammar, content, (tree) => specs.map((spec) => {
     const analysis = new FlowAnalysis(spec, content);
     const scopes: Node[] = [tree.rootNode];
     walk(tree.rootNode, (node) => {
@@ -182,7 +191,7 @@ export async function analyzeFlows(grammar: FlowGrammar, content: string): Promi
     });
     for (const scope of scopes) analysis.analyzeScope(scope);
     return [...analysis.flows.values()].sort((a, b) => a.sink.line - b.sink.line);
-  });
+  }));
 }
 
 /** Grammar for a source file in a security language, or null if flows are not analyzed for it. */

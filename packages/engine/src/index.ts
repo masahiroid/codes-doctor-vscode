@@ -27,3 +27,7 @@ export { injectTableFilter } from './report/browser/tableFilter';
 export { reportLibraryScript } from './report/browser/libraries';
 export type { ReportLibrary } from './report/browser/libraries';
 export { BRAND_MARK_SVG, PRODUCT_NAME } from './report/branding';
+export { compileTaintRule, analyzeTaintRule, analyzeTaintRules, taintRuleCovers } from './analyzer/flow/ruleTaint';
+export type { CompiledTaintRule, TaintRuleDefinition } from './analyzer/flow/ruleTaint';
+export type { DataFlow, FlowStep } from './analyzer/flow/taint';
+export { isTestPath } from './analyzer/security/testCode';

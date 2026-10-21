@@ -72,7 +72,11 @@ const PHP: FlowSpec = {
   sinks: [
     { category: COMMAND, callee: /^(?:system|exec|shell_exec|passthru|popen|proc_open|pcntl_exec)$/, argument: 0 },
     { category: CODE, callee: /^(?:eval|assert|create_function|preg_replace)$/, argument: 0 },
+    // Procedural drivers take the connection first and the query second; pg_query also has a query-only form.
+    { category: SQL, callee: /^(?:mysqli_query|mysqli_real_query|mysqli_multi_query|pg_query|pg_send_query|sqlite_query)$/ },
     { category: SQL, callee: SQL_METHODS, argument: 0 },
+    // PDO, mysqli objects and Laravel's query builder: `$pdo->query(...)`, `DB::select(...)`, `->whereRaw(...)`.
+    { category: SQL, callee: /(?:->|::)(?:query|exec|prepare|select|statement|unprepared|raw|whereRaw|orWhereRaw|selectRaw|orderByRaw|havingRaw|groupByRaw)$/, argument: 0 },
     { category: PATH, callee: /^(?:include|require|include_once|require_once|fopen|file_get_contents|readfile|file|unlink)$/, argument: 0 },
     { category: SSRF, callee: /^(?:curl_init|fsockopen)$/, argument: 0 },
   ],
