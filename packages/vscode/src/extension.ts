@@ -8,17 +8,19 @@ import { FindingsTreeDataProvider } from './lib/findingsTreeView';
 import { createHoverProvider } from './lib/hoverProvider';
 import { createIgnoreCodeActionProvider } from './lib/ignoreComments';
 import { createOnSaveController } from './lib/onSaveWatcher';
+import { createSecurityRulesController } from './lib/securityRulesController';
 import { createStatusBarController } from './lib/statusBar';
 
 export function activate(context: import('vscode').ExtensionContext) {
   const diagnosticCollection = vscode.languages.createDiagnosticCollection('codeDoctor');
-  const dashboardViewProvider = new CodeDoctorDashboardViewProvider(vscode, context);
   const findingsProvider = new FindingsTreeDataProvider(vscode);
   const statusBar = createStatusBarController(vscode);
   const commands = createCommands(vscode, context, diagnosticCollection);
   const onSaveController = createOnSaveController(vscode, context, diagnosticCollection);
   const aiPreviewProvider = registerAiPreviewContentProvider(vscode);
   const chatParticipant = registerChatParticipant(vscode, context);
+  const securityRules = createSecurityRulesController(vscode, context);
+  const dashboardViewProvider = new CodeDoctorDashboardViewProvider(vscode, context, securityRules.panel);
 
   const disposables = [
     diagnosticCollection,
@@ -30,10 +32,14 @@ export function activate(context: import('vscode').ExtensionContext) {
     vscode.commands.registerCommand(COMMANDS.copySummaryJson, commands.copySummaryJson),
     vscode.commands.registerCommand(COMMANDS.openLastReport, commands.openLastReport),
     vscode.commands.registerCommand(COMMANDS.clearDiagnostics, commands.clearDiagnostics),
+    vscode.commands.registerCommand(COMMANDS.syncSecurityRules, securityRules.syncRules),
+    vscode.commands.registerCommand(COMMANDS.scanSecurityRules, securityRules.scanSecurityRules),
+    vscode.commands.registerCommand(COMMANDS.exportSecurityAuditReport, securityRules.exportReport),
     vscode.commands.registerCommand(COMMANDS.openFindingLocation, commands.openFindingLocation),
     vscode.window.registerWebviewViewProvider(DASHBOARD_VIEW_ID, dashboardViewProvider),
     vscode.window.registerTreeDataProvider(FINDINGS_VIEW_ID, findingsProvider),
     vscode.languages.registerHoverProvider({ scheme: 'file' }, createHoverProvider(vscode)),
+    vscode.languages.registerHoverProvider({ scheme: 'file' }, securityRules.hoverProvider),
     vscode.languages.registerCodeActionsProvider(
       { scheme: 'file' },
       createIgnoreCodeActionProvider(vscode),
@@ -45,9 +51,11 @@ export function activate(context: import('vscode').ExtensionContext) {
     onSaveController,
     aiPreviewProvider,
     chatParticipant,
+    securityRules,
   ];
 
   context.subscriptions.push(...disposables);
+  void securityRules.initialize();
 }
 
 export function deactivate() {}

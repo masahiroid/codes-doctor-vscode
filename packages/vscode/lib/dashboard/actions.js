@@ -50,6 +50,14 @@ async function handleDashboardMessage(dashboard, input) {
         dashboard.render();
         return;
     }
+    if (message.type === 'toggleSecurityPack' && typeof message.packId === 'string' && typeof message.enabled === 'boolean') {
+        await dashboard.securityRules?.setPackEnabled(message.packId, message.enabled);
+        return;
+    }
+    if (message.type === 'openSecurityLocation' && typeof message.file === 'string' && typeof message.line === 'number') {
+        await dashboard.securityRules?.openLocation(message.file, message.line);
+        return;
+    }
     if (message.type === 'fetchModels') {
         await dashboard.fetchModels();
         return;

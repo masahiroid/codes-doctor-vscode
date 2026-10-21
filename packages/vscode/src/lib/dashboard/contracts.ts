@@ -1,5 +1,6 @@
 import type { ExtensionContext } from 'vscode';
 import type { ReviewStatus } from '../types';
+import type { SecurityRulesPanel } from '../securityRulesController';
 
 /** UI state and operations needed by workflows/renderers, independent of the provider class. */
 export interface DashboardHost {
@@ -11,6 +12,7 @@ export interface DashboardHost {
   modelFetchError: string | null;
   isRunningLlmAnalysis: boolean;
   llmAnalysisStatus: ReviewStatus | null;
+  securityRules?: SecurityRulesPanel;
   render(): void;
   fetchModels(): Promise<void>;
   runLlmAnalysis(): Promise<void>;

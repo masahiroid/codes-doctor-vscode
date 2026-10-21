@@ -9,9 +9,11 @@ class CodeDoctorDashboardViewProvider {
     controller;
     currentView = null;
     configListener;
+    securityRulesListener;
     viewSubscriptions = [];
-    constructor(vscode, context) {
-        this.controller = (0, controller_1.createDashboardController)(vscode, context, () => this.render());
+    constructor(vscode, context, securityRules) {
+        this.controller = (0, controller_1.createDashboardController)(vscode, context, () => this.render(), securityRules);
+        this.securityRulesListener = securityRules?.onDidChange(() => this.render());
         this.configListener = vscode.workspace.onDidChangeConfiguration((event) => {
             if (event.affectsConfiguration(settingsSchema_1.CONFIGURATION_SECTION))
                 this.render();
@@ -35,6 +37,7 @@ class CodeDoctorDashboardViewProvider {
     }
     dispose() {
         this.configListener.dispose();
+        this.securityRulesListener?.dispose();
         for (const subscription of this.viewSubscriptions)
             subscription.dispose();
         this.viewSubscriptions = [];

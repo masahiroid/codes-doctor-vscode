@@ -9,12 +9,14 @@ export function createDashboardController(
   vscode: typeof import('vscode'),
   context: import('vscode').ExtensionContext,
   onRender: () => void = () => {},
+  securityRules?: import('../securityRulesController').SecurityRulesPanel,
 ): DashboardController {
   const controller: DashboardController = {
     vscode, context, t: translator(vscode),
     extensionVersion: context.extension?.packageJSON?.version || '',
     fetchedModels: [], modelFetchError: null,
     isRunningLlmAnalysis: false, llmAnalysisStatus: null,
+    securityRules,
     render: onRender,
     handleMessage: (input) => handleDashboardMessage(controller, input),
     fetchModels: () => fetchDashboardModels(controller),

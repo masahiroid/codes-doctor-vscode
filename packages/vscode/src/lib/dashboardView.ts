@@ -8,10 +8,12 @@ export class CodeDoctorDashboardViewProvider implements WebviewViewProvider {
   readonly controller: import('./dashboard/contracts').DashboardController;
   currentView: import('vscode').WebviewView | null = null;
   private readonly configListener: import('vscode').Disposable;
+  private readonly securityRulesListener?: { dispose(): void };
   private viewSubscriptions: import('vscode').Disposable[] = [];
 
-  constructor(vscode: typeof import('vscode'), context: import('vscode').ExtensionContext) {
-    this.controller = createDashboardController(vscode, context, () => this.render());
+  constructor(vscode: typeof import('vscode'), context: import('vscode').ExtensionContext, securityRules?: import('./securityRulesController').SecurityRulesPanel) {
+    this.controller = createDashboardController(vscode, context, () => this.render(), securityRules);
+    this.securityRulesListener = securityRules?.onDidChange(() => this.render());
     this.configListener = vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration(CONFIGURATION_SECTION)) this.render();
     });
@@ -34,6 +36,7 @@ export class CodeDoctorDashboardViewProvider implements WebviewViewProvider {
 
   dispose(): void {
     this.configListener.dispose();
+    this.securityRulesListener?.dispose();
     for (const subscription of this.viewSubscriptions) subscription.dispose();
     this.viewSubscriptions = [];
     this.currentView = null;

@@ -21,6 +21,7 @@ const config_1 = require("../config");
 const settings_1 = require("./settings");
 const settingsSchema_1 = require("../settingsSchema");
 const engine_1 = require("../engine");
+const securityRules_1 = require("./securityRules");
 /** Honami's emblem, shared with the report header. */
 const { BRAND_MARK_SVG } = (0, engine_1.loadEngine)('ja');
 function buildHtml(view) {
@@ -49,7 +50,18 @@ function buildHtml(view) {
     <p>${view.t("Codes Doctor analyzes the currently opened workspace folder and generates a structural diagnosis report (God Classes, technical debt, security score, dependency graphs, SBOM).")}</p>
   </div>
 
-  <div class="card">
+  <button data-command="${settingsSchema_1.COMMANDS.analyzeCurrentWorkspace}">${view.t("Analyze Current Workspace")}</button>
+  <button class="secondary" data-command="${settingsSchema_1.COMMANDS.analyzeGitChanges}">${view.t("Analyze Git Changes")}</button>
+
+  ${(0, securityRules_1.buildSecurityRulesSection)(view)}
+
+  <details class="card" data-section="history" open>
+    <summary class="card-title">${view.t("Report History")}</summary>
+    ${(0, history_1.buildReportHistory)(view)}
+  </details>
+
+  <details class="card" data-section="settings" open>
+    <summary class="card-title">${view.t("Settings")}</summary>
     <div class="field">
       <label class="field-label" for="displayLanguage">${view.t('Display & Report Language')}</label>
       ${(0, controls_1.buildSelectField)(view, settings_1.SETTINGS_FIELDS.find((field) => field.settingKey === 'displayLanguage'))}
@@ -62,19 +74,10 @@ function buildHtml(view) {
       <label class="field-label" for="reportOpenMode">${view.t("Open Report Using")}</label>
       ${(0, controls_1.buildSelectField)(view, settings_1.SETTINGS_FIELDS.find((field) => field.settingKey === 'reportOpenMode'))}
     </div>
-  </div>
+  </details>
 
-  <button data-command="${settingsSchema_1.COMMANDS.analyzeCurrentWorkspace}">${view.t("Analyze Current Workspace")}</button>
-  <button class="secondary" data-command="${settingsSchema_1.COMMANDS.analyzeGitChanges}">${view.t("Analyze Git Changes")}</button>
-
-  <div class="card">
-    <div class="field">
-      <label class="field-label">${view.t("Report History")}</label>
-      ${(0, history_1.buildReportHistory)(view)}
-    </div>
-  </div>
-
-  <div class="card">
+  <details class="card" data-section="ai" open>
+    <summary class="card-title">${view.t("AI Review")}</summary>
     <div class="field">
       <label class="field-label" for="llmProvider">${view.t("LLM Provider")}</label>
       ${(0, controls_1.buildSelectField)(view, settings_1.SETTINGS_FIELDS.find((field) => field.settingKey === 'llmProvider'))}
@@ -108,7 +111,7 @@ function buildHtml(view) {
       <label class="field-label">${view.t("LLM Review History")}</label>
       ${(0, history_1.buildLlmHistory)(view)}
     </div>
-  </div>
+  </details>
 
   <script>(${browser_1.installDashboardControls.toString()})(${JSON.stringify(settingsSchema_1.COMMANDS.setLlmApiKey)});</script>
 </body>

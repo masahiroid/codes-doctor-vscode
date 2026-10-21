@@ -1,5 +1,17 @@
 # Changelog
 
+## 7.0.0
+
+- Add security rule sets: sync the rule packs from masahiroid/security-rules (SHA-256 verified, cached in the extension's storage for offline use; the source is a user setting only, so a workspace cannot pick the rules it is checked with), flag review candidates in Problems and hovers with source, check steps and management-sheet column, scan the workspace, and export JSON/CSV audit reports. Commands: Sync Security Rules, Scan Workspace with Security Rules, Export Security Audit Report. The dashboard has a Security Rules section: sync, choose which packs to check, scan, see results per rule with clickable locations and check steps, and export. Dashboard sections (Security Rules, Report History, Settings, AI Review) are now collapsible and remember their state. Network access is opt-in (codeDoctor.securityRules.autoSync). Matches are review candidates, never a compliance verdict.
+- Deterministic detection for distributed rules: a rule with `detect: { type: taint }` runs the engine's data-flow analysis (TypeScript/JavaScript and PHP to start) and reports only untrusted input that reaches SQL, command, code execution or SSRF calls, with the traced path in Problems and hovers. Rules can add their own sources, sanitizers and sink calls. Test code is excluded from security-rule scans. `sourceUrl` also accepts a `file:` URL for a local or shared-drive ruleset.
+- Security-rule scans parse each file once for all data-flow rules, can be cancelled, and show which languages were analyzed: a rule whose languages have no files says "No files to analyze" instead of "No flow found", and source files in unsupported languages are counted as not checked.
+- Engine: PHP procedural SQL calls (`mysqli_query($link, $sql)`, `pg_query`) now check the query argument, not only the connection.
+- Engine: PHP object and static SQL calls (`$pdo->query`, `DB::select`, `->whereRaw` and similar) are now data-flow sinks.
+
+## 6.0.5
+
+- Refresh English and Japanese READMEs for 6.x: setup, editor findings, Git changes, VS Code AI, chat, fix previews, settings and analysis limitations.
+
 ## 6.0.4
 
 - Exclude TypeScript declaration files (`.d.ts`), minified and pre-bundled distribution files (`.min.js`, `.bundle.js`), sourcemaps, and build artifacts from workspace analysis.

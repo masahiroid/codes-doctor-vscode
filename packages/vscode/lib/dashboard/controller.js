@@ -6,12 +6,13 @@ const actions_1 = require("./actions");
 const dashboardReview_1 = require("../dashboardReview");
 const presentation_1 = require("./presentation");
 /** Compose UI state with existing workflows; lifecycle belongs to the VS Code adapter. */
-function createDashboardController(vscode, context, onRender = () => { }) {
+function createDashboardController(vscode, context, onRender = () => { }, securityRules) {
     const controller = {
         vscode, context, t: (0, i18n_1.translator)(vscode),
         extensionVersion: context.extension?.packageJSON?.version || '',
         fetchedModels: [], modelFetchError: null,
         isRunningLlmAnalysis: false, llmAnalysisStatus: null,
+        securityRules,
         render: onRender,
         handleMessage: (input) => (0, actions_1.handleDashboardMessage)(controller, input),
         fetchModels: () => (0, actions_1.fetchDashboardModels)(controller),

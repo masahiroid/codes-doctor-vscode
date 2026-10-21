@@ -47,5 +47,11 @@
   "config.minSecurity.description": "セキュリティスコアがこの最低基準（0-100）を下回った場合に警告します。0で無効。",
   "config.minTechnicalDebt.description": "技術負債スコアがこの最低基準（0-100）を下回った場合に警告します。0で無効。",
   "config.outputDirectory.description": "レポートの出力先フォルダー。空の場合は拡張機能の既定のグローバルストレージを使用します。",
-  "config.analyzeOnSave.description": "ファイル保存時にバックグラウンドで解析を再実行し、エディタの診断波線を自動更新します。"
+  "config.analyzeOnSave.description": "ファイル保存時にバックグラウンドで解析を再実行し、エディタの診断波線を自動更新します。",
+  "codeDoctor.syncSecurityRules": "Codes Doctor: セキュリティルールを同期",
+  "codeDoctor.scanSecurityRules": "Codes Doctor: セキュリティルールでワークスペースを走査",
+  "codeDoctor.exportSecurityAuditReport": "Codes Doctor: セキュリティ監査レポートを出力",
+  "config.securityRules.sourceUrl.description": "セキュリティルールのマニフェスト（manifest.json）のHTTPS URL、またはローカル・共有ドライブ上の写しを指すfile: URL。各ルールファイルは、利用前にマニフェストのSHA-256と照合します。ユーザー設定でのみ指定でき、点検対象のワークスペースが自分を点検するルールを選ぶことはできません。",
+  "config.securityRules.autoSync.description": "VS Code起動時と同期間隔ごとにセキュリティルールを取得します。既定はオフで、「セキュリティルールを同期」を実行するまで何も取得しません。",
+  "config.securityRules.syncIntervalHours.description": "セキュリティルールの自動同期の間隔（時間）。autoSyncがオンのときだけ使います。"
 }

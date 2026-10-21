@@ -13,14 +13,25 @@ Codes Doctor は、現在開いているワークスペースフォルダーを�
 
 📘 **はじめての方は [利用マニュアル](https://github.com/masahiroid/codes-doctor-vscode/blob/main/packages/vscode/docs/USER_GUIDE.ja.md) をご覧ください** — 導入、レポートの各タブの読み方、AI 機能、設定、トラブルシューティングをまとめています。
 
-## 4.0 の新機能
+## 6.x でできること
 
-- **経路を追跡したセキュリティ指摘。** TypeScript/JavaScript、PHP、Python、Go、Java、C#、Rust、C++ で、外部からの入力が関数内でコマンド実行・SQL・`eval`・ファイルパス・URL・HTML 出力に届くかを追跡します。経路を確認できた指摘は「入力から到達」としてその経路を示し、パターンに一致しただけのものは Low に下げて「要確認」と表示します。
-- **より多くの言語で構文木解析。** Python、Go、Java、C#、Rust、C++ を Tree-sitter で解析し、コメントや文字列による誤検知を減らしました。テストコードの指摘は区別して表示し、スコアには含めません。
-- **レポートのデザインを刷新。** 透明感のあるパステル調で、OS や VS Code のテーマに合わせたライト／ダークに対応します。
-- **AI に渡す情報を強化。** AI レビューとエージェント向けプロンプトに、確度ごとに分けたセキュリティ情報を渡します。
+- **エディターで問題を確認。** セキュリティ指摘と God Class を Problems パネル・下線・ホバーで確認し、Activity Bar の Findings から該当行へ移動できます。ステータスバーにはセキュリティと技術的負債のスコアを表示します。
+- **変更箇所を優先。** `Analyze Git Changes` で未コミットの変更ファイル（なければ直前のコミット）にエディター診断と Findings を絞れます。保存時の自動解析や、無視コメントの Quick Fix にも対応しています。
+- **VS Code の AI を利用。** `vscode-lm` を選ぶと、GitHub Copilot などが提供する利用可能なモデルでレビューやプロンプトを生成できます。拡張機能への API キー設定は不要です。
+- **チャットから相談・修正。** `@codedoctor` の `/analyze`・`/security`・`/refactor`・`/fix` で解析結果を使えます。AI の修正案は差分を確認し、**Apply Fix** を選んで適用します。
+- **大きなプロジェクトにも配慮。** 宣言ファイルやビルド成果物を除外し、階層ごとの `.gitignore` を反映。巨大な AST 出力を制限し、大きすぎる WebView レポートは外部ブラウザーで開きます。
 
-詳細は [CHANGELOG](CHANGELOG.md) を参照してください。
+バージョンごとの変更は [CHANGELOG](CHANGELOG.md) を参照してください。
+
+## はじめの解析
+
+1. VS Code 1.90 以降で、拡張機能の検索から **Codes Doctor**（発行元: `masahirocom`）をインストールします。
+2. 調べたいプロジェクトのフォルダーを開き、ワークスペースを信頼します。
+3. Activity Bar の Codes Doctor を開き、必要なら **画面・レポートの言語** を **日本語** にします。
+4. **Analyze Current Workspace** を実行します。複数フォルダーの場合は対象を選びます。
+5. 開いた HTML レポートで全体を確認し、Problems / Findings で該当ソースを確認します。
+
+通常の静的解析に AI の契約や API キーは不要です。まず全体を解析し、日々の変更の確認には **Analyze Git Changes** を使うと便利です。Git 変更解析でも HTML レポートとスコアはプロジェクト全体の結果です。
 
 ## 実際の画面
 
@@ -42,9 +53,15 @@ Codes Doctor は、現在開いているワークスペースフォルダーを�
 
 ![SBOM tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/packages/vscode/media/screenshots/sbom.png)
 
-## コマンド
+## 主なコマンド
 
 - `Codes Doctor: Analyze Current Workspace`
+- `Codes Doctor: Analyze Git Changes`
+- `Codes Doctor: Open Latest Report`
+- `Codes Doctor: Copy Analysis Summary`
+- `Codes Doctor: Copy Analysis Summary as JSON`
+- `Codes Doctor: Preview AI Fix in Diff Editor`
+- `Codes Doctor: Clear Editor Diagnostics`
 - `Codes Doctor: Set LLM API Key`
 
 ## ダッシュボード（Activity Bar）
@@ -65,7 +82,11 @@ Codes Doctor は、現在開いているワークスペースフォルダーを�
 
 ## 任意機能: LLM 構造レビュー
 
-Codes Doctor は LLM（OpenAI または Anthropic）に分析結果をレビューさせ、構造評価をレポートに書き込ませることができます。
+Codes Doctor は LLM（OpenAI、Anthropic、または VS Code が提供するモデル）に分析結果をレビューさせ、構造評価をレポートに書き込ませることができます。
+
+**VS Code の AI を使う場合:** プロバイダーで **VS Code Built-in AI** を選び、モデルを取得・選択してレビューを実行します。利用可能なモデルを提供する拡張機能やアカウントが必要で、利用条件や認証は提供元に従います。
+
+**OpenAI / Anthropic を使う場合:**
 
 1. ダッシュボードの **LLMプロバイダー** でプロバイダを選択
 2. **APIキーを設定** をクリックして API キーを貼り付け — VS Code の secret storage（OS keychain）に保存され、settings.json やワークスペース内のどこにも平文で残りません
@@ -78,6 +99,29 @@ Codes Doctor は LLM（OpenAI または Anthropic）に分析結果をレビュ�
 
 モデル一覧は毎回プロバイダの API から直接取得されるため、ハードコードされた古いモデル名に縛られることはありません。
 
+## セキュリティルールセット（緊急点検）
+
+[masahiroid/security-rules](https://github.com/masahiroid/security-rules) で配信されるルールパック（NICT A2B注意喚起、OWASP Top 10:2025）を読み込み、手動確認が必要なコード箇所を示します。
+
+- Codes Doctorパネル（アクティビティバー）の**セキュリティルール**欄で、同期、点検するパックの選択、走査、結果のクリックによるコードへの移動までを一か所で行えます。各ルールの点検手順と管理表の列も確認できます。
+- **Codes Doctor: セキュリティルールを同期** は `manifest.json` と各パックを取得し、マニフェストのSHA-256と照合したうえで、検証済みの写しを拡張機能の保存領域に保存します。取得に失敗した場合（オフライン、閉域網）は、このキャッシュを使います。写しはワークスペースに置かず、`sourceUrl` もユーザー設定でのみ指定できるため、点検対象のリポジトリが自分を点検するルールを選ぶことはできません。
+- 開いた・保存したTypeScript、JavaScript、JSONファイルを読み込み済みルールで走査します。一致箇所はルールID付きでProblemsに表示され、ホバーでパック、出典、点検手順、管理表の列を確認できます。
+- **Codes Doctor: セキュリティルールでワークスペースを走査** はワークスペース全体を走査します。**Codes Doctor: セキュリティ監査レポートを出力** は、JSONとCSV（Excel向けBOM付きUTF-8）を `.codes-doctor/security-audit/` に書き出します。
+- 同期を実行するまで何も取得しません。`codeDoctor.securityRules.autoSync` をオンにすると、起動時と `syncIntervalHours` ごとに取得します。`codeDoctor.securityRules.sourceUrl` には社内ミラーも指定できます。
+
+`detect` を持つルールは、正規表現ではなくデータフロー解析で判定します。関数内で外部入力がSQL・コマンド実行・コード実行・SSRFの処理に届く箇所だけを、入力元から到達先までの経路付きで示します。関数やファイルをまたぐ流れはまだ追跡しないため、「到達なし」は安全の証明ではありません。テストコードは対象外です。
+
+意図的に脆弱なアプリでの測定結果です（セキュリティルール2.1.0、NICT A2Bパック）。
+
+| プロジェクト | データフローの検出 | 補足 |
+| --- | --- | --- |
+| [OWASP Juice Shop](https://github.com/juice-shop/juice-shop)（TypeScript、508ファイル） | SQL 13、SSRF 1、コード実行 1 | ログインと検索のSQLインジェクション、プロフィール画像のSSRF、ユーザー入力の`eval`を検出。NoSQLインジェクションと、`vm`サンドボックス経由の注文処理は対象外。 |
+| [DVWA](https://github.com/digininja/DVWA)（PHP、179ファイル） | SQL 14、コマンド 11 | low/highのSQL・コマンドインジェクションとAPIの`exec`を検出。エスケープ後に引用符なしで使うSQL（medium）と、いったんセッションに保存した入力（high）は見逃します。`if`条件で入力を検証している「impossible」のコマンド実行は、条件による検証をまだ認識できないため検出してしまいます。 |
+
+Juice Shopの走査は約2秒です。このリポジトリ（Web APIではないVS Code拡張）では、以前の正規表現が123行を挙げていたのに対し、検出は0件です。
+
+パターンの一致箇所は**要確認の候補**であり、合格・不合格の判定ではありません。すべてのルールは手動点検項目のため、「一致なし」は適合を意味せず、レポートには `compliance: unverified` と記録します。ハッシュは転送中の改変や取り違えの検出用で、配信者の署名ではないため、ルールリポジトリの書き込み権限を管理してください。ソースコードがPCの外へ送られることはありません。
+
 ## 設定
 
 ダッシュボードの **画面・レポートの言語** で **English**（デフォルト）または **日本語** を選択できます。画面・通知・新しく生成するHTMLレポート・AIレビューに適用されます。既存レポートは生成時の言語を保持し、履歴から追加するAIレビューもその言語に合わせます。言語を切り替えた後、再解析すると選択した言語のレポートを生成できます。
@@ -88,10 +132,24 @@ Codes Doctor は LLM（OpenAI または Anthropic）に分析結果をレビュ�
   - `external`: 既定のブラウザで開く
   - `webview`: VS Code の WebView パネルで開く
   - `vscode`: VS Code 自身の URI ハンドラーで開く
-- `codeDoctor.llmProvider`（デフォルト: `openai`） — `openai` / `anthropic`
+- `codeDoctor.llmProvider`（デフォルト: `openai`） — `openai` / `anthropic` / `vscode-lm`
 - `codeDoctor.llmOutputMode`（デフォルト: `review`） — `review`（構造レビューレポート） / `agentPrompt`（AIコーディング用プロンプト）
 - `codeDoctor.llmModel`（デフォルト: 空） — ダッシュボードのモデル取得後にドロップダウンから設定
 - `codeDoctor.llmMaxOutputTokens`（デフォルト: `16000`） — AI 出力の上限トークン数（200〜1,000,000）
+
+- `codeDoctor.minSecurity` / `codeDoctor.minTechnicalDebt`（既定: `0`） — 0〜100 の警告しきい値。0 で無効。スコアが下回ると通知します。
+- `codeDoctor.outputDirectory`（既定: 空） — レポート出力先。空なら拡張機能のストレージを使用します。
+- `codeDoctor.analyzeOnSave`（既定: `false`） — 保存時のバックグラウンド解析を有効にします。
+
+## 日々の確認と AI 修正
+
+解析後は Findings の項目をクリックしてコードへ移動します。指摘をホバーすると説明・対策・追跡経路を確認できます。無視する指摘には電球メニューから無視コメントを追加でき、保存時に再評価されます。`code-doctor-ignore-next-line`、`code-doctor-ignore`、`code-doctor-ignore-file` に対応します。
+
+AI を設定したら、対象コードの電球メニューまたは **Preview AI Fix in Diff Editor** を使います。修正前後を確認し、**Apply Fix** または **Discard** を選択します。適用するとファイルが保存されるため、再解析とプロジェクトのテストで確認してください。
+
+VS Code Chat では `@codedoctor /analyze` で全体の要約、`/security` でセキュリティの説明、`/refactor` で改善計画、`/fix` で修正プレビューを利用できます。Chat とモデル API が利用可能な VS Code 環境が必要です。
+
+AI レビューでは解析情報を、修正プレビューでは対象ファイルの内容を選択したモデルへ渡します。利用するプロバイダーのデータ取り扱いを確認してください。
 
 ## 対応言語
 
@@ -111,7 +169,7 @@ Codes Doctor は LLM（OpenAI または Anthropic）に分析結果をレビュ�
 
 TypeScript/JavaScript と PHP は専用の完全なパーサー、Python・Go・Java・C#・Rust・C++ は Tree-sitter、Swift・Kotlin・Dart は簡易的な構造抽出で解析します。依存グラフ・循環依存検出・レイヤー分析・SBOM/脆弱性スキャンは、言語を問わず対応する全ファイルを横断して実行されます。
 
-> **言語ごとの精度について。** メインの対応言語は TypeScript/JavaScript と PHP で、専用の完全なパーサーで解析し、最も検証されています。Python、Go、Java、C#、Rust、C++ は Tree-sitter で構文木に変換して解析するため、構造（クラス・メソッド・関数・インポート）は正確に取れます。セキュリティ検査でも、コメント、ただの文字列、定数だけを渡す呼び出しは指摘しません。ただし検査自体はまだパターンに基づくもので、利用者の入力が危険な処理まで届くかは追跡していないため、誤検知は残ります（たとえば Go の `text/template` のインポートは常に指摘されます）。Swift、Kotlin、Dart は簡易的な構造抽出のままで、誤検知や見落としが多くなります。テストコード内の指摘は「テストコード」と表示し、セキュリティスコアには含めません。結果は確定した評価ではなく、確認のきっかけとして扱ってください。
+> **言語ごとの精度について。** メインの対応言語は TypeScript/JavaScript と PHP で、専用の完全なパーサーで解析し、最も検証されています。Python、Go、Java、C#、Rust、C++ は Tree-sitter で構文木に変換して解析するため、構造（クラス・メソッド・関数・インポート）は正確に取れます。セキュリティ検査でも、コメント、ただの文字列、定数だけを渡す呼び出しは指摘しません。これらの言語と TypeScript/JavaScript、PHP では、関数内で利用者の入力が危険な処理まで届くかも追跡します。経路を確認できた指摘は「入力から到達」、パターンに一致しただけの指摘は Low に下げて「要確認」と表示します。別の関数を経由する入力はまだ追跡しないため、見落としや「要確認」止まりの指摘は残ります。Swift、Kotlin、Dart は簡易的な構造抽出のままで、誤検知や見落としが多くなります。テストコード内の指摘は「テストコード」と表示し、セキュリティスコアには含めません。結果は確定した評価ではなく、確認のきっかけとして扱ってください。
 
 C++の解析対象は `.cpp` / `.cc` / `.cxx` / `.hpp` / `.hh` です。`.h` / `.c`（Cの可能性があるファイル）は解析対象外です。
 

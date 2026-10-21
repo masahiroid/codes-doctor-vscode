@@ -10,6 +10,7 @@ import { getLlmModel, getLlmMaxOutputTokens, getLlmOutputMode, getDisplayLanguag
 import { SETTINGS_FIELDS } from './settings';
 import { TOKEN_LIMITS, COMMANDS } from '../settingsSchema';
 import { loadEngine } from '../engine';
+import { buildSecurityRulesSection } from './securityRules';
 
 /** Honami's emblem, shared with the report header. */
 const { BRAND_MARK_SVG } = loadEngine('ja');
@@ -41,7 +42,18 @@ export function buildHtml(view: DashboardHost) {
     <p>${view.t("Codes Doctor analyzes the currently opened workspace folder and generates a structural diagnosis report (God Classes, technical debt, security score, dependency graphs, SBOM).")}</p>
   </div>
 
-  <div class="card">
+  <button data-command="${COMMANDS.analyzeCurrentWorkspace}">${view.t("Analyze Current Workspace")}</button>
+  <button class="secondary" data-command="${COMMANDS.analyzeGitChanges}">${view.t("Analyze Git Changes")}</button>
+
+  ${buildSecurityRulesSection(view)}
+
+  <details class="card" data-section="history" open>
+    <summary class="card-title">${view.t("Report History")}</summary>
+    ${buildReportHistory(view)}
+  </details>
+
+  <details class="card" data-section="settings" open>
+    <summary class="card-title">${view.t("Settings")}</summary>
     <div class="field">
       <label class="field-label" for="displayLanguage">${view.t('Display & Report Language')}</label>
       ${buildSelectField(view, SETTINGS_FIELDS.find((field) => field.settingKey === 'displayLanguage'))}
@@ -54,19 +66,10 @@ export function buildHtml(view: DashboardHost) {
       <label class="field-label" for="reportOpenMode">${view.t("Open Report Using")}</label>
       ${buildSelectField(view, SETTINGS_FIELDS.find((field) => field.settingKey === 'reportOpenMode'))}
     </div>
-  </div>
+  </details>
 
-  <button data-command="${COMMANDS.analyzeCurrentWorkspace}">${view.t("Analyze Current Workspace")}</button>
-  <button class="secondary" data-command="${COMMANDS.analyzeGitChanges}">${view.t("Analyze Git Changes")}</button>
-
-  <div class="card">
-    <div class="field">
-      <label class="field-label">${view.t("Report History")}</label>
-      ${buildReportHistory(view)}
-    </div>
-  </div>
-
-  <div class="card">
+  <details class="card" data-section="ai" open>
+    <summary class="card-title">${view.t("AI Review")}</summary>
     <div class="field">
       <label class="field-label" for="llmProvider">${view.t("LLM Provider")}</label>
       ${buildSelectField(view, SETTINGS_FIELDS.find((field) => field.settingKey === 'llmProvider'))}
@@ -100,7 +103,7 @@ export function buildHtml(view: DashboardHost) {
       <label class="field-label">${view.t("LLM Review History")}</label>
       ${buildLlmHistory(view)}
     </div>
-  </div>
+  </details>
 
   <script>(${installDashboardControls.toString()})(${JSON.stringify(COMMANDS.setLlmApiKey)});</script>
 </body>

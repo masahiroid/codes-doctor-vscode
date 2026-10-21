@@ -14,6 +14,14 @@ Static structural diagnosis for codebases: God Classes, technical debt, security
 | [`packages/cli`](packages/cli) | The `codes-doctor` command for terminals and CI, with score thresholds as exit codes. |
 | [`packages/engine`](packages/engine) | The analysis engine both of them run. [Architecture](packages/engine/docs/ARCHITECTURE.md). |
 
+## Get started
+
+Install **Codes Doctor** by `masahirocom` in VS Code 1.90 or newer, open a trusted project folder, and run **Codes Doctor: Analyze Current Workspace**. Read the HTML report, then use Problems and the Findings view to jump to source lines. Static analysis requires no AI API key.
+
+The 6.x extension includes editor diagnostics, Git changes filtering, optional analysis on save, score threshold warnings, and AI reviews through OpenAI, Anthropic or VS Code model providers. Use `@codedoctor` in VS Code Chat to discuss analysis results or preview a proposed code fix before applying it.
+
+For setup, settings and limitations, see the [English README](packages/vscode/README.md) / [日本語 README](packages/vscode/README.ja.md). For terminal and CI usage, see the [CLI README](packages/cli/README.md).
+
 ## Development
 
 Node.js 22 or newer.

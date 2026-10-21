@@ -5,7 +5,7 @@
 
 [Codes Doctor VS Code 拡張機能](../vscode) と [`codes-doctor` CLI](../cli) が使う解析エンジンです。フォルダーを解析し、God Class、技術的負債、セキュリティの指摘、依存・呼び出しグラフ、アーキテクチャレイヤー、AST 表示、SBOM と依存関係の脆弱性スキャンを含む自己完結型の HTML レポートを出力します。プロセス内で動作し、サーバーは不要です。
 
-対応言語: TypeScript/JavaScript と PHP（完全な AST）、Python、Go、Swift、C#、Java、Kotlin、Rust、C++、Dart（簡易的な構造抽出）。詳しくは [docs/ARCHITECTURE.ja.md](docs/ARCHITECTURE.ja.md) を参照してください。
+対応言語: TypeScript/JavaScript と PHP（完全な AST）、Python・Go・Java・C#・Rust・C++（Tree-sitter）、Swift・Kotlin・Dart（簡易的な構造抽出）。詳しくは [docs/ARCHITECTURE.ja.md](docs/ARCHITECTURE.ja.md) を参照してください。
 
 > **言語ごとの精度について。** メインの対応言語は TypeScript/JavaScript と PHP で、専用の完全なパーサーで解析し、最も検証されています。Python、Go、Java、C#、Rust、C++ は Tree-sitter で構文木に変換して解析するため、構造（クラス・メソッド・関数・インポート）は正確に取れます。セキュリティ検査でも、コメント、ただの文字列、定数だけを渡す呼び出しは指摘しません。これらの言語と TypeScript/JavaScript、PHP では、関数内で利用者の入力が危険な処理まで届くかも追跡します。経路を確認できた指摘は「入力から到達」、パターンに一致しただけの指摘は Low に下げて「要確認」と表示します。別の関数を経由する入力はまだ追跡しないため、見落としや「要確認」止まりの指摘は残ります。Swift、Kotlin、Dart は簡易的な構造抽出のままで、誤検知や見落としが多くなります。テストコード内の指摘は「テストコード」と表示し、セキュリティスコアには含めません。結果は確定した評価ではなく、確認のきっかけとして扱ってください。
 
