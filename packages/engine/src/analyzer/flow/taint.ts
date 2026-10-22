@@ -2,6 +2,10 @@ import type { Node } from '../syntax/treeSitter';
 import { namedChildren, walk, withSyntaxTree } from '../syntax/treeSitter';
 import type { FlowGrammar, FlowSpec, SinkCategory } from './spec';
 import { FLOW_SPECS } from './languages';
+import { collectGuards, isValidated } from './guards';
+import type { GuardRegion } from './guards';
+import { quoting } from './quoting';
+import { callArguments, calleeText, calledName, functionName, parameterNames } from './syntax';
 
 /** A line of code on a data flow. */
 export interface FlowStep {
@@ -39,43 +43,8 @@ interface FunctionSummary {
   returnsSource: Taint | null;
 }
 
-/** Name a call refers to: the last segment of `helper`, `this.helper`, `$this->helper`, `self::helper`. */
-const calledName = (callee: string) => callee.split(/->|::|\.|\?\./).at(-1)?.trim() ?? '';
-
-/** A stretch of the file where an expression is known to be validated. */
-interface GuardRegion {
-  start: number;
-  end: number;
-  texts: Set<string>;
-}
-
-/** Literal text nodes inside strings and templates. */
-const STRING_CONTENT_TYPES = new Set(['string_content', 'string_fragment', 'string_value']);
-/** Nodes that build a string around a value: interpolating strings and templates. */
-const STRING_BUILDER_TYPES = new Set(['encapsed_string', 'string', 'template_string', 'template_substitution', 'heredoc', 'heredoc_body']);
-/** Binary operators that concatenate strings. */
-const CONCATENATION = new Set(['.', '+']);
-
-/** Expression text compared across occurrences: whitespace dropped and quotes unified. */
-const normalize = (text: string) => text.replace(/\s+/g, '').replace(/"/g, "'");
-
 /** Longest code excerpt kept for a flow step. */
 const STEP_CODE_LIMIT = 160;
-
-/** Name of a function node: its `name` field, the C/C++ declarator, or the variable it is assigned to. */
-function functionName(scope: Node): string | undefined {
-  const name = scope.childForFieldName('name');
-  if (name) return name.text;
-  let declarator = scope.childForFieldName('declarator');
-  while (declarator?.childForFieldName('declarator')) declarator = declarator.childForFieldName('declarator');
-  if (declarator) return declarator.text.split(/::|\./).at(-1);
-  const parent = scope.parent;
-  if (parent?.type === 'variable_declarator') return parent.childForFieldName('name')?.text;
-  if (parent?.type === 'assignment_expression' || parent?.type === 'pair') {
-    return (parent.childForFieldName('left') ?? parent.childForFieldName('key'))?.text.split('.').at(-1);
-  }
-  return undefined;
-}
 
 class FlowAnalysis<C extends string> {
   private readonly lines: string[];
@@ -96,23 +65,6 @@ class FlowAnalysis<C extends string> {
     return { line, code: (this.lines[line - 1] ?? '').trim().slice(0, STEP_CODE_LIMIT) };
   }
 
-  /** Callee text of a call: everything before its argument list. */
-  private callee(call: Node): string {
-    // Without an argument list (include/require), the callee is the keyword before the operand.
-    const args = call.childForFieldName('arguments') ?? namedChildren(call).at(-1) ?? null;
-    const end = args ? args.startIndex - call.startIndex : call.text.length;
-    return call.text.slice(0, end).replace(/\s+/g, ' ').trim();
-  }
-
-  private callArguments(call: Node): Node[] {
-    const args = call.childForFieldName('arguments');
-    if (!args) {
-      // include/require and similar take one operand instead of an argument list.
-      return namedChildren(call).slice(-1);
-    }
-    return namedChildren(args).filter((arg) => !/comment/.test(arg.type)).map((arg) => (arg.type === 'argument' ? namedChildren(arg)[0] ?? arg : arg));
-  }
-
   /**
    * Whether an expression carries untrusted input, and from where. A source is the
    * smallest node matching the language's source pattern; a sanitizer call stops taint.
@@ -122,17 +74,17 @@ class FlowAnalysis<C extends string> {
     let found: Taint | null = null;
     // An escaped value counts where it stands alone or sits inside quotes; outside quotes it is live again.
     const settle = (taint: Taint, at: Node) => {
-      const context = this.quoting(node, at);
+      const context = quoting(node, at);
       if (context === 'bare') found = taint;
       else if (context === 'unquoted') found = { ...taint, escaped: false };
     };
     walk(node, (current) => {
       if (found) return false;
-      if (this.isValidated(current)) return false;
+      if (isValidated(this.guards, current)) return false;
       if (this.spec.callTypes.has(current.type)) {
-        const callee = this.callee(current);
+        const callee = calleeText(current);
         if (this.spec.quoteSanitizers?.test(callee)) {
-          const inner = this.callArguments(current).map((arg) => this.taintOf(arg, tainted)).find((taint) => taint !== null);
+          const inner = callArguments(current).map((arg) => this.taintOf(arg, tainted)).find((taint) => taint !== null);
           if (inner) settle({ ...inner, escaped: true }, current);
           return false;
         }
@@ -162,133 +114,15 @@ class FlowAnalysis<C extends string> {
     return found;
   }
 
-  /**
-   * Where `target` sits in the string it is built into: not in a string at all, inside quotes,
-   * or outside quotes. Only the string around it counts (its concatenation chain, interpolating
-   * string or template), not unrelated literals such as array keys or other arguments.
-   */
-  private quoting(root: Node, target: Node): 'bare' | 'quoted' | 'unquoted' {
-    let builder: Node | null = null;
-    for (let current = target.parent; current && current.startIndex >= root.startIndex && current.endIndex <= root.endIndex; current = current.parent) {
-      const concatenation = current.type === 'binary_expression' && CONCATENATION.has(current.childForFieldName('operator')?.text ?? '');
-      if (concatenation || STRING_BUILDER_TYPES.has(current.type)) builder = current;
-      else if (current.type !== 'parenthesized_expression') break;
-    }
-    if (!builder) return 'bare';
-    let literal = '';
-    walk(builder, (current) => {
-      if (current.startIndex >= target.startIndex) return false;
-      if (STRING_CONTENT_TYPES.has(current.type)) literal += current.text;
-      return true;
-    });
-    if (!literal) return 'bare';
-    const unescaped = literal.replace(/\\./g, '');
-    const odd = (quote: string) => unescaped.split(quote).length % 2 === 0;
-    return odd("'") || odd('"') ? 'quoted' : 'unquoted';
-  }
-
-  private isValidated(node: Node): boolean {
-    if (this.guards.length === 0) return false;
-    const text = normalize(node.text);
-    return this.guards.some((guard) => node.startIndex >= guard.start && node.endIndex <= guard.end && guard.texts.has(text));
-  }
-
-  /** Expressions a condition validates when it is true (`positive`) and when it is false (`negative`). */
-  private validatedBy(condition: Node | null): { positive: string[]; negative: string[] } {
-    const none = { positive: [], negative: [] };
-    const guards = this.spec.guards;
-    if (!condition || !guards) return none;
-    if (condition.type === 'parenthesized_expression') return this.validatedBy(namedChildren(condition)[0] ?? null);
-    const operator = condition.childForFieldName('operator')?.text;
-    if (guards.notTypes.has(condition.type) && operator === '!') {
-      const inner = this.validatedBy(condition.childForFieldName('argument') ?? namedChildren(condition).at(-1) ?? null);
-      return { positive: inner.negative, negative: inner.positive };
-    }
-    if (condition.type === 'binary_expression' && (operator === '&&' || operator === 'and')) {
-      const parts = namedChildren(condition).map((part) => this.validatedBy(part));
-      return { positive: parts.flatMap((part) => part.positive), negative: [] };
-    }
-    if (condition.type === 'binary_expression' && (operator === '||' || operator === 'or')) {
-      const parts = namedChildren(condition).map((part) => this.validatedBy(part));
-      return { positive: [], negative: parts.flatMap((part) => part.negative) };
-    }
-    if (!this.spec.callTypes.has(condition.type)) return none;
-    const callee = this.callee(condition);
-    const args = this.callArguments(condition);
-    const validated = guards.validators
-      .filter((validator) => validator.callee.test(callee))
-      .filter((validator) => !validator.requires || validator.requires.text.test((args[validator.requires.argument]?.text ?? '').trim()))
-      .map((validator) => args[validator.argument])
-      .filter((arg): arg is Node => Boolean(arg))
-      .map((arg) => normalize(arg.text));
-    return { positive: validated, negative: [] };
-  }
-
-  /** Whether a branch always leaves the enclosing block: its last statement returns, exits or throws. */
-  private exits(body: Node | null): boolean {
-    const guards = this.spec.guards;
-    if (!body || !guards) return false;
-    const last = (body.namedChildCount > 0 && !guards.exitTypes.has(body.type) ? namedChildren(body).filter((child) => !/comment/.test(child.type)).at(-1) : body) ?? null;
-    if (!last) return false;
-    if (guards.exitTypes.has(last.type)) return true;
-    const expression = last.type === 'expression_statement' ? namedChildren(last)[0] : null;
-    if (!expression) return false;
-    if (/^throw/.test(expression.type)) return true;
-    return Boolean(guards.exitCalls && this.spec.callTypes.has(expression.type) && guards.exitCalls.test(this.callee(expression)));
-  }
-
-  private collectGuards(scope: Node): GuardRegion[] {
-    const guards = this.spec.guards;
-    if (!guards) return [];
-    const regions: GuardRegion[] = [];
-    const add = (node: Node | null | undefined, start: number, end: number, texts: string[]) => {
-      if (node !== null && texts.length > 0 && end > start) regions.push({ start, end, texts: new Set(texts) });
-    };
-    walk(scope, (node) => {
-      if (node !== scope && this.spec.functionTypes.has(node.type)) return false;
-      if (!guards.ifTypes.has(node.type)) return true;
-      const { positive, negative } = this.validatedBy(node.childForFieldName('condition'));
-      const body = node.childForFieldName('consequence') ?? node.childForFieldName('body');
-      const alternative = node.childForFieldName('alternative');
-      if (body) add(body, body.startIndex, body.endIndex, positive);
-      if (alternative) add(alternative, alternative.startIndex, alternative.endIndex, negative);
-      // Guard clause: `if (!valid($x)) { exit; }` validates $x for the rest of the block.
-      if (!alternative && this.exits(body) && node.parent) add(node.parent, node.endIndex, node.parent.endIndex, negative);
-      return true;
-    });
-    return regions;
-  }
-
   /** Taint of a call to a summarized function: its own input source, or a tainted argument it returns. */
   private returnedTaint(summary: FunctionSummary, call: Node, tainted: Map<string, Taint>): Taint | null {
     if (summary.returnsSource) return { ...summary.returnsSource, steps: [...summary.returnsSource.steps, this.step(call)] };
-    const args = this.callArguments(call);
+    const args = callArguments(call);
     for (const index of summary.returnsParams) {
       const taint = this.taintOf(args[index] ?? null, tainted);
       if (taint && !taint.escaped) return { ...taint, steps: [...taint.steps, this.step(call)] };
     }
     return null;
-  }
-
-  /** Parameter names of a function, one entry per position (destructuring yields several names). */
-  private parameters(scope: Node): string[][] {
-    const list = scope.childForFieldName('parameters') ?? scope.childForFieldName('parameter');
-    if (!list) return [];
-    const params = this.spec.identifierTypes.has(list.type) ? [list] : namedChildren(list).filter((child) => !/comment/.test(child.type));
-    return params.map((param) => {
-      const names: string[] = [];
-      walk(param, (node) => {
-        // Default values are not names.
-        if (node !== param && (node.type === 'assignment_pattern' || node.type === 'default_value')) {
-          const left = node.childForFieldName('left');
-          if (left) names.push(left.text);
-          return false;
-        }
-        if (this.spec.identifierTypes.has(node.type) && !/type/.test(node.parent?.type ?? '')) names.push(node.text);
-        return !this.spec.identifierTypes.has(node.type);
-      });
-      return names;
-    });
   }
 
   /**
@@ -302,7 +136,7 @@ class FlowAnalysis<C extends string> {
         if (!name) continue;
         const summary: FunctionSummary = { sinks: [], returnsParams: new Set(), returnsSource: null };
         const seed = new Map<string, Taint>();
-        this.parameters(scope).forEach((names, index) => {
+        parameterNames(this.spec, scope).forEach((names, index) => {
           for (const param of names) seed.set(param, { source: this.step(scope), steps: [], param: index });
         });
         this.summary = summary;
@@ -344,7 +178,7 @@ class FlowAnalysis<C extends string> {
   private reportThroughCall(call: Node, callee: string, tainted: Map<string, Taint>): void {
     const summary = this.summaries.get(calledName(callee));
     if (!summary || summary.sinks.length === 0) return;
-    const args = this.callArguments(call);
+    const args = callArguments(call);
     for (const inner of summary.sinks) {
       const taint = this.taintOf(args[inner.param] ?? null, tainted);
       if (!taint || taint.escaped) continue;
@@ -365,7 +199,7 @@ class FlowAnalysis<C extends string> {
   /** Analyze one function (or the module's top level), not descending into nested functions. */
   analyzeScope(scope: Node, seed?: Map<string, Taint>): void {
     this.currentFunction = scope.parent ? functionName(scope) : undefined;
-    this.guards = this.collectGuards(scope);
+    this.guards = collectGuards(this.spec, scope);
     const tainted = new Map<string, Taint>(seed);
     walk(scope, (node) => {
       if (node !== scope && this.spec.functionTypes.has(node.type)) return false;
@@ -386,11 +220,11 @@ class FlowAnalysis<C extends string> {
       }
 
       if (this.spec.callTypes.has(node.type)) {
-        const callee = this.callee(node);
+        const callee = calleeText(node);
         // A call belongs to the first matching rule only; rules are ordered by priority.
         const rule = this.spec.sinks.find((candidate) => candidate.callee.test(callee));
         if (rule) {
-          const args = this.callArguments(node);
+          const args = callArguments(node);
           const checked = rule.argument === undefined ? args : args.slice(rule.argument, rule.argument + 1);
           const taint = checked.map((arg) => this.taintOf(arg, tainted)).find((found) => found !== null && !found.escaped);
           if (taint) this.report(rule.category, taint, node);

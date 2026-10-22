@@ -9,7 +9,7 @@ export function createDashboardController(
   vscode: typeof import('vscode'),
   context: import('vscode').ExtensionContext,
   onRender: () => void = () => {},
-  securityRules?: import('../securityRulesController').SecurityRulesPanel,
+  securityRules?: import('../securityRules/controller').SecurityRulesPanel,
 ): DashboardController {
   const controller: DashboardController = {
     vscode, context, t: translator(vscode),

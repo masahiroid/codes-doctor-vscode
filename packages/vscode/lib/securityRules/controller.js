@@ -6,14 +6,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createSecurityRulesController = createSecurityRulesController;
 const node_path_1 = __importDefault(require("node:path"));
 const promises_1 = __importDefault(require("node:fs/promises"));
-const i18n_1 = require("./i18n");
-const settingsSchema_1 = require("./settingsSchema");
-const engine_1 = require("./engine");
-const securityRules_1 = require("./securityRules");
+const i18n_1 = require("../i18n");
+const settingsSchema_1 = require("../settingsSchema");
+const engine_1 = require("../engine");
+const ruleset_1 = require("./ruleset");
+const scan_1 = require("./scan");
+const audit_1 = require("./audit");
+const presentation_1 = require("./presentation");
+const workspaceScan_1 = require("./workspaceScan");
 const LAST_SYNC_KEY = 'codeDoctor.securityRules.lastSyncAt';
 const DISABLED_PACKS_KEY = 'codeDoctor.securityRules.disabledPacks';
 const REPORT_DIRECTORY = node_path_1.default.join('.codes-doctor', 'security-audit');
-const DIAGNOSTIC_SOURCE = 'Codes Doctor Security Rules';
 function createSecurityRulesController(vscode, context) {
     const t = (0, i18n_1.translator)(vscode);
     let engine;
@@ -31,8 +34,8 @@ function createSecurityRulesController(vscode, context) {
     let error;
     const config = () => vscode.workspace.getConfiguration('codeDoctor.securityRules');
     const manifestUrl = () => {
-        const value = config().get('sourceUrl', securityRules_1.DEFAULT_MANIFEST_URL);
-        return typeof value === 'string' && value.trim() ? value.trim() : securityRules_1.DEFAULT_MANIFEST_URL;
+        const value = config().get('sourceUrl', ruleset_1.DEFAULT_MANIFEST_URL);
+        return typeof value === 'string' && value.trim() ? value.trim() : ruleset_1.DEFAULT_MANIFEST_URL;
     };
     const intervalHours = () => {
         const value = config().get('syncIntervalHours', 24);
@@ -41,7 +44,7 @@ function createSecurityRulesController(vscode, context) {
     const workspaceRoot = () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     // The verified copy lives in the extension's storage, keyed by source. A copy inside the workspace
     // could be supplied by the repository under review and would decide its own audit.
-    const cacheDir = () => node_path_1.default.join(context.globalStorageUri.fsPath, 'security-rules', (0, securityRules_1.sha256Hex)(manifestUrl()).slice(0, 16));
+    const cacheDir = () => node_path_1.default.join(context.globalStorageUri.fsPath, 'security-rules', (0, ruleset_1.sha256Hex)(manifestUrl()).slice(0, 16));
     // Packs are stored as the disabled set, so a pack added upstream is on until the user turns it off.
     const disabledPacks = () => new Set(context.workspaceState.get(DISABLED_PACKS_KEY, []));
     const activeRules = () => {
@@ -89,28 +92,9 @@ function createSecurityRulesController(vscode, context) {
         catch {
             // Without the engine, rules with a detector are listed as not evaluated.
         }
-        ({ compiled, invalid } = (0, securityRules_1.compileRules)(next.packs, available));
+        ({ compiled, invalid } = (0, scan_1.compileRules)(next.packs, available));
     }
-    function toDiagnostic(candidate, uri) {
-        const entry = compiled.find((item) => item.pack.id === candidate.packId && item.rule.id === candidate.ruleId);
-        const severity = entry?.rule.severity === 'error' ? vscode.DiagnosticSeverity.Error : vscode.DiagnosticSeverity.Warning;
-        const range = new vscode.Range(candidate.startLine, candidate.startColumn, candidate.endLine, candidate.endColumn);
-        const flow = candidate.flow;
-        const message = flow
-            ? `[${candidate.ruleId}] ${t('Input reaches')}: ${entry?.rule.title ?? candidate.ruleId} — ${t('input from line {line} reaches this call', { line: flow.source.line })}`
-            : `[${candidate.ruleId}] ${t('Review required')}: ${entry?.rule.title ?? candidate.ruleId} — ${entry?.rule.message ?? ''}`;
-        const diagnostic = new vscode.Diagnostic(range, message, severity);
-        diagnostic.source = DIAGNOSTIC_SOURCE;
-        diagnostic.code = candidate.ruleId;
-        if (flow && uri) {
-            const at = (line) => new vscode.Location(uri, new vscode.Range(Math.max(line - 1, 0), 0, Math.max(line - 1, 0), 200));
-            diagnostic.relatedInformation = [
-                new vscode.DiagnosticRelatedInformation(at(flow.source.line), `${t('Source')}: ${flow.source.code}`),
-                ...flow.steps.map((step) => new vscode.DiagnosticRelatedInformation(at(step.line), `${t('Via')}: ${step.code}`)),
-            ];
-        }
-        return diagnostic;
-    }
+    const ruleFor = (candidate) => compiled.find((item) => item.pack.id === candidate.packId && item.rule.id === candidate.ruleId);
     function publish(uri, candidates) {
         if (candidates.length === 0) {
             candidatesByUri.delete(uri.toString());
@@ -118,7 +102,7 @@ function createSecurityRulesController(vscode, context) {
             return;
         }
         candidatesByUri.set(uri.toString(), candidates);
-        diagnostics.set(uri, candidates.map((candidate) => toDiagnostic(candidate, uri)));
+        diagnostics.set(uri, candidates.map((candidate) => (0, presentation_1.buildDiagnostic)(vscode, t, ruleFor(candidate), candidate, uri)));
     }
     const isTestFile = (filePath) => {
         try {
@@ -131,7 +115,7 @@ function createSecurityRulesController(vscode, context) {
     async function scanDocument(document) {
         if (!ruleset || document.uri.scheme !== 'file')
             return;
-        const language = (0, securityRules_1.languageForFile)(document.fileName);
+        const language = (0, scan_1.languageForFile)(document.fileName);
         if (!language || isTestFile(document.fileName))
             return;
         let available;
@@ -141,7 +125,7 @@ function createSecurityRulesController(vscode, context) {
         catch {
             // Pattern rules still run without the engine.
         }
-        publish(document.uri, await (0, securityRules_1.scanFile)(document.getText(), language, document.fileName, activeRules(), available));
+        publish(document.uri, await (0, scan_1.scanFile)(document.getText(), language, document.fileName, activeRules(), available));
     }
     const rescanOpenDocuments = () => vscode.workspace.textDocuments.forEach((document) => void scanDocument(document));
     function clearFindings() {
@@ -152,8 +136,8 @@ function createSecurityRulesController(vscode, context) {
     async function runSync(silent) {
         error = undefined;
         try {
-            const downloaded = await (0, securityRules_1.downloadRuleset)(manifestUrl());
-            await (0, securityRules_1.writeRulesetCache)(cacheDir(), downloaded);
+            const downloaded = await (0, ruleset_1.downloadRuleset)(manifestUrl());
+            await (0, ruleset_1.writeRulesetCache)(cacheDir(), downloaded);
             applyRuleset(downloaded);
             await context.globalState.update(LAST_SYNC_KEY, Date.now());
             clearFindings();
@@ -169,7 +153,7 @@ function createSecurityRulesController(vscode, context) {
             const reason = failure instanceof Error ? failure.message : String(failure);
             // Offline or a rejected download falls back to the last verified copy in the workspace.
             try {
-                applyRuleset(await (0, securityRules_1.readRulesetCache)(cacheDir()));
+                applyRuleset(await (0, ruleset_1.readRulesetCache)(cacheDir()));
                 clearFindings();
                 rescanOpenDocuments();
                 error = t('Could not sync security rules ({reason}). Using the cached rules.', { reason });
@@ -197,14 +181,6 @@ function createSecurityRulesController(vscode, context) {
             vscode.window.showWarningMessage(t('No security rule pack is selected. Select at least one pack in the Codes Doctor panel.'));
             return undefined;
         }
-        const uris = await vscode.workspace.findFiles(securityRules_1.SCAN_GLOB, securityRules_1.SCAN_EXCLUDE_GLOB, 20000);
-        const unsupported = (await vscode.workspace.findFiles(securityRules_1.UNSUPPORTED_SOURCE_GLOB, securityRules_1.SCAN_EXCLUDE_GLOB, 5000)).length;
-        const results = [];
-        const filesByLanguage = {};
-        let scanned = 0;
-        let skipped = 0;
-        let tests = 0;
-        let total = 0;
         let available;
         try {
             available = flowEngine();
@@ -214,48 +190,16 @@ function createSecurityRulesController(vscode, context) {
         }
         diagnostics.clear();
         candidatesByUri.clear();
-        for (const [index, uri] of uris.entries()) {
-            if (token?.isCancellationRequested) {
-                diagnostics.clear();
-                candidatesByUri.clear();
-                return undefined;
-            }
-            if (index % 25 === 0)
-                progress?.report({ message: `${index}/${uris.length}`, increment: (25 / Math.max(uris.length, 1)) * 100 });
-            const language = (0, securityRules_1.languageForFile)(uri.fsPath);
-            if (!language)
-                continue;
-            // Test code is not reachable from outside, and its deliberate unsafe calls were most of the noise.
-            if (isTestFile(node_path_1.default.relative(root, uri.fsPath))) {
-                tests++;
-                continue;
-            }
-            try {
-                const stat = await promises_1.default.stat(uri.fsPath);
-                if (stat.size > securityRules_1.SCAN_LIMITS.maxFileBytes) {
-                    skipped++;
-                    continue;
-                }
-                const candidates = await (0, securityRules_1.scanFile)(await promises_1.default.readFile(uri.fsPath, 'utf8'), language, uri.fsPath, rules, available);
-                scanned++;
-                filesByLanguage[language] = (filesByLanguage[language] ?? 0) + 1;
-                if (candidates.length === 0)
-                    continue;
-                publish(uri, candidates);
-                results.push({ file: node_path_1.default.relative(root, uri.fsPath).split(node_path_1.default.sep).join('/'), candidates });
-                total += candidates.length;
-                if (total >= securityRules_1.SCAN_LIMITS.maxTotalCandidates)
-                    break;
-            }
-            catch {
-                skipped++;
-            }
+        const outcome = await (0, workspaceScan_1.scanWorkspaceFiles)(vscode, { root, rules, engine: available, onFindings: publish, progress, token });
+        if (!outcome) {
+            diagnostics.clear();
+            candidatesByUri.clear();
         }
-        return { results, scanned, skipped, tests, unsupported, filesByLanguage };
+        return outcome;
     }
     function buildReport(outcome, root) {
         const disabled = disabledPacks();
-        return (0, securityRules_1.buildAuditReport)((ruleset?.packs ?? []).filter((pack) => !disabled.has(pack.id)), outcome.results, invalid, {
+        return (0, audit_1.buildAuditReport)((ruleset?.packs ?? []).filter((pack) => !disabled.has(pack.id)), outcome.results, invalid, {
             generatedAt: new Date().toISOString(),
             toolName: settingsSchema_1.PRODUCT_NAME,
             toolVersion: settingsSchema_1.EXTENSION_VERSION,
@@ -303,7 +247,7 @@ function createSecurityRulesController(vscode, context) {
         const csvPath = node_path_1.default.join(directory, `security-audit-${stamp}.csv`);
         await promises_1.default.mkdir(directory, { recursive: true });
         await promises_1.default.writeFile(node_path_1.default.join(directory, `security-audit-${stamp}.json`), `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-        await promises_1.default.writeFile(csvPath, (0, securityRules_1.auditReportToCsv)(report), 'utf8');
+        await promises_1.default.writeFile(csvPath, (0, audit_1.auditReportToCsv)(report), 'utf8');
         const open = t('Open CSV');
         // Not awaited: the panel must not stay busy while a notification waits for a click.
         void Promise.resolve(vscode.window.showInformationMessage(t('Security audit report saved to {directory}. Items are review candidates, not a compliance verdict.', { directory: REPORT_DIRECTORY }), open)).then((choice) => (choice === open ? vscode.commands.executeCommand('vscode.open', vscode.Uri.file(csvPath)) : undefined));
@@ -334,38 +278,6 @@ function createSecurityRulesController(vscode, context) {
         const position = new vscode.Position(Math.max(line - 1, 0), 0);
         await vscode.window.showTextDocument(vscode.Uri.file(target), { selection: new vscode.Range(position, position) });
     }
-    function hoverMarkdown(candidate) {
-        const entry = compiled.find((item) => item.pack.id === candidate.packId && item.rule.id === candidate.ruleId);
-        if (!entry)
-            return undefined;
-        const { pack, rule } = entry;
-        // Rule text comes from the network, so it is escaped before it is rendered as Markdown.
-        const lines = [
-            `### 🛡️ ${(0, securityRules_1.escapeMarkdown)(rule.id)}: ${(0, securityRules_1.escapeMarkdown)(rule.title)}`,
-            '',
-            (0, securityRules_1.escapeMarkdown)(rule.message),
-            '',
-            `**${t('Pack')}:** ${(0, securityRules_1.escapeMarkdown)(`${pack.id} ${pack.version} (${pack.channel})`)}`,
-            `**${t('Category')}:** ${(0, securityRules_1.escapeMarkdown)(rule.category)}`,
-            `**${t('Management sheet column')}:** ${(0, securityRules_1.escapeMarkdown)(rule.excelColumn)} → ${(0, securityRules_1.escapeMarkdown)(rule.actionRequired)}`,
-        ];
-        if (candidate.flow) {
-            const code = (text) => `\`${text.replace(/`/g, "'")}\``;
-            lines.push('', `**${t('Traced Data Flow')}:**`, `- **${t('Source')} (L${candidate.flow.source.line}):** ${code(candidate.flow.source.code)}`);
-            for (const step of candidate.flow.steps)
-                lines.push(`- **${t('Via')} (L${step.line}):** ${code(step.code)}`);
-            lines.push(`- **${t('Sink')} (L${candidate.flow.sink.line}):** ${code(candidate.flow.sink.code)}`);
-        }
-        if (rule.sourceUrls.length > 0)
-            lines.push(`**${t('Source documents')}:** ${rule.sourceUrls.map((url) => `<${url}>`).join(' ')}`);
-        if (rule.checkSteps.length > 0) {
-            lines.push('', `**${t('Check steps')}:**`, ...rule.checkSteps.map((step) => `- ${(0, securityRules_1.escapeMarkdown)(step)}`));
-        }
-        lines.push('', `_${candidate.flow
-            ? t('Untrusted input reaches this operation. Check whether it is validated in another file, then fix or record the reason.')
-            : t('This is a review candidate found by a pattern match. A manual check and evidence are still required.')}_`);
-        return lines.join('\n');
-    }
     const hoverProvider = {
         provideHover(document, position) {
             const candidates = candidatesByUri.get(document.uri.toString());
@@ -373,7 +285,7 @@ function createSecurityRulesController(vscode, context) {
                 return null;
             const blocks = candidates
                 .filter((c) => new vscode.Range(c.startLine, c.startColumn, c.endLine, c.endColumn).contains(position))
-                .map(hoverMarkdown)
+                .map((candidate) => (0, presentation_1.buildHoverMarkdown)(t, ruleFor(candidate), candidate))
                 .filter((block) => Boolean(block));
             if (blocks.length === 0)
                 return null;
@@ -395,7 +307,7 @@ function createSecurityRulesController(vscode, context) {
     // Loading the workspace copy is local only; the network is touched by an explicit sync or by autoSync.
     async function initialize() {
         try {
-            applyRuleset(await (0, securityRules_1.readRulesetCache)(cacheDir()));
+            applyRuleset(await (0, ruleset_1.readRulesetCache)(cacheDir()));
             rescanOpenDocuments();
             emit();
         }

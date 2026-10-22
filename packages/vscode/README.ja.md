@@ -175,7 +175,7 @@ C++の解析対象は `.cpp` / `.cc` / `.cxx` / `.hpp` / `.hh` です。`.h` / `
 
 ## 開発
 
-この拡張機能は、解析エンジン（`packages/engine`）と CLI（`packages/cli`）と同じ [codes-doctor-vscode](https://github.com/masahiroid/codes-doctor-vscode) モノレポで管理しています。Node.js 22 以降を使ってください。
+この拡張機能は、解析エンジン（`packages/engine`）と CLI（`packages/cli`）と同じ [codes-doctor-vscode](https://github.com/masahiroid/codes-doctor-vscode) モノレポで管理しています。Node.js 24 以降を使ってください。
 
 ```bash
 cd packages/vscode

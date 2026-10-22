@@ -1,31 +1,21 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { translator } from './i18n';
-import { EXTENSION_VERSION, PRODUCT_NAME } from './settingsSchema';
-import { loadEngine } from './engine';
-import {
-  sha256Hex,
-  DEFAULT_MANIFEST_URL,
-  SCAN_EXCLUDE_GLOB,
-  SCAN_GLOB,
-  SCAN_LIMITS,
-  UNSUPPORTED_SOURCE_GLOB,
-  auditReportToCsv,
-  buildAuditReport,
-  compileRules,
-  downloadRuleset,
-  escapeMarkdown,
-  languageForFile,
-  readRulesetCache,
-  scanFile,
-  writeRulesetCache,
-} from './securityRules';
-import type { AuditReport, Candidate, CompiledRule, FileCandidates, FlowEngine, LoadedRuleset } from './securityRules';
+import { translator } from '../i18n';
+import { EXTENSION_VERSION, PRODUCT_NAME } from '../settingsSchema';
+import { loadEngine } from '../engine';
+import { DEFAULT_MANIFEST_URL, downloadRuleset, readRulesetCache, sha256Hex, writeRulesetCache } from './ruleset';
+import type { LoadedRuleset } from './ruleset';
+import { compileRules, languageForFile, scanFile } from './scan';
+import type { Candidate, CompiledRule, FlowEngine } from './scan';
+import { auditReportToCsv, buildAuditReport } from './audit';
+import type { AuditReport } from './audit';
+import { buildDiagnostic, buildHoverMarkdown } from './presentation';
+import { scanWorkspaceFiles } from './workspaceScan';
+import type { ScanProgress, ScanToken, WorkspaceScan } from './workspaceScan';
 
 const LAST_SYNC_KEY = 'codeDoctor.securityRules.lastSyncAt';
 const DISABLED_PACKS_KEY = 'codeDoctor.securityRules.disabledPacks';
 const REPORT_DIRECTORY = path.join('.codes-doctor', 'security-audit');
-const DIAGNOSTIC_SOURCE = 'Codes Doctor Security Rules';
 
 export interface SecurityPackView {
   id: string;
@@ -136,26 +126,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
     ({ compiled, invalid } = compileRules(next.packs, available));
   }
 
-  function toDiagnostic(candidate: Candidate, uri?: import('vscode').Uri) {
-    const entry = compiled.find((item) => item.pack.id === candidate.packId && item.rule.id === candidate.ruleId);
-    const severity = entry?.rule.severity === 'error' ? vscode.DiagnosticSeverity.Error : vscode.DiagnosticSeverity.Warning;
-    const range = new vscode.Range(candidate.startLine, candidate.startColumn, candidate.endLine, candidate.endColumn);
-    const flow = candidate.flow;
-    const message = flow
-      ? `[${candidate.ruleId}] ${t('Input reaches')}: ${entry?.rule.title ?? candidate.ruleId} — ${t('input from line {line} reaches this call', { line: flow.source.line })}`
-      : `[${candidate.ruleId}] ${t('Review required')}: ${entry?.rule.title ?? candidate.ruleId} — ${entry?.rule.message ?? ''}`;
-    const diagnostic = new vscode.Diagnostic(range, message, severity);
-    diagnostic.source = DIAGNOSTIC_SOURCE;
-    diagnostic.code = candidate.ruleId;
-    if (flow && uri) {
-      const at = (line: number) => new vscode.Location(uri, new vscode.Range(Math.max(line - 1, 0), 0, Math.max(line - 1, 0), 200));
-      diagnostic.relatedInformation = [
-        new vscode.DiagnosticRelatedInformation(at(flow.source.line), `${t('Source')}: ${flow.source.code}`),
-        ...flow.steps.map((step) => new vscode.DiagnosticRelatedInformation(at(step.line), `${t('Via')}: ${step.code}`)),
-      ];
-    }
-    return diagnostic;
-  }
+  const ruleFor = (candidate: Candidate) => compiled.find((item) => item.pack.id === candidate.packId && item.rule.id === candidate.ruleId);
 
   function publish(uri: import('vscode').Uri, candidates: Candidate[]) {
     if (candidates.length === 0) {
@@ -164,7 +135,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
       return;
     }
     candidatesByUri.set(uri.toString(), candidates);
-    diagnostics.set(uri, candidates.map((candidate) => toDiagnostic(candidate, uri)));
+    diagnostics.set(uri, candidates.map((candidate) => buildDiagnostic(vscode, t, ruleFor(candidate), candidate, uri)));
   }
 
   const isTestFile = (filePath: string) => {
@@ -229,12 +200,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
 
   const syncRules = () => exclusive('sync', () => runSync(false));
 
-  type Progress = { report(value: { message?: string; increment?: number }): void };
-  type Token = { isCancellationRequested: boolean };
-
-  async function scanWorkspace(progress?: Progress, token?: Token): Promise<{
-    results: FileCandidates[]; scanned: number; skipped: number; tests: number; unsupported: number; filesByLanguage: Record<string, number>;
-  } | undefined> {
+  async function scanWorkspace(progress?: ScanProgress, token?: ScanToken): Promise<WorkspaceScan | undefined> {
     const root = workspaceRoot();
     if (!root) {
       vscode.window.showErrorMessage(t('No workspace folder is open. Open a folder and try again.'));
@@ -247,14 +213,6 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
       vscode.window.showWarningMessage(t('No security rule pack is selected. Select at least one pack in the Codes Doctor panel.'));
       return undefined;
     }
-    const uris = await vscode.workspace.findFiles(SCAN_GLOB, SCAN_EXCLUDE_GLOB, 20000);
-    const unsupported = (await vscode.workspace.findFiles(UNSUPPORTED_SOURCE_GLOB, SCAN_EXCLUDE_GLOB, 5000)).length;
-    const results: FileCandidates[] = [];
-    const filesByLanguage: Record<string, number> = {};
-    let scanned = 0;
-    let skipped = 0;
-    let tests = 0;
-    let total = 0;
     let available: FlowEngine | undefined;
     try {
       available = flowEngine();
@@ -263,42 +221,15 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
     }
     diagnostics.clear();
     candidatesByUri.clear();
-    for (const [index, uri] of uris.entries()) {
-      if (token?.isCancellationRequested) {
-        diagnostics.clear();
-        candidatesByUri.clear();
-        return undefined;
-      }
-      if (index % 25 === 0) progress?.report({ message: `${index}/${uris.length}`, increment: (25 / Math.max(uris.length, 1)) * 100 });
-      const language = languageForFile(uri.fsPath);
-      if (!language) continue;
-      // Test code is not reachable from outside, and its deliberate unsafe calls were most of the noise.
-      if (isTestFile(path.relative(root, uri.fsPath))) {
-        tests++;
-        continue;
-      }
-      try {
-        const stat = await fs.stat(uri.fsPath);
-        if (stat.size > SCAN_LIMITS.maxFileBytes) {
-          skipped++;
-          continue;
-        }
-        const candidates = await scanFile(await fs.readFile(uri.fsPath, 'utf8'), language, uri.fsPath, rules, available);
-        scanned++;
-        filesByLanguage[language] = (filesByLanguage[language] ?? 0) + 1;
-        if (candidates.length === 0) continue;
-        publish(uri, candidates);
-        results.push({ file: path.relative(root, uri.fsPath).split(path.sep).join('/'), candidates });
-        total += candidates.length;
-        if (total >= SCAN_LIMITS.maxTotalCandidates) break;
-      } catch {
-        skipped++;
-      }
+    const outcome = await scanWorkspaceFiles(vscode, { root, rules, engine: available, onFindings: publish, progress, token });
+    if (!outcome) {
+      diagnostics.clear();
+      candidatesByUri.clear();
     }
-    return { results, scanned, skipped, tests, unsupported, filesByLanguage };
+    return outcome;
   }
 
-  function buildReport(outcome: NonNullable<Awaited<ReturnType<typeof scanWorkspace>>>, root: string) {
+  function buildReport(outcome: WorkspaceScan, root: string) {
     const disabled = disabledPacks();
     return buildAuditReport(
       (ruleset?.packs ?? []).filter((pack) => !disabled.has(pack.id)),
@@ -323,7 +254,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
     );
   }
 
-  async function runScan(progress?: Progress, token?: Token): Promise<AuditReport | undefined> {
+  async function runScan(progress?: ScanProgress, token?: ScanToken): Promise<AuditReport | undefined> {
     const root = workspaceRoot();
     const outcome = await scanWorkspace(progress, token);
     if (!root || !outcome) {
@@ -338,7 +269,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
     return report;
   }
 
-  const withProgress = <T>(title: string, work: (progress: Progress, token: Token) => Promise<T>) =>
+  const withProgress = <T>(title: string, work: (progress: ScanProgress, token: ScanToken) => Promise<T>) =>
     Promise.resolve(vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title, cancellable: true }, work));
 
   const scanSecurityRules = () => exclusive('scan', async () => {
@@ -389,43 +320,13 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
     await vscode.window.showTextDocument(vscode.Uri.file(target), { selection: new vscode.Range(position, position) });
   }
 
-  function hoverMarkdown(candidate: Candidate): string | undefined {
-    const entry = compiled.find((item) => item.pack.id === candidate.packId && item.rule.id === candidate.ruleId);
-    if (!entry) return undefined;
-    const { pack, rule } = entry;
-    // Rule text comes from the network, so it is escaped before it is rendered as Markdown.
-    const lines = [
-      `### 🛡️ ${escapeMarkdown(rule.id)}: ${escapeMarkdown(rule.title)}`,
-      '',
-      escapeMarkdown(rule.message),
-      '',
-      `**${t('Pack')}:** ${escapeMarkdown(`${pack.id} ${pack.version} (${pack.channel})`)}`,
-      `**${t('Category')}:** ${escapeMarkdown(rule.category)}`,
-      `**${t('Management sheet column')}:** ${escapeMarkdown(rule.excelColumn)} → ${escapeMarkdown(rule.actionRequired)}`,
-    ];
-    if (candidate.flow) {
-      const code = (text: string) => `\`${text.replace(/`/g, "'")}\``;
-      lines.push('', `**${t('Traced Data Flow')}:**`, `- **${t('Source')} (L${candidate.flow.source.line}):** ${code(candidate.flow.source.code)}`);
-      for (const step of candidate.flow.steps) lines.push(`- **${t('Via')} (L${step.line}):** ${code(step.code)}`);
-      lines.push(`- **${t('Sink')} (L${candidate.flow.sink.line}):** ${code(candidate.flow.sink.code)}`);
-    }
-    if (rule.sourceUrls.length > 0) lines.push(`**${t('Source documents')}:** ${rule.sourceUrls.map((url) => `<${url}>`).join(' ')}`);
-    if (rule.checkSteps.length > 0) {
-      lines.push('', `**${t('Check steps')}:**`, ...rule.checkSteps.map((step) => `- ${escapeMarkdown(step)}`));
-    }
-    lines.push('', `_${candidate.flow
-      ? t('Untrusted input reaches this operation. Check whether it is validated in another file, then fix or record the reason.')
-      : t('This is a review candidate found by a pattern match. A manual check and evidence are still required.')}_`);
-    return lines.join('\n');
-  }
-
   const hoverProvider: import('vscode').HoverProvider = {
     provideHover(document, position) {
       const candidates = candidatesByUri.get(document.uri.toString());
       if (!candidates) return null;
       const blocks = candidates
         .filter((c) => new vscode.Range(c.startLine, c.startColumn, c.endLine, c.endColumn).contains(position))
-        .map(hoverMarkdown)
+        .map((candidate) => buildHoverMarkdown(t, ruleFor(candidate), candidate))
         .filter((block): block is string => Boolean(block));
       if (blocks.length === 0) return null;
       const markdown = new vscode.MarkdownString(blocks.join('\n\n---\n\n'));

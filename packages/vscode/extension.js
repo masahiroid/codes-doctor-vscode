@@ -45,7 +45,7 @@ const findingsTreeView_1 = require("./lib/findingsTreeView");
 const hoverProvider_1 = require("./lib/hoverProvider");
 const ignoreComments_1 = require("./lib/ignoreComments");
 const onSaveWatcher_1 = require("./lib/onSaveWatcher");
-const securityRulesController_1 = require("./lib/securityRulesController");
+const controller_1 = require("./lib/securityRules/controller");
 const statusBar_1 = require("./lib/statusBar");
 function activate(context) {
     const diagnosticCollection = vscode.languages.createDiagnosticCollection('codeDoctor');
@@ -55,7 +55,7 @@ function activate(context) {
     const onSaveController = (0, onSaveWatcher_1.createOnSaveController)(vscode, context, diagnosticCollection);
     const aiPreviewProvider = (0, aiFixPreview_1.registerAiPreviewContentProvider)(vscode);
     const chatParticipant = (0, chatParticipant_1.registerChatParticipant)(vscode, context);
-    const securityRules = (0, securityRulesController_1.createSecurityRulesController)(vscode, context);
+    const securityRules = (0, controller_1.createSecurityRulesController)(vscode, context);
     const dashboardViewProvider = new dashboardView_1.CodeDoctorDashboardViewProvider(vscode, context, securityRules.panel);
     const disposables = [
         diagnosticCollection,

@@ -159,3 +159,21 @@ test('test code is recognised by directory and file name conventions', () => {
     assert.equal(isTestPath(productionPath), false, productionPath);
   }
 });
+
+test('TypeScript files with generic arrow functions parse; JSX stays enabled for JSX-capable files', async () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const { parseFile } = require('../dist/analyzer/typescript/ast');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'codes-jsx-'));
+  try {
+    fs.writeFileSync(path.join(dir, 'generic.ts'), 'export const wrap = <T>(value: T) => value;\nexport function f() { return wrap(1); }\n');
+    fs.writeFileSync(path.join(dir, 'view.tsx'), 'export function View() { return <div>hi</div>; }\n');
+    const generic = await parseFile(path.join(dir, 'generic.ts'));
+    const view = await parseFile(path.join(dir, 'view.tsx'));
+    assert.deepEqual(generic.functions.map((f) => f.name), ['f']);
+    assert.deepEqual(view.functions.map((f) => f.name), ['View']);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

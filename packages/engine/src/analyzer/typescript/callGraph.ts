@@ -1,6 +1,7 @@
 import { FileInfo, CallEdge, CallGraph } from '../../types';
 import { parse } from '@typescript-eslint/typescript-estree';
 import { readFileContent } from '../../fileWalker';
+import { allowsJsx } from './ast';
 
 /**
  * Build a call graph from TypeScript/JavaScript source files.
@@ -18,7 +19,7 @@ export async function buildCallGraph(fileInfoList: FileInfo[]): Promise<CallGrap
 
     try {
       const ast = parse(fileContent, {
-        jsx: true,
+        jsx: allowsJsx(fileInfo.filePath),
         loc: true,
         range: true,
         ecmaVersion: 'latest',

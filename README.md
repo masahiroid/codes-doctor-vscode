@@ -24,7 +24,7 @@ For setup, settings and limitations, see the [English README](packages/vscode/RE
 
 ## Development
 
-Node.js 22 or newer.
+Node.js 24 or newer.
 
 ```bash
 npm run install:all   # npm ci in every package

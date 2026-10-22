@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.1.1
+
+- Fix: TypeScript files with generic arrow functions (`<T>(value: T) => value`) failed to parse and were silently left out of the analysis, the call graph and the AST view. JSX is now enabled only for file types that allow it.
+- Update report libraries: DOMPurify 3.4.17 (advisories GHSA-cg2g-xh64-v4q7, GHSA-mrv2-3pqr-j5jr and GHSA-c6gr-qvv4-5v3f; the report's sanitizer settings were not affected), Chart.js 4.6.1, Mermaid 12.2.0, marked 18.1.1.
+- The CLI now requires Node.js 24 or newer (Node.js 20 is end-of-life). Development and releases use Node.js 24; CI also tests Node.js 26.
+- Internal: split the data-flow analysis (guards, quoting, syntax helpers) and the security-rule modules (ruleset, scan, audit, presentation, workspace scan) into smaller files; no behavior change.
+
 ## 7.1.0
 
 - Data-flow analysis follows values through functions in the same file: a parameter that reaches a dangerous call inside a helper, and arguments or input sources carried by return values, are traced from the caller.

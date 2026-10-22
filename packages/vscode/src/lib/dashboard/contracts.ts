@@ -1,6 +1,6 @@
 import type { ExtensionContext } from 'vscode';
 import type { ReviewStatus } from '../types';
-import type { SecurityRulesPanel } from '../securityRulesController';
+import type { SecurityRulesPanel } from '../securityRules/controller';
 
 /** UI state and operations needed by workflows/renderers, independent of the provider class. */
 export interface DashboardHost {

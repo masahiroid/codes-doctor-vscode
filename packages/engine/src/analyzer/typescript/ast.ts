@@ -8,6 +8,14 @@ import fs from 'fs';
 /**
  * Count lines in a string
  */
+/**
+ * JSX only where the file type allows it. In a `.ts` file `<T>(x) => x` is a generic arrow
+ * function, and parsing it as JSX fails the whole file.
+ */
+export function allowsJsx(filePath: string): boolean {
+  return !/\.[cm]?ts$/i.test(filePath);
+}
+
 function countLines(content: string): number {
   return content.split('\n').length;
 }
@@ -35,7 +43,7 @@ export async function parseFile(filePath: string): Promise<FileInfo> {
 
   try {
     const ast = parse(fileContent, {
-      jsx: true,
+      jsx: allowsJsx(filePath),
       loc: true,
       range: true,
       ecmaVersion: 'latest',

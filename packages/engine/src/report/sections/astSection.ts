@@ -14,7 +14,7 @@ type AstLanguageId = Extract<(typeof LANGUAGES)[number], { parser: 'ast' }>['id'
 
 /** Readable structure of one parsed file, per language. */
 const STRUCTURE_BUILDERS: { [K in LanguageId]: (file: LanguageFileMap[K][number]) => string } = {
-  typescript: (file) => buildTypeScriptStructure(readSource(file.filePath)),
+  typescript: (file) => buildTypeScriptStructure(readSource(file.filePath), file.filePath),
   php: (file) => buildPhpStructure(readSource(file.filePath), file.filePath),
   dart: (file) => buildLightweightStructure(file, 'クラス'),
   python: (file) => buildLightweightStructure(file, 'クラス'),
@@ -29,7 +29,7 @@ const STRUCTURE_BUILDERS: { [K in LanguageId]: (file: LanguageFileMap[K][number]
 
 /** Full-AST languages expose their real parse tree in the raw data view. */
 const RAW_AST_PARSERS: Record<AstLanguageId, (content: string, filePath: string) => unknown> = {
-  typescript: (content) => parseTypeScriptAst(content),
+  typescript: parseTypeScriptAst,
   php: parsePhpAst,
 };
 

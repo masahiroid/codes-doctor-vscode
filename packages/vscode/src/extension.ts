@@ -8,7 +8,7 @@ import { FindingsTreeDataProvider } from './lib/findingsTreeView';
 import { createHoverProvider } from './lib/hoverProvider';
 import { createIgnoreCodeActionProvider } from './lib/ignoreComments';
 import { createOnSaveController } from './lib/onSaveWatcher';
-import { createSecurityRulesController } from './lib/securityRulesController';
+import { createSecurityRulesController } from './lib/securityRules/controller';
 import { createStatusBarController } from './lib/statusBar';
 
 export function activate(context: import('vscode').ExtensionContext) {

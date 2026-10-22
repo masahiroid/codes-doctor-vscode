@@ -2,7 +2,7 @@ import type { DashboardHost } from './contracts';
 import { escapeHtmlAttr } from './format';
 import { COMMANDS } from '../settingsSchema';
 import { getDisplayLanguage } from '../config';
-import type { SecurityRulesState } from '../securityRulesController';
+import type { SecurityRulesState } from '../securityRules/controller';
 
 const MAX_LOCATIONS = 20;
 const CHANNEL_LABELS: Record<string, string> = { emergency: 'Emergency', baseline: 'Baseline', regulatory: 'Regulatory' };

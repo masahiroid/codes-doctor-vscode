@@ -2,8 +2,8 @@ import { parseTypeScriptAst } from './parsers';
 import { OutlineType, renderOutline } from './structureOutline';
 
 /** Top-level imports, classes (fields + methods) and functions of a TS/JS file. */
-export function buildTypeScriptStructure(content: string): string {
-  const ast = parseTypeScriptAst(content);
+export function buildTypeScriptStructure(content: string, filePath: string): string {
+  const ast = parseTypeScriptAst(content, filePath);
   const imports: string[] = [];
   const classes: OutlineType[] = [];
   const functions: string[] = [];

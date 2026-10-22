@@ -15,12 +15,17 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 24 builds the releases; 26 runs alongside it until releases move to it.
+        node: [24, 26]
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: ${{ matrix.node }}
           cache: npm
           cache-dependency-path: packages/*/package-lock.json
 
@@ -61,6 +66,6 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: codes-doctor-report
+          name: codes-doctor-report-node${{ matrix.node }}
           path: codes-doctor-report
           if-no-files-found: ignore

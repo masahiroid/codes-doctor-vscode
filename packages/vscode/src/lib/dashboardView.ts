@@ -11,7 +11,7 @@ export class CodeDoctorDashboardViewProvider implements WebviewViewProvider {
   private readonly securityRulesListener?: { dispose(): void };
   private viewSubscriptions: import('vscode').Disposable[] = [];
 
-  constructor(vscode: typeof import('vscode'), context: import('vscode').ExtensionContext, securityRules?: import('./securityRulesController').SecurityRulesPanel) {
+  constructor(vscode: typeof import('vscode'), context: import('vscode').ExtensionContext, securityRules?: import('./securityRules/controller').SecurityRulesPanel) {
     this.controller = createDashboardController(vscode, context, () => this.render(), securityRules);
     this.securityRulesListener = securityRules?.onDidChange(() => this.render());
     this.configListener = vscode.workspace.onDidChangeConfiguration((event) => {

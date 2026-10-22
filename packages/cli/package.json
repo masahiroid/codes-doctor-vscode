@@ -1,6 +1,6 @@
 {
   "name": "codes-doctor",
-  "version": "7.1.0",
+  "version": "7.1.1",
   "private": true,
   "description": "Codes Doctor command line: structural, security and dependency analysis with an HTML report",
   "license": "Apache-2.0",
@@ -13,7 +13,7 @@
     "vendor"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "vendor": "npm run build --prefix ../engine && node ../../scripts/vendor-engine.mjs .",

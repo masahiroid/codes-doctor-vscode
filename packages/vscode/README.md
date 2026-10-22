@@ -175,7 +175,7 @@ C++ analysis covers `.cpp`, `.cc`, `.cxx`, `.hpp`, and `.hh` files. Plain `.h`/`
 
 ## Development
 
-The extension lives in the [codes-doctor-vscode](https://github.com/masahiroid/codes-doctor-vscode) monorepo next to its analysis engine (`packages/engine`) and the CLI (`packages/cli`). Use Node.js 22 or newer:
+The extension lives in the [codes-doctor-vscode](https://github.com/masahiroid/codes-doctor-vscode) monorepo next to its analysis engine (`packages/engine`) and the CLI (`packages/cli`). Use Node.js 24 or newer:
 
 ```bash
 cd packages/vscode
