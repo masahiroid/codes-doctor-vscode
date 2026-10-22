@@ -1,6 +1,6 @@
 {
   "name": "@codes-doctor/engine",
-  "version": "7.0.0",
+  "version": "7.1.0",
   "private": true,
   "description": "Codes Doctor analysis engine: structural, security and dependency analysis with HTML reports",
   "license": "Apache-2.0",
@@ -14,7 +14,8 @@
   "scripts": {
     "build": "node scripts/build-report-libraries.mjs && rm -rf dist && tsc -p tsconfig.json && node scripts/localize-en.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --test test/*.test.js"
+    "test": "npm run build && node --test test/*.test.js",
+    "benchmark:security": "npm run build && node scripts/benchmark-security.mjs"
   },
   "dependencies": {
     "@typescript-eslint/typescript-estree": "^8.71.2",

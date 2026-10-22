@@ -155,12 +155,12 @@
   "Manual": "手動",
   "{count} test files excluded": "テスト{count}ファイルを除外",
   "{flows} input flows · {count} pattern candidates": "入力到達 {flows}件 · パターン候補 {count}件",
-  "\"Data flow\" items follow untrusted input to dangerous calls within each function. \"No flow found\" is not proof of safety: flows through other functions or files are not followed. \"Manual check\" items still need a manual check.": "「データフロー」は、関数内で外部入力が危険な処理に届くかを追跡します。「到達なし」は安全の証明ではありません（関数やファイルをまたぐ流れは追跡しません）。「手動確認」の項目は手動での点検が必要です。",
   "input from line {line} reaches this call": "{line}行目の入力がこの呼び出しに届きます",
-  "Untrusted input reaches this operation within one function. Check whether it is validated elsewhere, then fix or record the reason.": "関数内で外部入力がこの処理に届いています。別の箇所で検証されていないか確認し、修正するか理由を記録してください。",
   "No files to analyze": "対象ファイルなし",
   "Analyzed": "解析対象",
   "{count} source files in other languages (Python, Go, Java, …) were not checked: the security rules do not support them yet.": "他言語（Python、Go、Javaなど）のソースファイル{count}件は、セキュリティルールが未対応のため点検していません。",
   "Security rules scan cancelled.": "セキュリティルールの走査を中止しました。",
-  "Security rules scan finished: {count} input flows found. \"No flow found\" is not proof of safety.": "セキュリティルールの走査が完了しました。入力到達は{count}件です。「到達なし」は安全の証明ではありません。"
+  "Security rules scan finished: {count} input flows found. \"No flow found\" is not proof of safety.": "セキュリティルールの走査が完了しました。入力到達は{count}件です。「到達なし」は安全の証明ではありません。",
+  "\"Data flow\" items follow untrusted input to dangerous calls within each file, including through functions in the same file and past validation checks. \"No flow found\" is not proof of safety: flows through other files are not followed. \"Manual check\" items still need a manual check.": "「データフロー」は、ファイル内で外部入力が危険な処理に届くかを追跡します（同じファイル内の関数呼び出しと、条件による入力検証も考慮します）。「到達なし」は安全の証明ではありません（ファイルをまたぐ流れは追跡しません）。「手動確認」の項目は手動での点検が必要です。",
+  "Untrusted input reaches this operation. Check whether it is validated in another file, then fix or record the reason.": "外部入力がこの処理に届いています。別のファイルで検証されていないか確認し、修正するか理由を記録してください。"
 }

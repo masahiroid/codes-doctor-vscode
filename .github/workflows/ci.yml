@@ -36,6 +36,10 @@ jobs:
       - name: Engine tests
         run: npm test --prefix packages/engine
 
+      - name: Security detection benchmark
+        # Clones pinned vulnerable apps and compares findings with hand-labeled results.
+        run: node packages/engine/scripts/benchmark-security.mjs
+
       - name: CLI tests
         run: npm test --prefix packages/cli
 

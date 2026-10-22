@@ -1,0 +1,17 @@
+{
+  "categories": ["SQL Injection", "Command Injection", "Code Injection", "SSRF"],
+  "targets": [
+    {
+      "name": "juice-shop",
+      "repository": "https://github.com/juice-shop/juice-shop.git",
+      "commit": "399fba76194305a312693eee44f4df64bdf0c3ce",
+      "language": "typescript"
+    },
+    {
+      "name": "dvwa",
+      "repository": "https://github.com/digininja/DVWA.git",
+      "commit": "a1978a2fed195acd093010af6395f86a281537ca",
+      "language": "php"
+    }
+  ]
+}

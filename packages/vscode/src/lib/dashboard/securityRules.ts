@@ -79,7 +79,7 @@ function buildResults(view: DashboardHost, state: SecurityRulesState) {
   return `<div class="summary-line"><strong>${view.t('{flows} input flows · {count} pattern candidates', { flows, count: candidates })}</strong>
       <span class="history-meta">${view.t('{files} files scanned', { files: scan.scannedFiles })}${scan.testFilesExcluded ? ` · ${view.t('{count} test files excluded', { count: scan.testFilesExcluded })}` : ''} · ${escapeHtmlAttr(new Date(scan.at).toLocaleString(locale))}</span></div>
     ${buildCoverage(view, scan)}
-    <div class="note">${view.t('"Data flow" items follow untrusted input to dangerous calls within each function. "No flow found" is not proof of safety: flows through other functions or files are not followed. "Manual check" items still need a manual check.')}</div>
+    <div class="note">${view.t('"Data flow" items follow untrusted input to dangerous calls within each file, including through functions in the same file and past validation checks. "No flow found" is not proof of safety: flows through other files are not followed. "Manual check" items still need a manual check.')}</div>
     ${buildRuleRows(view, state)}`;
 }
 

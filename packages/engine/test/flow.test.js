@@ -169,3 +169,111 @@ mysqli_query($link, "SELECT 1");
 `;
   assert.deepEqual(sinks(await analyzeFlows('php', php)), ['SQL Injection@4', 'SQL Injection@5']);
 });
+
+test('validation in an if condition, its else branch and a guard clause makes input clean', async () => {
+  const php = `<?php
+$id = $_GET['id'];
+if (is_numeric($id)) {
+  mysqli_query($c, "SELECT * FROM t WHERE id = " . $id);
+}
+if (!preg_match('/^\\d+$/', $_GET['n'])) {
+  echo 'bad';
+} else {
+  $n = $_GET['n'];
+  mysqli_query($c, "SELECT * FROM t WHERE n = " . $n);
+}
+$ip = $_GET['ip'];
+if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+  die('invalid');
+}
+system('ping ' . $ip);
+$loose = $_GET['q'];
+if (preg_match('/\\d+/', $loose)) {
+  mysqli_query($c, "SELECT * FROM t WHERE q = " . $loose);
+}
+mysqli_query($c, "SELECT * FROM t WHERE id = " . $id);
+`;
+  // An unanchored pattern validates nothing, and the check does not reach past its branch.
+  assert.deepEqual(sinks(await analyzeFlows('php', php)), ['SQL Injection@19', 'SQL Injection@21']);
+
+  const js = `function h(req) {
+  const id = req.params.id;
+  if (!Number.isInteger(Number(id)) || !/^\\d+$/.test(id)) {
+    return;
+  }
+  db.query('SELECT * FROM t WHERE id = ' + id);
+  const host = req.query.host;
+  if (ALLOWED_HOSTS.includes(host)) fetch(host);
+  fetch(host);
+}`;
+  assert.deepEqual(sinks(await analyzeFlows('typescript', js)), ['SSRF@9']);
+});
+
+test('SQL escaping only protects a value placed inside quotes', async () => {
+  const php = `<?php
+$id = mysqli_real_escape_string($c, $_POST['id']);
+mysqli_query($c, "SELECT * FROM t WHERE id = '$id'");
+mysqli_query($c, "SELECT * FROM t WHERE id = $id");
+mysqli_query($c, "SELECT * FROM t WHERE id = '" . $id . "'");
+mysqli_query($c, "SELECT * FROM t WHERE id = " . $id);
+$q = "SELECT * FROM t WHERE name = '$id' AND id = $id";
+mysqli_query($c, $q);
+$x = isset($GLOBALS["link"]) ? mysqli_real_escape_string($GLOBALS["link"], $_GET['x']) : "";
+mysqli_query($c, "SELECT * FROM t WHERE x = '$x'");
+system('ls ' . escapeshellarg($id));
+`;
+  assert.deepEqual(sinks(await analyzeFlows('php', php)), ['SQL Injection@4', 'SQL Injection@6', 'SQL Injection@8']);
+});
+
+test('hash output is clean', async () => {
+  const js = "function h(req) {\n  db.query(`SELECT * FROM u WHERE p = '${security.hash(req.body.password)}'`);\n  db.query(`SELECT * FROM u WHERE e = '${req.body.email}'`);\n}";
+  assert.deepEqual(sinks(await analyzeFlows('typescript', js)), ['SQL Injection@3']);
+  const php = "<?php\n$p = md5($_POST['p']);\nmysqli_query($c, \"SELECT * FROM u WHERE p = '$p'\");\n";
+  assert.deepEqual(sinks(await analyzeFlows('php', php)), []);
+});
+
+test('flows through functions in the same file: parameters to sinks, arguments to return values', async () => {
+  const js = `function findUser(id) {
+  return db.query('SELECT * FROM users WHERE id = ' + id);
+}
+function runPing(host) {
+  const cmd = 'ping ' + host;
+  return exec(cmd);
+}
+function toNumber(value) {
+  return parseInt(value);
+}
+function passThrough(value) {
+  return value;
+}
+const currentId = () => req.query.id;
+function handler(req, res) {
+  findUser(req.params.id);
+  runPing(toNumber(req.query.host));
+  const target = passThrough(req.body.url);
+  fetch(target);
+  fetch(currentId());
+  findUser(42);
+}`;
+  const flows = await analyzeFlows('typescript', js);
+  assert.deepEqual(sinks(flows), ['SQL Injection@2', 'SSRF@19']);
+  const sql = flows.find((flow) => flow.category === 'SQL Injection');
+  assert.equal(sql.source.line, 16);
+  assert.equal(sql.sink.line, 2);
+
+  const php = `<?php
+class OrderController {
+  private function load($id) {
+    return DB::select("SELECT * FROM orders WHERE id = " . $id);
+  }
+  private function shell($arg) {
+    $safe = escapeshellarg($arg);
+    system('convert ' . $safe);
+  }
+  public function show() {
+    $this->load($_GET['id']);
+    $this->shell($_GET['file']);
+  }
+}`;
+  assert.deepEqual(sinks(await analyzeFlows('php', php)), ['SQL Injection@4']);
+});

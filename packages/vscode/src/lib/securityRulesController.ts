@@ -414,7 +414,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
       lines.push('', `**${t('Check steps')}:**`, ...rule.checkSteps.map((step) => `- ${escapeMarkdown(step)}`));
     }
     lines.push('', `_${candidate.flow
-      ? t('Untrusted input reaches this operation within one function. Check whether it is validated elsewhere, then fix or record the reason.')
+      ? t('Untrusted input reaches this operation. Check whether it is validated in another file, then fix or record the reason.')
       : t('This is a review candidate found by a pattern match. A manual check and evidence are still required.')}_`);
     return lines.join('\n');
   }

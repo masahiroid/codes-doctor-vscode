@@ -40,13 +40,28 @@ const SQL_METHODS = /(?:^|\.)(execute|executemany|executescript|query|queryRow|Q
 const GO_SQL_METHODS = /\.(?:Query|QueryRow|Exec|Prepare|Raw)$/;
 const GO_SQL_CONTEXT_METHODS = /\.(?:QueryContext|QueryRowContext|ExecContext|PrepareContext)$/;
 
+/** A regular expression literal anchored at both ends, e.g. `/^\d+$/` or `'/^[a-z]+$/i'`. */
+const ANCHORED_PATTERN = /^['"`]?\/\^[\s\S]*\$\/[a-zA-Z]*['"`]?$/;
+
 const JAVASCRIPT: FlowSpec = {
   functionTypes: set('function_declaration', 'function_expression', 'arrow_function', 'method_definition', 'generator_function_declaration'),
   identifierTypes: set('identifier', 'shorthand_property_identifier_pattern'),
   assignment: (node) => (node.type === 'variable_declarator' ? fields(node, 'name', 'value') : cFamilyAssignment(node)),
   callTypes: set('call_expression', 'new_expression'),
   sources: /\b(?:req|request)\.(?:query|body|params|headers|cookies|files)\b|\bctx\.(?:query|params|request\.body)\b|\bprocess\.argv\b|\blocation\.(?:search|hash|href)\b|\bdocument\.(?:cookie|URL|referrer)\b|\bURLSearchParams\b/,
-  sanitizers: /^(?:parseInt|parseFloat|Number|Boolean|encodeURIComponent|encodeURI|escape\w*|DOMPurify\.sanitize|validator\.\w+|path\.basename)$/,
+  sanitizers: /^(?:parseInt|parseFloat|Number|Boolean|encodeURIComponent|encodeURI|escape\w*|DOMPurify\.sanitize|validator\.\w+|path\.basename|(?:\w+\.)*(?:hash|md5|sha1|sha256|sha512)|md5|sha1|sha256)$/,
+  guards: {
+    ifTypes: set('if_statement'),
+    exitTypes: set('return_statement', 'throw_statement', 'continue_statement', 'break_statement'),
+    notTypes: set('unary_expression'),
+    validators: [
+      { callee: /^(?:Number\.(?:isInteger|isSafeInteger|isFinite)|isFinite|validator\.is(?:Int|Numeric|UUID|Email|IP|Alphanumeric|Alpha|MongoId|Hexadecimal)|isUUID|uuidValidate)$/, argument: 0 },
+      // /^\d+$/.test(x)
+      { callee: /^\/\^[\s\S]*\$\/[a-z]*\.test$/, argument: 0 },
+      // ALLOWED_HOSTS.includes(x): an allowlist held in a constant.
+      { callee: /^[A-Z][A-Z0-9_]+\.(?:includes|has)$/, argument: 0 },
+    ],
+  },
   sinks: [
     { category: COMMAND, callee: /(?:^|\.)(?:exec|execSync|spawn|spawnSync|execFile|execFileSync|fork)$/ },
     { category: CODE, callee: /^(?:eval|Function|new Function|setTimeout|setInterval|vm\.runIn\w+)$/, argument: 0 },
@@ -68,7 +83,21 @@ const PHP: FlowSpec = {
   },
   callTypes: set('function_call_expression', 'member_call_expression', 'scoped_call_expression', 'include_expression', 'require_expression', 'include_once_expression', 'require_once_expression'),
   sources: /\$_(?:GET|POST|REQUEST|COOKIE|FILES|SERVER)\b|\$request->(?:input|get|query|post|all)\(|\bfile_get_contents\('php:\/\/input'\)/,
-  sanitizers: /^(?:intval|floatval|boolval|escapeshellarg|escapeshellcmd|htmlspecialchars|htmlentities|strip_tags|basename|filter_var|\w+->quote|addslashes|mysqli_real_escape_string)$/,
+  sanitizers: /^(?:intval|floatval|boolval|escapeshellarg|escapeshellcmd|htmlspecialchars|htmlentities|strip_tags|basename|filter_var|\$?\w+->quote|md5|sha1|hash|crc32|password_hash)$/,
+  quoteSanitizers: /^(?:mysqli_real_escape_string|mysql_real_escape_string|addslashes|pg_escape_string|sqlite_escape_string|SQLite3::escapeString|\$?\w+->(?:real_escape_string|escapeString))$/,
+  guards: {
+    ifTypes: set('if_statement'),
+    exitTypes: set('return_statement', 'exit_statement', 'continue_statement', 'break_statement'),
+    exitCalls: /^(?:die|exit)$/,
+    notTypes: set('unary_op_expression'),
+    validators: [
+      { callee: /^(?:is_numeric|is_int|is_integer|is_float|ctype_digit|ctype_alnum|ctype_alpha|ctype_xdigit)$/, argument: 0 },
+      { callee: /^preg_match$/, argument: 1, requires: { argument: 0, text: ANCHORED_PATTERN } },
+      { callee: /^filter_var$/, argument: 0, requires: { argument: 1, text: /FILTER_VALIDATE_/ } },
+      // in_array($x, $allowed, true): strict allowlist membership.
+      { callee: /^in_array$/, argument: 0, requires: { argument: 2, text: /^true$/i } },
+    ],
+  },
   sinks: [
     { category: COMMAND, callee: /^(?:system|exec|shell_exec|passthru|popen|proc_open|pcntl_exec)$/, argument: 0 },
     { category: CODE, callee: /^(?:eval|assert|create_function|preg_replace)$/, argument: 0 },

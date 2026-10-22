@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.1.0
+
+- Data-flow analysis follows values through functions in the same file: a parameter that reaches a dangerous call inside a helper, and arguments or input sources carried by return values, are traced from the caller.
+- Validation in `if` conditions, `else` branches and guard clauses (`if (!valid($x)) exit;`) makes the validated expression clean: `is_numeric`, `ctype_*`, anchored `preg_match`, `filter_var(..., FILTER_VALIDATE_*)`, strict `in_array`, `Number.isInteger`, anchored `/^…$/.test`, `validator.is*` and constant allowlists.
+- SQL escaping (`mysqli_real_escape_string`, `addslashes`, `real_escape_string`) only protects a value inside quotes; a value placed into SQL outside quotes is reported again. Hash output (`md5`, `sha*`, `*.hash()`) is clean.
+- A detection benchmark on OWASP Juice Shop and DVWA, pinned to a commit with every finding labeled by hand, runs in CI: 38 true positives, 0 false positives and 3 known misses (7.0: 34, 6 and 7).
+
 ## 7.0.0
 
 - Add security rule sets: sync the rule packs from masahiroid/security-rules (SHA-256 verified, cached in the extension's storage for offline use; the source is a user setting only, so a workspace cannot pick the rules it is checked with), flag review candidates in Problems and hovers with source, check steps and management-sheet column, scan the workspace, and export JSON/CSV audit reports. Commands: Sync Security Rules, Scan Workspace with Security Rules, Export Security Audit Report. The dashboard has a Security Rules section: sync, choose which packs to check, scan, see results per rule with clickable locations and check steps, and export. Dashboard sections (Security Rules, Report History, Settings, AI Review) are now collapsible and remember their state. Network access is opt-in (codeDoctor.securityRules.autoSync). Matches are review candidates, never a compliance verdict.

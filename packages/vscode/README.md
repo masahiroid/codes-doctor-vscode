@@ -109,16 +109,16 @@ Codes Doctor can load the rule packs published at [masahiroid/security-rules](ht
 - **Codes Doctor: Scan Workspace with Security Rules** scans the whole workspace. **Codes Doctor: Export Security Audit Report** writes JSON and CSV (UTF-8 with BOM, for Excel) to `.codes-doctor/security-audit/`.
 - Nothing is downloaded until you run a sync, unless you turn on `codeDoctor.securityRules.autoSync` (startup and every `syncIntervalHours`). `codeDoctor.securityRules.sourceUrl` can point at an internal mirror.
 
-Rules that carry a `detect` block are checked by data-flow analysis instead of a regular expression: only untrusted input that reaches a SQL, command, code-execution or SSRF call within one function is reported, with the path from source to sink. Flows through other functions or files are not followed yet, so "No flow found" is not proof of safety. Test code is excluded.
+Rules that carry a `detect` block are checked by data-flow analysis instead of a regular expression: only untrusted input that reaches a SQL, command, code-execution or SSRF call is reported, with the path from source to sink. The analysis follows values through functions in the same file, recognizes validation in `if` conditions and guard clauses (`is_numeric`, anchored `preg_match`, `filter_var`, `Number.isInteger`, allowlists), and knows that SQL escaping only helps inside quotes. Flows through other files are not followed yet, so "No flow found" is not proof of safety. Test code is excluded.
 
-Measured on intentionally vulnerable apps (security rules 2.1.0, NICT A2B pack):
+Measured on intentionally vulnerable apps pinned to a commit (SQL, command, code execution and SSRF; test code excluded). Every finding is labeled by hand, and CI fails when a true positive disappears or an unlabeled finding appears ([benchmark](../engine/benchmark/security)).
 
-| Project | Data-flow findings | Notes |
-| --- | --- | --- |
-| [OWASP Juice Shop](https://github.com/juice-shop/juice-shop) (TypeScript, 508 files) | SQL 13, SSRF 1, code execution 1 | Finds the login and search SQL injections, the profile-image SSRF and the `eval` on user input. NoSQL injection and the sandboxed `vm` order exploit are out of scope. |
-| [DVWA](https://github.com/digininja/DVWA) (PHP, 179 files) | SQL 14, command 11 | Finds the low/high SQL and command-injection levels and the API `exec`. Misses SQL that is escaped but used unquoted (medium) and input stored in the session first (high). Flags the "impossible" command level, which validates the input with `if` conditions that are not recognized yet. |
+| Project | True positives | False positives | Known misses |
+| --- | --- | --- | --- |
+| [OWASP Juice Shop](https://github.com/juice-shop/juice-shop) (TypeScript) | 13 | 0 | 1: input passed to a `vm` sandbox through an object |
+| [DVWA](https://github.com/digininja/DVWA) (PHP) | 25 | 0 | 2: input stored in the session on another page (second order) |
 
-Scanning Juice Shop takes about 2 seconds. In this repository (a VS Code extension, not a web API) it reports nothing, where the earlier regular expressions flagged 123 lines.
+7.0 found 34 true positives with 6 false positives and 7 known misses on the same code. NoSQL injection is not covered yet. In this repository (a VS Code extension, not a web API) the scan reports nothing.
 
 A pattern match is a **review candidate**, never a pass or a fail. Every rule is a manual check, so "no match" does not mean compliant, and the report states `compliance: unverified`. The hash detects tampering or mix-ups in transit; it is not a signature from the publisher, so protect write access to the rules repository. Source code never leaves your machine.
 

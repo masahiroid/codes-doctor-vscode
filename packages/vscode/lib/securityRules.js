@@ -322,7 +322,7 @@ function buildAuditReport(packs, results, invalid, context, compiled = [], engin
             verification: 'manual',
             method,
             // A data flow is input reaching the operation; a regex hit only marks code to look at.
-            // Neither "no flow" nor "no hit" proves the item safe: the analysis stays within one function.
+            // Neither "no flow" nor "no hit" proves the item safe: the analysis stays within one file.
             status: failed
                 ? 'not_evaluated'
                 : method === 'dataflow'
@@ -338,7 +338,7 @@ function buildAuditReport(packs, results, invalid, context, compiled = [], engin
     return {
         ...context,
         compliance: 'unverified',
-        note: 'Data flows show untrusted input reaching a dangerous operation within one function. Pattern matches are review candidates only. Neither an empty data-flow result nor no match establishes compliance; every item still needs a manual check and evidence.',
+        note: 'Data flows show untrusted input reaching a dangerous operation within one file. Pattern matches are review candidates only. Neither an empty data-flow result nor no match establishes compliance; every item still needs a manual check and evidence.',
         packs: packs.map(({ id, version, channel, mandatory, sha256, publishedAt, advisoryPublishedAt }) => ({ id, version, channel, mandatory, sha256, publishedAt, advisoryPublishedAt })),
         invalidRules: invalid,
         rules,

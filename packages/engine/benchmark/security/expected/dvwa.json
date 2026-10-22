@@ -1,0 +1,193 @@
+{
+  "findings": [
+    {
+      "category": "Code Injection",
+      "file": "vulnerabilities/view_help.php",
+      "line": 20,
+      "label": "tp",
+      "note": "$_GET id and locale reach eval through a file path"
+    },
+    {
+      "category": "Code Injection",
+      "file": "vulnerabilities/view_help.php",
+      "line": 22,
+      "label": "tp",
+      "note": "$_GET id and locale reach eval through a file path"
+    },
+    {
+      "category": "Command Injection",
+      "file": "vulnerabilities/api/src/HealthController.php",
+      "line": 88,
+      "label": "tp",
+      "note": "command injection level (api/src/HealthController.php)"
+    },
+    {
+      "category": "Command Injection",
+      "file": "vulnerabilities/exec/source/high.php",
+      "line": 26,
+      "label": "tp",
+      "note": "command injection level (exec/source/high.php)"
+    },
+    {
+      "category": "Command Injection",
+      "file": "vulnerabilities/exec/source/high.php",
+      "line": 30,
+      "label": "tp",
+      "note": "command injection level (exec/source/high.php)"
+    },
+    {
+      "category": "Command Injection",
+      "file": "vulnerabilities/exec/source/low.php",
+      "line": 10,
+      "label": "tp",
+      "note": "command injection level (exec/source/low.php)"
+    },
+    {
+      "category": "Command Injection",
+      "file": "vulnerabilities/exec/source/low.php",
+      "line": 14,
+      "label": "tp",
+      "note": "command injection level (exec/source/low.php)"
+    },
+    {
+      "category": "Command Injection",
+      "file": "vulnerabilities/exec/source/medium.php",
+      "line": 19,
+      "label": "tp",
+      "note": "command injection level (exec/source/medium.php)"
+    },
+    {
+      "category": "Command Injection",
+      "file": "vulnerabilities/exec/source/medium.php",
+      "line": 23,
+      "label": "tp",
+      "note": "command injection level (exec/source/medium.php)"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "dvwa/includes/DBMS/MySQL.php",
+      "line": 60,
+      "label": "tp",
+      "note": "setup script puts $_SERVER values (PHP_SELF, SERVER_NAME) into SQL"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "dvwa/includes/DBMS/PGSQL.php",
+      "line": 66,
+      "label": "tp",
+      "note": "setup script puts $_SERVER values (PHP_SELF, SERVER_NAME) into SQL"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/authbypass/change_user_details.php",
+      "line": 48,
+      "label": "tp",
+      "note": "SQL injection (vulnerabilities/authbypass/change_user_details.php)"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/bac/source/low.php",
+      "line": 81,
+      "label": "tp",
+      "note": "X-Forwarded-For header inserted into SQL"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/bac/source/medium.php",
+      "line": 73,
+      "label": "tp",
+      "note": "X-Forwarded-For header inserted into SQL"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/brute/source/low.php",
+      "line": 13,
+      "label": "tp",
+      "note": "SQL injection (brute/source/low.php)"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/sqli_blind/source/high.php",
+      "line": 13,
+      "label": "tp",
+      "note": "SQL injection (sqli_blind/source/high.php)"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/sqli_blind/source/high.php",
+      "line": 35,
+      "label": "tp",
+      "note": "SQL injection (sqli_blind/source/high.php)"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/sqli_blind/source/low.php",
+      "line": 13,
+      "label": "tp",
+      "note": "SQL injection (sqli_blind/source/low.php)"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/sqli_blind/source/low.php",
+      "line": 34,
+      "label": "tp",
+      "note": "SQL injection (sqli_blind/source/low.php)"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/sqli_blind/source/medium.php",
+      "line": 15,
+      "label": "tp",
+      "note": "escaped with mysqli_real_escape_string but used unquoted"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/sqli_blind/source/medium.php",
+      "line": 36,
+      "label": "tp",
+      "note": "escaped with mysqli_real_escape_string but used unquoted"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/sqli/source/low.php",
+      "line": 11,
+      "label": "tp",
+      "note": "SQL injection (sqli/source/low.php)"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/sqli/source/low.php",
+      "line": 34,
+      "label": "tp",
+      "note": "SQL injection (sqli/source/low.php)"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/sqli/source/medium.php",
+      "line": 12,
+      "label": "tp",
+      "note": "escaped with mysqli_real_escape_string but used unquoted"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/sqli/source/medium.php",
+      "line": 30,
+      "label": "tp",
+      "note": "escaped with mysqli_real_escape_string but used unquoted"
+    }
+  ],
+  "misses": [
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/sqli/source/high.php",
+      "line": 11,
+      "note": "input stored in $_SESSION on another page (second order)"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "vulnerabilities/sqli/source/high.php",
+      "line": 31,
+      "note": "second order through $_SESSION"
+    }
+  ]
+}

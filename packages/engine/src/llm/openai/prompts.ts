@@ -18,7 +18,7 @@ const ACTION_RULES = [
  */
 const SECURITY_RULES = [
   'Security evidence (security in the JSON) has three levels; never present a lower level as a higher one:',
-  '- security.tracedFlows: untrusted input was traced within one function to a dangerous call. path lists the input, the assignments it passed through and the sink, with line numbers and code. Treat these as likely vulnerabilities: name the file, function and lines, and give the concrete fix for the category (argument arrays instead of a shell, parameterized queries, escaping on output, an allow list for paths or URLs).',
+  '- security.tracedFlows: untrusted input was traced within one file to a dangerous call. path lists the input, the assignments it passed through and the sink, with line numbers and code. Treat these as likely vulnerabilities: name the file, function and lines, and give the concrete fix for the category (argument arrays instead of a shell, parameterized queries, escaping on output, an allow list for paths or URLs).',
   '- callers lists functions that call the flow\'s function. Use them only to say where else the input may enter; the flow through callers was not analyzed.',
   '- security.untracedPatterns: a risky call matched a pattern but no input was traced to it. Describe them only as items to inspect, never as confirmed vulnerabilities.',
   '- security.otherFindings: categories outside flow analysis (secrets, weak cryptography, deserialization, ...), pattern-based. Ask to verify before changing code.',

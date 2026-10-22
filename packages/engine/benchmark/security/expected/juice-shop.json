@@ -1,0 +1,103 @@
+{
+  "findings": [
+    {
+      "category": "Code Injection",
+      "file": "routes/userProfile.ts",
+      "line": 65,
+      "label": "tp",
+      "note": "eval of user-controlled username"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "data/static/codefixes/dbSchemaChallenge_1.ts",
+      "line": 5,
+      "label": "tp",
+      "note": "challenge fix option that is still injectable"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "data/static/codefixes/dbSchemaChallenge_3.ts",
+      "line": 11,
+      "label": "tp",
+      "note": "challenge fix option that is still injectable"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "data/static/codefixes/loginAdminChallenge_1.ts",
+      "line": 18,
+      "label": "tp",
+      "note": "challenge fix option that is still injectable"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "data/static/codefixes/loginBenderChallenge_1.ts",
+      "line": 18,
+      "label": "tp",
+      "note": "challenge fix option that is still injectable"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "data/static/codefixes/loginBenderChallenge_4.ts",
+      "line": 15,
+      "label": "tp",
+      "note": "challenge fix option that is still injectable"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "data/static/codefixes/loginJimChallenge_2.ts",
+      "line": 15,
+      "label": "tp",
+      "note": "challenge fix option that is still injectable"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "data/static/codefixes/loginJimChallenge_4.ts",
+      "line": 18,
+      "label": "tp",
+      "note": "challenge fix option that is still injectable"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "data/static/codefixes/unionSqlInjectionChallenge_1.ts",
+      "line": 6,
+      "label": "tp",
+      "note": "challenge fix option that is still injectable"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "data/static/codefixes/unionSqlInjectionChallenge_3.ts",
+      "line": 10,
+      "label": "tp",
+      "note": "challenge fix option that is still injectable"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "routes/login.ts",
+      "line": 34,
+      "label": "tp",
+      "note": "login SQL injection (req.body.email interpolated)"
+    },
+    {
+      "category": "SQL Injection",
+      "file": "routes/search.ts",
+      "line": 23,
+      "label": "tp",
+      "note": "search UNION SQL injection"
+    },
+    {
+      "category": "SSRF",
+      "file": "routes/profileImageUrlUpload.ts",
+      "line": 24,
+      "label": "tp",
+      "note": "SSRF via imageUrl"
+    }
+  ],
+  "misses": [
+    {
+      "category": "Code Injection",
+      "file": "routes/b2bOrder.ts",
+      "line": 23,
+      "note": "input passes through a vm sandbox object, not a direct argument"
+    }
+  ]
+}
