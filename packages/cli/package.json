@@ -1,6 +1,6 @@
 {
   "name": "codes-doctor",
-  "version": "7.1.1",
+  "version": "7.1.2",
   "private": true,
   "description": "Codes Doctor command line: structural, security and dependency analysis with an HTML report",
   "license": "Apache-2.0",
@@ -17,7 +17,7 @@
   },
   "scripts": {
     "vendor": "npm run build --prefix ../engine && node ../../scripts/vendor-engine.mjs .",
-    "build": "npm run vendor && tsc -p tsconfig.json",
+    "build": "node ../../scripts/verify-install.mjs ../engine . && npm run vendor && tsc -p tsconfig.json",
     "test": "npm run build && node --test test/*.test.js"
   },
   "dependencies": {

@@ -89,6 +89,10 @@ jobs:
         if: steps.plan.outputs.version || steps.plan.outputs.bump == 'true'
         run: npm run install:all
 
+      - name: Verify dependencies
+        if: steps.plan.outputs.version || steps.plan.outputs.bump == 'true'
+        run: npm run verify:deps
+
       - name: Test
         if: steps.plan.outputs.version || steps.plan.outputs.bump == 'true'
         run: |

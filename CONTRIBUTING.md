@@ -19,6 +19,7 @@ Please include the version, your environment, the steps to reproduce, and what y
 ## Requirements for acceptable contributions
 
 - Run the project's tests and linter as described in the README (typically `npm test` and `npm run lint`) and make sure they pass.
+- When you add or update a dependency, run `npm run verify:deps`. Decide each new install script explicitly in `allowScripts`, and never allowlist a vulnerability without a reason and an expiry date.
 - New features and bug fixes add or update tests that cover the changed behavior and its failure cases.
 - Follow the existing code style and structure of the repository.
 - Update the README and other documentation when behavior changes. Keep English and Japanese documents consistent where both exist.
@@ -29,4 +30,4 @@ Please include the version, your environment, the steps to reproduce, and what y
 
 # コントリビュートの手順（日本語）
 
-バグ報告・機能要望は GitHub Issues へお願いします（脆弱性は SECURITY.md に従い非公開で報告してください）。Pull Request は既定ブランチから作成したブランチで、1つの目的に絞って作成してください。README に記載の方法でテスト等を実行して通ることを確認し、挙動を変える場合はテストまたは検証内容を追加してください。ドキュメントの更新、秘密情報をコミットしないこと、リポジトリのライセンスでの受け入れにご同意ください。
+バグ報告・機能要望は GitHub Issues へお願いします（脆弱性は SECURITY.md に従い非公開で報告してください）。Pull Request は既定ブランチから作成したブランチで、1つの目的に絞って作成してください。README に記載の方法でテスト等を実行して通ることを確認し、依存関係を追加・更新した場合は `npm run verify:deps` も実行してください（インストール時スクリプトは `allowScripts` で許可か拒否を明示し、脆弱性を許可リストに入れる場合は理由と期限を記載してください）。挙動を変える場合はテストまたは検証内容を追加してください。ドキュメントの更新、秘密情報をコミットしないこと、リポジトリのライセンスでの受け入れにご同意ください。

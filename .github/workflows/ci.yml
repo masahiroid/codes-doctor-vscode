@@ -32,11 +32,10 @@ jobs:
       - name: Install
         run: npm run install:all
 
-      - name: Audit production dependencies
-        run: |
-          for dir in packages/engine packages/cli packages/vscode; do
-            (cd "$dir" && npm audit --omit=dev --audit-level=high)
-          done
+      - name: Verify dependencies
+        # node_modules matches the lockfiles, registry signatures are valid, every install script is
+        # explicitly allowed or denied, and npm advisories and OSV report nothing.
+        run: npm run verify:deps
 
       - name: Engine tests
         run: npm test --prefix packages/engine

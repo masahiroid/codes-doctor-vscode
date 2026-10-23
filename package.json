@@ -7,6 +7,8 @@
     "install:all": "npm ci --prefix packages/engine && npm ci --prefix packages/cli && npm ci --prefix packages/vscode",
     "build": "npm run build --prefix packages/engine && npm run build --prefix packages/cli && npm run build --prefix packages/vscode",
     "test": "npm test --prefix packages/engine && npm test --prefix packages/cli && npm test --prefix packages/vscode",
-    "package:vsix": "npm run package --prefix packages/vscode"
+    "package:vsix": "npm run install:all && npm run package:release --prefix packages/vscode",
+    "audit": "node scripts/osv-audit.mjs && npm audit --audit-level=low --prefix packages/engine && npm audit --audit-level=low --prefix packages/cli && npm audit --audit-level=low --prefix packages/vscode",
+    "verify:deps": "node scripts/verify-install.mjs packages/engine packages/cli packages/vscode && node scripts/check-supply-chain.mjs && npm run audit"
   }
 }

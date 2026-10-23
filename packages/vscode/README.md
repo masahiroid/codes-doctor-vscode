@@ -178,12 +178,15 @@ C++ analysis covers `.cpp`, `.cc`, `.cxx`, `.hpp`, and `.hh` files. Plain `.h`/`
 The extension lives in the [codes-doctor-vscode](https://github.com/masahiroid/codes-doctor-vscode) monorepo next to its analysis engine (`packages/engine`) and the CLI (`packages/cli`). Use Node.js 24 or newer:
 
 ```bash
+npm ci --prefix packages/engine
 cd packages/vscode
-npm install
+npm ci                # exactly what package-lock.json lists
 npm run vendor:csap   # builds packages/engine and copies it into vendor/
 npm test              # bilingual UI, reports, review prompts
 npm run package       # produces codes-doctor-<version>.vsix
 ```
+
+Packaging refuses to run when `node_modules` does not match `package-lock.json`. To release-check dependencies, run `npm run verify:deps` at the repository root.
 
 The engine build produces the Japanese (`vendor/csap`) and English (`vendor/csap-en`) engines and the report's browser libraries (`vendor/assets`); the extension uses them unchanged.
 

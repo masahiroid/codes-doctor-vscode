@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.1.2
+
+- Development and release checks: installs are refused outside Node.js 24+, builds stop when node_modules does not match package-lock.json, and CI and every release verify registry signatures, require each dependency install script to be explicitly allowed or denied, and audit all dependencies (development ones included) with npm audit and OSV. Run them locally with `npm run verify:deps`; `npm run package:vsix` now packages from a clean install.
+
 ## 7.1.1
 
 - Fix: TypeScript files with generic arrow functions (`<T>(value: T) => value`) failed to parse and were silently left out of the analysis, the call graph and the AST view. JSX is now enabled only for file types that allow it.

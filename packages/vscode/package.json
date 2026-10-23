@@ -2,7 +2,7 @@
   "name": "codes-doctor",
   "displayName": "Codes Doctor",
   "description": "%extension.description%",
-  "version": "7.1.1",
+  "version": "7.1.2",
   "publisher": "masahirocom",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -26,6 +26,13 @@
   ],
   "engines": {
     "vscode": "^1.90.0"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=24",
+      "onFail": "error"
+    }
   },
   "categories": [
     "Other",
@@ -310,14 +317,14 @@
   "scripts": {
     "lint": "npm run typecheck",
     "vendor:csap": "npm run build --prefix ../engine && node ../../scripts/vendor-engine.mjs .",
-    "prepackage": "npm run vendor:csap && npm run build && npm run bundle",
+    "prepackage": "node ../../scripts/verify-install.mjs ../engine . && npm run vendor:csap && npm run build && npm run bundle",
     "package": "npx @vscode/vsce package --no-dependencies",
     "package:release": "npm run prepackage && mkdir -p releases && VERSION=$(node -p \"require('./package.json').version\") && npx @vscode/vsce package --no-dependencies -o releases/codes-doctor-$VERSION.vsix && cp releases/codes-doctor-$VERSION.vsix releases/codes-doctor-latest.vsix",
-    "prepublish:marketplace": "npm run vendor:csap && npm run build && npm run bundle",
+    "prepublish:marketplace": "node ../../scripts/verify-install.mjs ../engine . && npm run vendor:csap && npm run build && npm run bundle",
     "publish:marketplace": "npx @vscode/vsce publish --no-dependencies",
-    "publish:patch": "npm run vendor:csap && npm run build && npm run bundle && npx @vscode/vsce publish --no-dependencies patch",
-    "publish:minor": "npm run vendor:csap && npm run build && npm run bundle && npx @vscode/vsce publish --no-dependencies minor",
-    "publish:major": "npm run vendor:csap && npm run build && npm run bundle && npx @vscode/vsce publish --no-dependencies major",
+    "publish:patch": "node ../../scripts/verify-install.mjs ../engine . && npm run vendor:csap && npm run build && npm run bundle && npx @vscode/vsce publish --no-dependencies patch",
+    "publish:minor": "node ../../scripts/verify-install.mjs ../engine . && npm run vendor:csap && npm run build && npm run bundle && npx @vscode/vsce publish --no-dependencies minor",
+    "publish:major": "node ../../scripts/verify-install.mjs ../engine . && npm run vendor:csap && npm run build && npm run bundle && npx @vscode/vsce publish --no-dependencies major",
     "test": "npm run build && npm run bundle && node --test test/*.test.js",
     "build": "node node_modules/typescript-compiler/bin/tsc -p tsconfig.json",
     "typecheck": "node node_modules/typescript-compiler/bin/tsc -p tsconfig.json --noEmit",
@@ -337,5 +344,9 @@
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
     "typescript-compiler": "npm:typescript@^7.0.2"
+  },
+  "allowScripts": {
+    "esbuild": false,
+    "@vscode/vsce-sign": false
   }
 }

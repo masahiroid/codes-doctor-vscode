@@ -178,12 +178,15 @@ C++の解析対象は `.cpp` / `.cc` / `.cxx` / `.hpp` / `.hh` です。`.h` / `
 この拡張機能は、解析エンジン（`packages/engine`）と CLI（`packages/cli`）と同じ [codes-doctor-vscode](https://github.com/masahiroid/codes-doctor-vscode) モノレポで管理しています。Node.js 24 以降を使ってください。
 
 ```bash
+npm ci --prefix packages/engine
 cd packages/vscode
-npm install
+npm ci                # package-lock.json のとおりに入れる
 npm run vendor:csap   # packages/engine をビルドして vendor/ にコピー
 npm test              # 画面の二言語対応、レポート、レビュー用プロンプトを検証
 npm run package       # codes-doctor-<version>.vsix を生成
 ```
+
+`node_modules` が `package-lock.json` と一致しない場合、パッケージ作成は止まります。依存関係の検査は、リポジトリのルートで `npm run verify:deps` を実行してください。
 
 エンジンのビルドで、日本語版（`vendor/csap`）、英語版（`vendor/csap-en`）、レポート用ブラウザーライブラリー（`vendor/assets`）ができます。拡張機能はそれらをそのまま使います。
 
