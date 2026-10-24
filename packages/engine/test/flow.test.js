@@ -428,3 +428,21 @@ function g(req) {
   assert.deepEqual(await analyzeTaintRules([rule], 'typescript', 'a.ts', code), [null]);
   assert.throws(() => compileTaintRule('X', { type: 'object_access', languages: ['typescript'], owner_references: ['(a+)+'] }), /nested quantifiers/);
 });
+
+test('security file scan: file order, traced flows before patterns, test code marked, and the score built from the same issues', async () => {
+  const { scanSecurityIssues } = require('../dist/analyzer/security/fileScan');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'codes-filescan-'));
+  try {
+    fs.mkdirSync(path.join(dir, 'test'));
+    fs.writeFileSync(path.join(dir, 'a.js'), "function h(req) {\n  eval('1');\n  child_process.exec(req.query.cmd);\n}\n");
+    fs.writeFileSync(path.join(dir, 'test', 'b.test.js'), 'eval(input);\n');
+    const files = [{ filePath: path.join(dir, 'a.js') }, { filePath: path.join(dir, 'test', 'b.test.js') }];
+    const issues = await scanSecurityIssues(files, dir, 'typescript');
+    assert.deepEqual(issues.map((i) => [path.basename(i.filePath), i.lineNumber, i.confidence ?? 'pattern', Boolean(i.inTest)]),
+      [['a.js', 3, 'flow', false], ['a.js', 2, 'pattern', false], ['b.test.js', 1, 'pattern', true]]);
+    const score = await calculateSecurityScore([{ language: 'typescript', files }], dir);
+    assert.deepEqual(score.issues, issues);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
