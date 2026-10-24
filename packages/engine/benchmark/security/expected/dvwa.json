@@ -64,6 +64,132 @@
       "note": "command injection level (exec/source/medium.php)"
     },
     {
+      "category": "Object Access",
+      "file": "vulnerabilities/bac/source/low.php",
+      "line": 23,
+      "label": "tp",
+      "note": "user lookup by user_id; the only check compares with a client-controlled cookie"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/bac/source/low.php",
+      "line": 36,
+      "label": "tp",
+      "note": "user record returned by user_id; the only check compares with a client-controlled cookie"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/bac/source/low.php",
+      "line": 81,
+      "label": "tp",
+      "note": "access log written for any requested user_id with no ownership check"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/bac/source/medium.php",
+      "line": 22,
+      "label": "tp",
+      "note": "user lookup by user_id; the check is a fixed token"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/bac/source/medium.php",
+      "line": 29,
+      "label": "tp",
+      "note": "user record returned by user_id; the check is a fixed token"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/bac/source/medium.php",
+      "line": 73,
+      "label": "tp",
+      "note": "access log written for any requested user_id with no ownership check"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/sqli_blind/source/impossible.php",
+      "line": 18,
+      "label": "tp",
+      "note": "any user record is returned by user_id with no ownership check"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/sqli_blind/source/impossible.php",
+      "line": 27,
+      "label": "tp",
+      "note": "any user record is returned by user_id with no ownership check"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/sqli_blind/source/low.php",
+      "line": 13,
+      "label": "tp",
+      "note": "any user record is returned by user_id with no ownership check"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/sqli_blind/source/low.php",
+      "line": 34,
+      "label": "tp",
+      "note": "any user record is returned by user_id with no ownership check"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/sqli_blind/source/medium.php",
+      "line": 15,
+      "label": "tp",
+      "note": "any user record is returned by user_id with no ownership check"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/sqli_blind/source/medium.php",
+      "line": 36,
+      "label": "tp",
+      "note": "any user record is returned by user_id with no ownership check"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/sqli/source/impossible.php",
+      "line": 17,
+      "label": "tp",
+      "note": "any user record is returned by user_id with no ownership check"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/sqli/source/impossible.php",
+      "line": 35,
+      "label": "tp",
+      "note": "any user record is returned by user_id with no ownership check"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/sqli/source/low.php",
+      "line": 11,
+      "label": "tp",
+      "note": "any user record is returned by user_id with no ownership check"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/sqli/source/low.php",
+      "line": 34,
+      "label": "tp",
+      "note": "any user record is returned by user_id with no ownership check"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/sqli/source/medium.php",
+      "line": 12,
+      "label": "tp",
+      "note": "any user record is returned by user_id with no ownership check"
+    },
+    {
+      "category": "Object Access",
+      "file": "vulnerabilities/sqli/source/medium.php",
+      "line": 30,
+      "label": "tp",
+      "note": "any user record is returned by user_id with no ownership check"
+    },
+    {
       "category": "SQL Injection",
       "file": "dvwa/includes/DBMS/MySQL.php",
       "line": 60,

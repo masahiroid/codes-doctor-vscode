@@ -162,5 +162,17 @@
   "Security rules scan cancelled.": "セキュリティルールの走査を中止しました。",
   "Security rules scan finished: {count} input flows found. \"No flow found\" is not proof of safety.": "セキュリティルールの走査が完了しました。入力到達は{count}件です。「到達なし」は安全の証明ではありません。",
   "\"Data flow\" items follow untrusted input to dangerous calls within each file, including through functions in the same file and past validation checks. \"No flow found\" is not proof of safety: flows through other files are not followed. \"Manual check\" items still need a manual check.": "「データフロー」は、ファイル内で外部入力が危険な処理に届くかを追跡します（同じファイル内の関数呼び出しと、条件による入力検証も考慮します）。「到達なし」は安全の証明ではありません（ファイルをまたぐ流れは追跡しません）。「手動確認」の項目は手動での点検が必要です。",
-  "Untrusted input reaches this operation. Check whether it is validated in another file, then fix or record the reason.": "外部入力がこの処理に届いています。別のファイルで検証されていないか確認し、修正するか理由を記録してください。"
+  "Untrusted input reaches this operation. Check whether it is validated in another file, then fix or record the reason.": "外部入力がこの処理に届いています。別のファイルで検証されていないか確認し、修正するか理由を記録してください。",
+  "input from line {line} is passed to {target}": "{line}行目の入力が {target} の処理に渡ります",
+  "Following calls between files…": "ファイル間の呼び出しを解析中…",
+  "Scanning files": "ファイルを走査中",
+  "No ownership check: {count}": "所有者照合なし {count}件",
+  "Ownership checks found": "照合の不足なし",
+  "Access": "アクセス制御",
+  "Filtered by an owner field — check where its value comes from": "所有者項目で絞り込み — 値の出所を確認",
+  "Ownership check found": "所有者照合あり",
+  "No ownership check": "所有者照合なし",
+  "the ID from line {line} selects the object here without a check that it belongs to the signed-in user": "{line}行目のIDでここの対象を選んでいますが、ログイン中のユーザーの所有物かを確認していません",
+  "Compare the object owner with the signed-in user, scope the lookup to that user, or call an authorization check. If the object is public by design, record the reason.": "対象の所有者とログイン中のユーザーを照合するか、問い合わせをそのユーザーで絞り込むか、認可チェックを呼んでください。設計上公開してよい対象であれば、その理由を記録してください。",
+  "\"Access\" items list request handlers where a requested ID selects an object with no ownership check found. Whether an object may be public cannot be judged from code.": "「アクセス制御」は、リクエストで指定されたIDで対象を選んでいるのに、所有者の照合が見つからない処理を示します。その対象を公開してよいかは、コードからは判断できません。"
 }

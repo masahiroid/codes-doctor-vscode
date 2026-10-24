@@ -1,5 +1,11 @@
 {
-  "categories": ["SQL Injection", "Command Injection", "Code Injection", "SSRF"],
+  "categories": [
+    "SQL Injection",
+    "Command Injection",
+    "Code Injection",
+    "SSRF",
+    "Object Access"
+  ],
   "targets": [
     {
       "name": "juice-shop",

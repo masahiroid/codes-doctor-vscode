@@ -13,15 +13,42 @@ const NESTED_QUANTIFIER = /\((?:[^()\\]|\\.)*[+*](?:[^()\\]|\\.)*\)\s*(?:[+*]|\{
 export interface FlowEngine {
   compileTaintRule(id: string, detect: unknown): TaintRule;
   analyzeTaintRules(rules: TaintRule[], language: string, filePath: string, content: string): Promise<Array<FlowResult[] | null>>;
+  buildTaintRuleIndex(rules: TaintRule[], files: Array<{ path: string; language: string }>, read: (path: string) => Promise<string>): Promise<ProjectIndex>;
+  analyzeTaintRulesWithIndex(index: ProjectIndex, rules: TaintRule[], language: string, filePath: string, content: string): Promise<Array<FlowResult[] | null>>;
+  analyzeAccessRules(rules: TaintRule[], language: string, filePath: string, content: string, index?: ProjectIndex): Promise<Array<EndpointResult[] | null>>;
   taintRuleCovers(rule: TaintRule, language: string): boolean;
   isTestPath(filePath: string): boolean;
 }
-export type TaintRule = { id: string; languages: ReadonlySet<string> };
+export type TaintRule = { id: string; kind?: 'taint' | 'access'; languages: ReadonlySet<string> };
+
+export type EndpointStatus = 'owner_check_missing' | 'owner_field_unverified' | 'owner_checked' | 'no_object_access';
+/** A request handler and whether its object lookups check ownership (access rules only). */
+export interface EndpointResult {
+  function?: string;
+  line: number;
+  route?: string;
+  status: EndpointStatus;
+  evidence?: FlowLine;
+  findings: FlowResult[];
+}
+/** Endpoints found in one file, per rule (`packId/ruleId`). */
+export type EndpointsByRule = Map<string, EndpointResult[]>;
+export const ruleKey = (packId: string, ruleId: string) => `${packId}/${ruleId}`;
+/** Function summaries of the whole workspace, built by the engine; opaque here. */
+export type ProjectIndex = { readonly __projectIndex?: never };
+/** A line on a data flow; `file` is set when the line is in another file than the one scanned. */
+export interface FlowLine {
+  line: number;
+  code: string;
+  file?: string;
+}
 export interface FlowResult {
   category: string;
-  source: { line: number; code: string };
-  steps: Array<{ line: number; code: string }>;
-  sink: { line: number; code: string };
+  source: FlowLine;
+  steps: FlowLine[];
+  sink: FlowLine;
+  /** When the sink is in another file: the call in the scanned file that passes the input there. */
+  entry?: FlowLine;
   function?: string;
 }
 
@@ -133,27 +160,55 @@ export function scanText(text: string, language: string, rules: CompiledRule[], 
 }
 
 /** Pattern matches plus data flows for the rules that have a detector. */
-export async function scanFile(text: string, language: string, filePath: string, rules: CompiledRule[], engine?: FlowEngine): Promise<Candidate[]> {
+/** The rules with a data-flow detector. */
+export const flowRulesOf = (rules: CompiledRule[]) => rules.filter((item): item is CompiledRule & { taint: TaintRule } => item.taint !== undefined);
+
+/**
+ * Pattern matches plus data flows. With a project index, calls into other files of the workspace
+ * are followed; a flow into another file is placed on the call in this file.
+ */
+export async function scanFile(text: string, language: string, filePath: string, rules: CompiledRule[], engine?: FlowEngine, index?: ProjectIndex, endpoints?: EndpointsByRule): Promise<Candidate[]> {
   const candidates = scanText(text, language, rules);
   if (!engine) return candidates;
-  const flowRules = rules.filter((item): item is CompiledRule & { taint: TaintRule } => item.taint !== undefined);
+  const flowRules = flowRulesOf(rules);
   if (flowRules.length === 0) return candidates;
   let results: Array<FlowResult[] | null> = [];
   try {
     // One parse of the file serves every rule.
-    results = await engine.analyzeTaintRules(flowRules.map((item) => item.taint), language, filePath, text);
+    const taintRules = flowRules.map((item) => item.taint);
+    results = index
+      ? await engine.analyzeTaintRulesWithIndex(index, taintRules, language, filePath, text)
+      : await engine.analyzeTaintRules(taintRules, language, filePath, text);
   } catch {
     // A file the parser cannot read yields no flows; the pattern pass above still ran.
   }
-  for (const [index, { pack, rule }] of flowRules.entries()) {
-    for (const flow of results[index] ?? []) {
-      const line = Math.max(flow.sink.line - 1, 0);
-      const lineText = text.split('\n', line + 1)[line] ?? '';
-      const indent = lineText.length - lineText.trimStart().length;
-      candidates.push({ packId: pack.id, ruleId: rule.id, startLine: line, startColumn: indent, endLine: line, endColumn: Math.max(lineText.length, indent + 1), flow });
+  const place = (packId: string, ruleId: string, flow: FlowResult) => {
+    const line = Math.max((flow.entry ?? flow.sink).line - 1, 0);
+    const lineText = text.split('\n', line + 1)[line] ?? '';
+    const indent = lineText.length - lineText.trimStart().length;
+    candidates.push({ packId, ruleId, startLine: line, startColumn: indent, endLine: line, endColumn: Math.max(lineText.length, indent + 1), flow });
+  };
+  for (const [position, { pack, rule }] of flowRules.entries()) {
+    for (const flow of results[position] ?? []) place(pack.id, rule.id, flow);
+  }
+
+  // Access (BOLA) rules: every handler gets a status; only lookups without an ownership check are findings.
+  const accessRules = flowRules.filter((item) => item.taint.kind === 'access');
+  if (accessRules.length > 0) {
+    let access: Array<EndpointResult[] | null> = [];
+    try {
+      access = await engine.analyzeAccessRules(accessRules.map((item) => item.taint), language, filePath, text, index);
+    } catch {
+      // As above: no endpoints for a file the parser cannot read.
+    }
+    for (const [position, { pack, rule }] of accessRules.entries()) {
+      const found = access[position];
+      if (!found || found.length === 0) continue;
+      endpoints?.set(ruleKey(pack.id, rule.id), found);
+      for (const endpoint of found) for (const flow of endpoint.findings) place(pack.id, rule.id, flow);
     }
   }
   return candidates;
 }
 
-module.exports = { SCAN_LIMITS, compileRules, languageForFile, SCAN_GLOB, UNSUPPORTED_SOURCE_GLOB, SCAN_EXCLUDE_GLOB, scanText, scanFile };
+module.exports = { SCAN_LIMITS, compileRules, flowRulesOf, ruleKey, languageForFile, SCAN_GLOB, UNSUPPORTED_SOURCE_GLOB, SCAN_EXCLUDE_GLOB, scanText, scanFile };

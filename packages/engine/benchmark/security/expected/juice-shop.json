@@ -8,6 +8,181 @@
       "note": "eval of user-controlled username"
     },
     {
+      "category": "Object Access",
+      "file": "data/static/codefixes/forgedReviewChallenge_1.ts",
+      "line": 4,
+      "label": "tp",
+      "note": "fix option that still updates any review by its ID"
+    },
+    {
+      "category": "Object Access",
+      "file": "data/static/codefixes/forgedReviewChallenge_3.ts",
+      "line": 4,
+      "label": "tp",
+      "note": "fix option that still updates any review by its ID"
+    },
+    {
+      "category": "Object Access",
+      "file": "data/static/codefixes/noSqlReviewsChallenge_1.ts",
+      "line": 10,
+      "label": "tp",
+      "note": "fixes the NoSQL issue but still updates any review by its ID"
+    },
+    {
+      "category": "Object Access",
+      "file": "data/static/codefixes/noSqlReviewsChallenge_2.ts",
+      "line": 4,
+      "label": "tp",
+      "note": "fixes the NoSQL issue but still updates any review by its ID"
+    },
+    {
+      "category": "Object Access",
+      "file": "data/static/codefixes/noSqlReviewsChallenge_3_correct.ts",
+      "line": 10,
+      "label": "tp",
+      "note": "fixes the NoSQL issue but still updates any review by its ID"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/address.ts",
+      "line": 11,
+      "label": "fp",
+      "note": "lookup is by req.body.UserId, which security.appendUserId() middleware overwrites with the signed-in user; the analysis does not see that middleware (declare it with owner_references)"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/basket.ts",
+      "line": 19,
+      "label": "tp",
+      "note": "any basket is returned by its ID (View Basket challenge)"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/basketItems.ts",
+      "line": 68,
+      "label": "tp",
+      "note": "any basket item is updated by its ID (Manipulate Basket)"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/basketItems.ts",
+      "line": 88,
+      "label": "fp",
+      "note": "stock lookup by ProductId; products are public"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/captcha.ts",
+      "line": 37,
+      "label": "fp",
+      "note": "captcha lookup by captchaId; not user-owned data"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/dataExport.ts",
+      "line": 26,
+      "label": "fp",
+      "note": "lookup is by req.body.UserId, which security.appendUserId() middleware overwrites with the signed-in user; the analysis does not see that middleware (declare it with owner_references)"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/delivery.ts",
+      "line": 34,
+      "label": "fp",
+      "note": "delivery methods are public reference data"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/likeProductReviews.ts",
+      "line": 25,
+      "label": "fp",
+      "note": "reviews are public; liking any review is intended"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/likeProductReviews.ts",
+      "line": 35,
+      "label": "fp",
+      "note": "reviews are public; liking any review is intended"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/likeProductReviews.ts",
+      "line": 43,
+      "label": "fp",
+      "note": "reviews are public; liking any review is intended"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/likeProductReviews.ts",
+      "line": 50,
+      "label": "fp",
+      "note": "reviews are public; liking any review is intended"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/order.ts",
+      "line": 148,
+      "label": "fp",
+      "note": "lookup is by req.body.UserId, which security.appendUserId() middleware overwrites with the signed-in user; the analysis does not see that middleware (declare it with owner_references)"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/order.ts",
+      "line": 35,
+      "label": "tp",
+      "note": "any basket is checked out by its ID without an ownership check"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/orderHistory.ts",
+      "line": 36,
+      "label": "fp",
+      "note": "route is limited to the accounting role by isAccounting() middleware, which the analysis does not see"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/payment.ts",
+      "line": 21,
+      "label": "fp",
+      "note": "lookup is by req.body.UserId, which security.appendUserId() middleware overwrites with the signed-in user; the analysis does not see that middleware (declare it with owner_references)"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/recycles.ts",
+      "line": 12,
+      "label": "tp",
+      "note": "any recycle request (with the user address) is returned by its ID"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/showProductReviews.ts",
+      "line": 36,
+      "label": "fp",
+      "note": "product reviews are public"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/trackOrder.ts",
+      "line": 18,
+      "label": "fp",
+      "note": "tracking by an unguessable order ID is the intended capability (the NoSQL injection here is a separate issue)"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/updateProductReviews.ts",
+      "line": 17,
+      "label": "tp",
+      "note": "any review is updated by its ID (Forged Review)"
+    },
+    {
+      "category": "Object Access",
+      "file": "routes/wallet.ts",
+      "line": 12,
+      "label": "fp",
+      "note": "lookup is by req.body.UserId, which security.appendUserId() middleware overwrites with the signed-in user; the analysis does not see that middleware (declare it with owner_references)"
+    },
+    {
       "category": "SQL Injection",
       "file": "data/static/codefixes/dbSchemaChallenge_1.ts",
       "line": 5,

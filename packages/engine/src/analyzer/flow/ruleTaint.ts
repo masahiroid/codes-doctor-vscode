@@ -2,6 +2,10 @@ import type { FlowGrammar, FlowSpec, SinkCategory, SinkRule } from './spec';
 import { FLOW_SPECS } from './languages';
 import { analyzeFlowsWithSpecs, flowGrammarFor } from './taint';
 import type { DataFlow } from './taint';
+import { analyzeAccessWithIndex, analyzeFileWithIndex, buildFlowIndex } from './project';
+import { accessSpec, analyzeAccess } from './access';
+import type { AccessEndpoint, AccessOptions } from './access';
+import type { FlowIndex, SpecsFor } from './project';
 
 /**
  * A taint rule as distributed in a rule pack (`detect: { type: taint, ... }`). Sources and
@@ -20,8 +24,12 @@ export interface TaintRuleDefinition {
 
 export interface CompiledTaintRule {
   id: string;
+  /** `taint`: input reaching dangerous calls. `access`: request IDs reaching lookups without an ownership check (BOLA). */
+  kind: 'taint' | 'access';
   languages: ReadonlySet<string>;
   specs: Map<FlowGrammar, FlowSpec<string>>;
+  /** For `access` rules: project-specific expressions for the signed-in user and authorization calls. */
+  access?: AccessOptions;
 }
 
 const BUILTIN_SINKS: ReadonlySet<string> = new Set<SinkCategory>(['Command Injection', 'SQL Injection', 'Code Injection', 'Path Traversal', 'SSRF', 'XSS']);
@@ -56,9 +64,10 @@ function grammarsFor(language: string): FlowGrammar[] {
 export function compileTaintRule(id: string, input: unknown): CompiledTaintRule {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error(`${id}: detect must be an object`);
   const definition = input as Record<string, unknown>;
-  if (definition.type !== 'taint') throw new Error(`${id}: unsupported detect type ${String(definition.type)}`);
+  if (definition.type !== 'taint' && definition.type !== 'object_access') throw new Error(`${id}: unsupported detect type ${String(definition.type)}`);
   if (!Array.isArray(definition.languages) || definition.languages.length === 0) throw new Error(`${id}: detect.languages is required`);
   const languages = definition.languages.map(String);
+  if (definition.type === 'object_access') return compileAccessRule(id, definition, languages);
   const sources = patterns(definition.sources, `${id}.sources`);
   const sanitizers = patterns(definition.sanitizers, `${id}.sanitizers`);
   if (!Array.isArray(definition.sinks) || definition.sinks.length === 0) throw new Error(`${id}: detect.sinks is required`);
@@ -95,7 +104,26 @@ export function compileTaintRule(id: string, input: unknown): CompiledTaintRule 
     }
   }
   if (specs.size === 0) throw new Error(`${id}: none of the languages ${languages.join(', ')} support flow analysis`);
-  return { id, languages: new Set(languages), specs };
+  return { id, kind: 'taint', languages: new Set(languages), specs };
+}
+
+/**
+ * `detect: { type: object_access, languages, owner_references?, authorization_calls? }`: the
+ * built-in BOLA analysis, optionally told how this project names the signed-in user and its
+ * authorization checks.
+ */
+function compileAccessRule(id: string, definition: Record<string, unknown>, languages: string[]): CompiledTaintRule {
+  const ownerReferences = patterns(definition.owner_references, `${id}.owner_references`).map((source) => new RegExp(source));
+  const authorizationCalls = patterns(definition.authorization_calls, `${id}.authorization_calls`).map((source) => new RegExp(`^(?:${source})$`));
+  const specs = new Map<FlowGrammar, FlowSpec<string>>();
+  for (const language of languages) {
+    for (const grammar of grammarsFor(language)) {
+      const spec = accessSpec(grammar);
+      if (spec) specs.set(grammar, spec);
+    }
+  }
+  if (specs.size === 0) throw new Error(`${id}: none of the languages ${languages.join(', ')} support object access analysis`);
+  return { id, kind: 'access', languages: new Set(languages), specs, access: { ownerReferences, authorizationCalls } };
 }
 
 /**
@@ -117,10 +145,58 @@ export function taintRuleCovers(rule: CompiledTaintRule, language: string): bool
  */
 export async function analyzeTaintRules(rules: readonly CompiledTaintRule[], language: string, filePath: string, content: string): Promise<Array<DataFlow<string>[] | null>> {
   const grammar = flowGrammarFor(language, filePath);
-  const specs = rules.map((rule) => (grammar && taintRuleCovers(rule, language) ? rule.specs.get(grammar) : undefined));
+  // Access rules report endpoints (analyzeAccessRules), not plain flows.
+  const specs = rules.map((rule) => (grammar && rule.kind === 'taint' && taintRuleCovers(rule, language) ? rule.specs.get(grammar) : undefined));
   const applicable = specs.filter((spec): spec is FlowSpec<string> => spec !== undefined);
   if (!grammar || applicable.length === 0) return rules.map(() => null);
   const flows = await analyzeFlowsWithSpecs(grammar, applicable, content);
   let next = 0;
   return specs.map((spec) => (spec ? flows[next++] : null));
+}
+
+/** Rule specs for a grammar, keyed by rule ID, for the project-wide analysis. */
+const ruleSpecs = (rules: readonly CompiledTaintRule[]): SpecsFor => (grammar) =>
+  rules.flatMap((rule) => {
+    const spec = rule.specs.get(grammar);
+    return spec ? [{ key: rule.id, spec }] : [];
+  });
+
+/**
+ * Summaries of every function in the project for these rules, so calls into other files are
+ * followed. Build it once per workspace scan and reuse it for single files until the next scan.
+ */
+export async function buildTaintRuleIndex(rules: readonly CompiledTaintRule[], files: ReadonlyArray<{ path: string; language: string }>, read: (path: string) => Promise<string>): Promise<FlowIndex> {
+  const project = files.flatMap((file) => {
+    const grammar = flowGrammarFor(file.language, file.path);
+    return grammar ? [{ path: file.path, grammar }] : [];
+  });
+  return buildFlowIndex(project, ruleSpecs(rules), read);
+}
+
+/** `analyzeTaintRules` with calls into other files followed through a project index. */
+export async function analyzeTaintRulesWithIndex(index: FlowIndex, rules: readonly CompiledTaintRule[], language: string, filePath: string, content: string): Promise<Array<DataFlow<string>[] | null>> {
+  const grammar = flowGrammarFor(language, filePath);
+  const covered = rules.map((rule) => Boolean(grammar && rule.kind === 'taint' && taintRuleCovers(rule, language) && rule.specs.has(grammar)));
+  if (!grammar || !covered.some(Boolean)) return rules.map(() => null);
+  const results = await analyzeFileWithIndex(index, { path: filePath, grammar }, content, ruleSpecs(rules.filter((_, index) => covered[index])));
+  return rules.map((rule, index) => (covered[index] ? results.get(rule.id) ?? [] : null));
+}
+
+/**
+ * Endpoints of one file for each access (BOLA) rule, or null for rules of another kind or language.
+ * With a project index, lookups in other files called from a handler are followed.
+ */
+export async function analyzeAccessRules(rules: readonly CompiledTaintRule[], language: string, filePath: string, content: string, index?: FlowIndex): Promise<Array<AccessEndpoint[] | null>> {
+  const grammar = flowGrammarFor(language, filePath);
+  const results: Array<AccessEndpoint[] | null> = [];
+  for (const rule of rules) {
+    if (!grammar || rule.kind !== 'access' || !taintRuleCovers(rule, language) || !rule.specs.has(grammar)) {
+      results.push(null);
+      continue;
+    }
+    results.push(index
+      ? await analyzeAccessWithIndex(index, { path: filePath, grammar }, content, rule.access, rule.id)
+      : await analyzeAccess(grammar, content, rule.access));
+  }
+  return results;
 }

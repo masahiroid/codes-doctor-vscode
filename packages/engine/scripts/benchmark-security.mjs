@@ -17,7 +17,9 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BENCH = path.join(ROOT, 'benchmark', 'security');
 const require = createRequire(import.meta.url);
-const { analyzeFlows, flowGrammarFor } = require(path.join(ROOT, 'dist', 'analyzer', 'flow', 'taint.js'));
+const { flowGrammarFor } = require(path.join(ROOT, 'dist', 'analyzer', 'flow', 'taint.js'));
+const { FLOW_SPECS } = require(path.join(ROOT, 'dist', 'analyzer', 'flow', 'languages.js'));
+const { buildFlowIndex, analyzeFileWithIndex, accessSpecsFor, analyzeAccessWithIndex } = require(path.join(ROOT, 'dist', 'analyzer', 'flow', 'project.js'));
 const { isTestPath } = require(path.join(ROOT, 'dist', 'analyzer', 'security', 'testCode.js'));
 
 const args = process.argv.slice(2);
@@ -61,17 +63,33 @@ let failed = false;
 const summary = [];
 for (const target of config.targets) {
   const dir = checkout(target);
-  const found = [];
+  // The whole project is analyzed together, so flows through other files count, as in the extension.
+  const project = [];
   for (const file of files(dir)) {
     if (!EXTENSIONS[target.language].test(file) || isTestPath(file)) continue;
     const grammar = flowGrammarFor(target.language, file);
-    if (!grammar) continue;
-    const content = fs.readFileSync(path.join(dir, file), 'utf8');
-    if (content.length > 1024 * 1024) continue;
+    if (grammar && fs.statSync(path.join(dir, file)).size <= 1024 * 1024) project.push({ path: path.join(dir, file), grammar, relative: file });
+  }
+  const specsFor = (grammar) => [{ key: 'builtin', spec: FLOW_SPECS[grammar] }];
+  const read = async (file) => fs.readFileSync(file, 'utf8');
+  const index = await buildFlowIndex(project, specsFor, read);
+  const found = [];
+  // Object access (BOLA): handlers whose request IDs reach a lookup without an ownership check.
+  if (categories.has('Object Access')) {
+    const accessIndex = await buildFlowIndex(project, accessSpecsFor, read);
+    for (const file of project) {
+      let endpoints = [];
+      try { endpoints = await analyzeAccessWithIndex(accessIndex, file, await read(file.path)); } catch { continue; }
+      for (const endpoint of endpoints) {
+        for (const flow of endpoint.findings) found.push({ category: 'Object Access', file: file.relative, line: (flow.entry ?? flow.sink).line });
+      }
+    }
+  }
+  for (const file of project) {
     let flows = [];
-    try { flows = await analyzeFlows(grammar, content); } catch { continue; }
+    try { flows = (await analyzeFileWithIndex(index, file, await read(file.path), specsFor)).get('builtin') ?? []; } catch { continue; }
     for (const flow of flows) {
-      if (categories.has(flow.category)) found.push({ category: flow.category, file, line: flow.sink.line });
+      if (categories.has(flow.category)) found.push({ category: flow.category, file: file.relative, line: (flow.entry ?? flow.sink).line });
     }
   }
 

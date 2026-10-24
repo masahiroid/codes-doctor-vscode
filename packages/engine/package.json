@@ -1,6 +1,6 @@
 {
   "name": "@codes-doctor/engine",
-  "version": "7.1.2",
+  "version": "7.2.0",
   "private": true,
   "description": "Codes Doctor analysis engine: structural, security and dependency analysis with HTML reports",
   "license": "Apache-2.0",

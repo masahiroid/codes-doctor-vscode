@@ -1,6 +1,6 @@
 # Security detection benchmark
 
-Measures the data-flow analysis on intentionally vulnerable applications, each pinned to a commit in [targets.json](targets.json). Only SQL, command, code-execution and SSRF findings are counted, and test code is skipped, the same as the security-rule scan in the extension.
+Measures the data-flow analysis on intentionally vulnerable applications, each pinned to a commit in [targets.json](targets.json). SQL, command, code-execution and SSRF findings and object access (BOLA) findings are counted; the whole project is analyzed together, so flows through other files count; test code is skipped. This is the same as the security-rule scan in the extension.
 
 ```sh
 npm run benchmark:security            # build, clone the targets (cached in the OS temp folder) and compare

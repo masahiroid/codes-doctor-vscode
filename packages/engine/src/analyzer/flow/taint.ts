@@ -11,6 +11,10 @@ import { callArguments, calleeText, calledName, functionName, parameterNames } f
 export interface FlowStep {
   line: number;
   code: string;
+  /** Set when the line is in another file than the one analyzed (path as given to the project analysis). */
+  file?: string;
+  /** For a flow's source: the input expression itself (`req.params.id`), not just its line. */
+  expression?: string;
 }
 
 /** Untrusted input reaching a dangerous operation, with the lines it passed through. */
@@ -20,11 +24,16 @@ export interface DataFlow<C extends string = SinkCategory> {
   /** Assignments between the source and the sink, in order. */
   steps: FlowStep[];
   sink: FlowStep;
+  /**
+   * When the dangerous operation is in another file: the call in this file that passes the input
+   * there. The flow is reported at this line; `sink` and the later steps carry their file.
+   */
+  entry?: FlowStep;
   /** Name of the function the flow is in; absent at the top level and in anonymous functions. */
   function?: string;
 }
 
-interface Taint {
+export interface Taint {
   source: FlowStep;
   steps: FlowStep[];
   /** Passed through a quote-dependent escape; harmless until placed into a string outside quotes. */
@@ -37,16 +46,19 @@ interface Taint {
  * What a function in the same file does with its parameters: which reach a dangerous call
  * inside it, and which (or which input source) its return value carries.
  */
-interface FunctionSummary {
+export interface FunctionSummary {
   sinks: Array<{ param: number; category: string; sink: FlowStep; steps: FlowStep[] }>;
   returnsParams: Set<number>;
   returnsSource: Taint | null;
 }
 
+/** Finds the summary of a function in another file that a call refers to, by its callee text. */
+export type SummaryResolver = (callee: string) => FunctionSummary | undefined;
+
 /** Longest code excerpt kept for a flow step. */
 const STEP_CODE_LIMIT = 160;
 
-class FlowAnalysis<C extends string> {
+export class FlowAnalysis<C extends string> {
   private readonly lines: string[];
   private currentFunction: string | undefined;
   private guards: GuardRegion[] = [];
@@ -56,8 +68,18 @@ class FlowAnalysis<C extends string> {
   private summary: FunctionSummary | null = null;
   readonly flows = new Map<string, DataFlow<C>>();
 
-  constructor(private readonly spec: FlowSpec<C>, content: string) {
+  constructor(private readonly spec: FlowSpec<C>, content: string, private readonly resolve: SummaryResolver = () => undefined) {
     this.lines = content.split('\n');
+  }
+
+  /** Summary for a call: a function of this file first, then one in another file. */
+  private summaryFor(callee: string): FunctionSummary | undefined {
+    return this.summaries.get(calledName(callee)) ?? this.resolve(callee);
+  }
+
+  /** This file's function summaries, for use by other files. */
+  get fileSummaries(): ReadonlyMap<string, FunctionSummary> {
+    return this.summaries;
   }
 
   private step(node: Node): FlowStep {
@@ -80,6 +102,8 @@ class FlowAnalysis<C extends string> {
     };
     walk(node, (current) => {
       if (found) return false;
+      // A callback passed along runs later with its own inputs; what it reads is not this value.
+      if (current !== node && this.spec.functionTypes.has(current.type)) return false;
       if (isValidated(this.guards, current)) return false;
       if (this.spec.callTypes.has(current.type)) {
         const callee = calleeText(current);
@@ -89,7 +113,7 @@ class FlowAnalysis<C extends string> {
           return false;
         }
         if (this.spec.sanitizers.test(callee)) return false;
-        const summary = this.summaries.get(calledName(callee));
+        const summary = this.summaryFor(callee);
         if (summary) {
           // The summary says what the call returns; its arguments do not flow into the result otherwise.
           found = this.returnedTaint(summary, current, tainted);
@@ -105,7 +129,7 @@ class FlowAnalysis<C extends string> {
       if (this.spec.sources.test(current.text)) {
         const narrower = namedChildren(current).some((child) => this.spec.sources.test(child.text));
         if (!narrower) {
-          found = { source: this.step(current), steps: [] };
+          found = { source: { ...this.step(current), expression: current.text }, steps: [] };
           return false;
         }
       }
@@ -176,7 +200,7 @@ class FlowAnalysis<C extends string> {
 
   /** A tainted argument to a same-file function whose parameter reaches a dangerous call inside it. */
   private reportThroughCall(call: Node, callee: string, tainted: Map<string, Taint>): void {
-    const summary = this.summaries.get(calledName(callee));
+    const summary = this.summaryFor(callee);
     if (!summary || summary.sinks.length === 0) return;
     const args = callArguments(call);
     for (const inner of summary.sinks) {
@@ -187,10 +211,15 @@ class FlowAnalysis<C extends string> {
         if (through.param !== undefined) this.summary.sinks.push({ param: through.param, category: inner.category, sink: inner.sink, steps: through.steps });
         continue;
       }
-      const key = `${inner.category}:${inner.sink.line}`;
+      // A sink in another file is reported at the call here; one in this file at the sink itself.
+      const entry = inner.sink.file ? this.step(call) : undefined;
+      const at = entry ?? inner.sink;
+      const key = `${inner.category}:${at.line}`;
       if (this.flows.has(key)) continue;
-      const steps = through.steps.filter((step) => step.line !== through.source.line && step.line !== inner.sink.line);
+      const local = (step: FlowStep) => !step.file && (step.line === through.source.line || step.line === at.line);
+      const steps = through.steps.filter((step) => !local(step));
       const flow: DataFlow<C> = { category: inner.category as C, source: through.source, steps, sink: inner.sink };
+      if (entry) flow.entry = entry;
       if (this.currentFunction) flow.function = this.currentFunction;
       this.flows.set(key, flow);
     }
@@ -269,15 +298,24 @@ export async function analyzeFlowsWithSpec<C extends string>(grammar: FlowGramma
 export async function analyzeFlowsWithSpecs<C extends string>(grammar: FlowGrammar, specs: readonly FlowSpec<C>[], content: string): Promise<DataFlow<C>[][]> {
   return withSyntaxTree(grammar, content, (tree) => specs.map((spec) => {
     const analysis = new FlowAnalysis(spec, content);
-    const scopes: Node[] = [tree.rootNode];
-    walk(tree.rootNode, (node) => {
-      if (node !== tree.rootNode && spec.functionTypes.has(node.type)) scopes.push(node);
-      return true;
-    });
-    analysis.summarize(scopes.slice(1));
-    for (const scope of scopes) analysis.analyzeScope(scope);
-    return [...analysis.flows.values()].sort((a, b) => a.sink.line - b.sink.line);
+    const functions = functionScopes(spec, tree.rootNode);
+    analysis.summarize(functions);
+    for (const scope of [tree.rootNode, ...functions]) analysis.analyzeScope(scope);
+    return [...analysis.flows.values()].sort(byLine);
   }));
+}
+
+/** Orders flows by the line they are reported at in their file. */
+export const byLine = (a: DataFlow<string>, b: DataFlow<string>) => (a.entry ?? a.sink).line - (b.entry ?? b.sink).line;
+
+/** Function nodes of a file: the scopes the analysis runs over, after the top level. */
+export function functionScopes(spec: FlowSpec<string>, root: Node): Node[] {
+  const scopes: Node[] = [];
+  walk(root, (node) => {
+    if (node !== root && spec.functionTypes.has(node.type)) scopes.push(node);
+    return true;
+  });
+  return scopes;
 }
 
 /** Grammar for a source file in a security language, or null if flows are not analyzed for it. */

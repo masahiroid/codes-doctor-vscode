@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.2.0
+
+- Data flows are followed across files: a workspace scan summarizes every function first, then connects calls through relative `import` / `require` and to project functions and methods with a unique name. A flow into another file is reported on the call that passes the input, with the other file's lines in the path, Problems and hovers. Single files saved later are scanned against the last workspace scan's summaries.
+- Broken object level authorization (BOLA / IDOR): rules with `detect: { type: object_access }` check every request handler that uses a requested ID to read, change or delete an object, and report it as "No ownership check", "Filtered by an owner field — check where its value comes from" or "Ownership check found" (with the line). Ownership evidence is a lookup scoped to the signed-in user, an `if` comparing with the signed-in user, or an authorization call. Rules can add project-specific owner expressions and authorization calls. The panel lists the handlers per status, and the audit report adds the handlers and their counts (new CSV columns endpoints_missing, endpoints_unverified, endpoints_checked).
+- Engine: object literal shorthand (`{ id }`) now carries taint, and a callback passed as an argument no longer counts as the argument's value.
+- Benchmark adds BOLA: Juice Shop 10 true and 15 false positives (mostly public data and owners set by middleware), DVWA 18 true and 0 false positives; the other checks are unchanged (38 true, 0 false positives).
+
 ## 7.1.2
 
 - Development and release checks: installs are refused outside Node.js 24+, builds stop when node_modules does not match package-lock.json, and CI and every release verify registry signatures, require each dependency install script to be explicitly allowed or denied, and audit all dependencies (development ones included) with npm audit and OSV. Run them locally with `npm run verify:deps`; `npm run package:vsix` now packages from a clean install.

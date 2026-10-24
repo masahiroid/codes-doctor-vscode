@@ -6,7 +6,7 @@ import { loadEngine } from '../engine';
 import { DEFAULT_MANIFEST_URL, downloadRuleset, readRulesetCache, sha256Hex, writeRulesetCache } from './ruleset';
 import type { LoadedRuleset } from './ruleset';
 import { compileRules, languageForFile, scanFile } from './scan';
-import type { Candidate, CompiledRule, FlowEngine } from './scan';
+import type { Candidate, CompiledRule, FlowEngine, ProjectIndex } from './scan';
 import { auditReportToCsv, buildAuditReport } from './audit';
 import type { AuditReport } from './audit';
 import { buildDiagnostic, buildHoverMarkdown } from './presentation';
@@ -61,6 +61,8 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
   let busy: SecurityRulesState['busy'] = null;
   let scan: SecurityRulesState['scan'];
   let error: string | undefined;
+  /** Function summaries from the last workspace scan; single files are scanned against them. */
+  let projectIndex: ProjectIndex | undefined;
 
   const config = () => vscode.workspace.getConfiguration('codeDoctor.securityRules');
   const manifestUrl = () => {
@@ -156,7 +158,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
     } catch {
       // Pattern rules still run without the engine.
     }
-    publish(document.uri, await scanFile(document.getText(), language, document.fileName, activeRules(), available));
+    publish(document.uri, await scanFile(document.getText(), language, document.fileName, activeRules(), available, projectIndex));
   }
 
   const rescanOpenDocuments = () => vscode.workspace.textDocuments.forEach((document) => void scanDocument(document));
@@ -165,6 +167,8 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
     diagnostics.clear();
     candidatesByUri.clear();
     scan = undefined;
+    // Summaries belong to the rules they were built with.
+    projectIndex = undefined;
   }
 
   async function runSync(silent: boolean) {
@@ -221,7 +225,11 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
     }
     diagnostics.clear();
     candidatesByUri.clear();
-    const outcome = await scanWorkspaceFiles(vscode, { root, rules, engine: available, onFindings: publish, progress, token });
+    const outcome = await scanWorkspaceFiles(vscode, {
+      root, rules, engine: available, onFindings: publish, progress, token,
+      labels: { summarizing: t('Following calls between files…'), scanning: t('Scanning files') },
+    });
+    if (outcome) projectIndex = outcome.index;
     if (!outcome) {
       diagnostics.clear();
       candidatesByUri.clear();
@@ -312,7 +320,8 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
   async function openLocation(file: string, line: number) {
     const root = workspaceRoot();
     // Only locations from the last scan are opened, so a message cannot point the editor at an arbitrary path.
-    const known = scan?.rules.some((rule) => rule.locations.some((location) => location.file === file && location.line === line));
+    const known = scan?.rules.some((rule) => rule.locations.some((location) => location.file === file && location.line === line)
+      || (rule.endpoints ?? []).some((endpoint) => endpoint.file === file && endpoint.line === line));
     if (!root || !known) return;
     const target = path.resolve(root, file);
     if (!target.startsWith(root + path.sep)) return;

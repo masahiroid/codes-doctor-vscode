@@ -105,20 +105,34 @@ Codes Doctor can load the rule packs published at [masahiroid/security-rules](ht
 
 - The **Security Rules** section of the Codes Doctor panel (Activity Bar) does all of this in one place: sync, tick the packs to check, scan, and click a result to jump to the code. Each rule lists its check steps and management-sheet column.
 - **Codes Doctor: Sync Security Rules** downloads `manifest.json` and each pack, checks every file against the SHA-256 in the manifest, and keeps a verified copy in the extension's own storage. If the download fails (offline, closed network), the cached copy is used. The copy is not kept in the workspace, and `sourceUrl` is a user setting only, so the repository under review cannot choose the rules it is checked with.
-- Opened and saved TypeScript, JavaScript and JSON files are scanned with the loaded rules. Matches appear in Problems with the rule ID; hovering shows the pack, source documents, check steps and the management-sheet column.
+- Opened and saved TypeScript, JavaScript, PHP and JSON files are scanned with the loaded rules. Matches appear in Problems with the rule ID; hovering shows the pack, source documents, check steps and the management-sheet column.
 - **Codes Doctor: Scan Workspace with Security Rules** scans the whole workspace. **Codes Doctor: Export Security Audit Report** writes JSON and CSV (UTF-8 with BOM, for Excel) to `.codes-doctor/security-audit/`.
 - Nothing is downloaded until you run a sync, unless you turn on `codeDoctor.securityRules.autoSync` (startup and every `syncIntervalHours`). `codeDoctor.securityRules.sourceUrl` can point at an internal mirror.
 
-Rules that carry a `detect` block are checked by data-flow analysis instead of a regular expression: only untrusted input that reaches a SQL, command, code-execution or SSRF call is reported, with the path from source to sink. The analysis follows values through functions in the same file, recognizes validation in `if` conditions and guard clauses (`is_numeric`, anchored `preg_match`, `filter_var`, `Number.isInteger`, allowlists), and knows that SQL escaping only helps inside quotes. Flows through other files are not followed yet, so "No flow found" is not proof of safety. Test code is excluded.
+Rules that carry a `detect` block are checked by data-flow analysis instead of a regular expression: only untrusted input that reaches a SQL, command, code-execution or SSRF call is reported, with the path from source to sink. A workspace scan first summarizes every function, so values are followed through calls into other files (relative `import` / `require`, and project functions and methods with a unique name). A flow into another file is reported on the call that passes the input, and the path shows the other file's lines. The analysis also recognizes validation in `if` conditions and guard clauses (`is_numeric`, anchored `preg_match`, `filter_var`, `Number.isInteger`, allowlists), and knows that SQL escaping only helps inside quotes. Calls into packages and ambiguous names are not followed, so "No flow found" is not proof of safety. Test code is excluded.
 
-Measured on intentionally vulnerable apps pinned to a commit (SQL, command, code execution and SSRF; test code excluded). Every finding is labeled by hand, and CI fails when a true positive disappears or an unlabeled finding appears ([benchmark](../engine/benchmark/security)).
+### Broken object level authorization (BOLA / IDOR)
 
-| Project | True positives | False positives | Known misses |
-| --- | --- | --- | --- |
-| [OWASP Juice Shop](https://github.com/juice-shop/juice-shop) (TypeScript) | 13 | 0 | 1: input passed to a `vm` sandbox through an object |
-| [DVWA](https://github.com/digininja/DVWA) (PHP) | 25 | 0 | 2: input stored in the session on another page (second order) |
+Rules with `detect: { type: object_access }` check every request handler that uses a requested ID (any path parameter, or a query or body field named like an ID) to read, change or delete a stored object. Each handler gets one status:
 
-7.0 found 34 true positives with 6 false positives and 7 known misses on the same code. NoSQL injection is not covered yet. In this repository (a VS Code extension, not a web API) the scan reports nothing.
+| Status | Meaning |
+| --- | --- |
+| No ownership check | The ID selects the object and none of the evidence below was found. Reported in Problems. |
+| Filtered by an owner field — check where its value comes from | The lookup also filters on an owner column (`UserId`, `user_id`, `owner_id` …) whose value is not recognizably the signed-in user, for example one filled in by middleware. |
+| Ownership check found | The lookup is scoped to the signed-in user, an `if` compares something with the signed-in user (not with a literal), or an authorization call (`authorize`, `Gate::allows`, `can` …) is made. The panel shows the line. |
+
+The signed-in user is `req.user`, `req.session`, `$_SESSION`, `auth()`, `Auth::`, `$request->user()`, names such as `currentUser`, and variables assigned from them; cookies are not, because the client sets them. Converting or validating an ID is not evidence. Whether an object may be public cannot be judged from code, so lookups of public data (products, public reviews) are reported too. A rule can add project-specific expressions for the signed-in user (`owner_references`) and authorization calls (`authorization_calls`).
+
+Measured on intentionally vulnerable apps pinned to a commit (test code excluded). Every finding is labeled by hand, and CI fails when a true positive disappears or an unlabeled finding appears ([benchmark](../engine/benchmark/security)).
+
+| Project | Check | True positives | False positives | Known misses |
+| --- | --- | --- | --- | --- |
+| [OWASP Juice Shop](https://github.com/juice-shop/juice-shop) (TypeScript) | SQL, command, code execution, SSRF | 13 | 0 | 1: input passed to a `vm` sandbox through an object |
+| | BOLA | 10 | 15: public data (8), an owner set by middleware the analysis does not see (5), a role check in middleware (1), an unguessable tracking ID (1) | — |
+| [DVWA](https://github.com/digininja/DVWA) (PHP) | SQL, command, code execution, SSRF | 25 | 0 | 2: input stored in the session on another page (second order) |
+| | BOLA | 18 | 0 | — |
+
+7.0 found 34 true positives with 6 false positives and 7 known misses for SQL, command, code execution and SSRF on the same code. NoSQL injection is not covered yet. In this repository (a VS Code extension, not a web API) the scan reports nothing.
 
 A pattern match is a **review candidate**, never a pass or a fail. Every rule is a manual check, so "no match" does not mean compliant, and the report states `compliance: unverified`. The hash detects tampering or mix-ups in transit; it is not a signature from the publisher, so protect write access to the rules repository. Source code never leaves your machine.
 

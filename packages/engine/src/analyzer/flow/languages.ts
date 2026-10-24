@@ -45,7 +45,8 @@ const ANCHORED_PATTERN = /^['"`]?\/\^[\s\S]*\$\/[a-zA-Z]*['"`]?$/;
 
 const JAVASCRIPT: FlowSpec = {
   functionTypes: set('function_declaration', 'function_expression', 'arrow_function', 'method_definition', 'generator_function_declaration'),
-  identifierTypes: set('identifier', 'shorthand_property_identifier_pattern'),
+  // `{ id }` in an object literal reads the variable `id`.
+  identifierTypes: set('identifier', 'shorthand_property_identifier_pattern', 'shorthand_property_identifier'),
   assignment: (node) => (node.type === 'variable_declarator' ? fields(node, 'name', 'value') : cFamilyAssignment(node)),
   callTypes: set('call_expression', 'new_expression'),
   sources: /\b(?:req|request)\.(?:query|body|params|headers|cookies|files)\b|\bctx\.(?:query|params|request\.body)\b|\bprocess\.argv\b|\blocation\.(?:search|hash|href)\b|\bdocument\.(?:cookie|URL|referrer)\b|\bURLSearchParams\b/,

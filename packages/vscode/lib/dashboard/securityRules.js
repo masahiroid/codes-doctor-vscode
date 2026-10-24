@@ -17,6 +17,32 @@ function buildPacks(view, state) {
     </li>`).join('');
     return `<ul class="pack-list">${rows}</ul>`;
 }
+const ENDPOINT_GROUPS = [
+    { status: 'owner_field_unverified', title: 'Filtered by an owner field — check where its value comes from' },
+    { status: 'owner_checked', title: 'Ownership check found' },
+];
+/**
+ * For access (BOLA) rules: the handlers that are not findings, grouped by status, each with the
+ * line that counts as its ownership check. Findings are already listed as locations above.
+ */
+function buildEndpoints(view, rule) {
+    if (!rule.endpoints)
+        return '';
+    return ENDPOINT_GROUPS.map(({ status, title }) => {
+        const items = rule.endpoints.filter((endpoint) => endpoint.status === status);
+        if (items.length === 0)
+            return '';
+        const rows = items.slice(0, MAX_LOCATIONS).map((endpoint) => {
+            const name = endpoint.route ?? endpoint.function ?? `${endpoint.file}:${endpoint.line}`;
+            const evidence = 'evidenceLine' in endpoint && endpoint.evidenceLine ? ` · L${endpoint.evidenceLine}` : '';
+            return `<li class="location" data-security-file="${(0, format_1.escapeHtmlAttr)(endpoint.file)}" data-security-line="${endpoint.line}" title="${(0, format_1.escapeHtmlAttr)(`${endpoint.file}:${endpoint.line}`)}">
+          <span class="location-file">${(0, format_1.escapeHtmlAttr)(name)}</span><span class="history-meta">${(0, format_1.escapeHtmlAttr)(endpoint.file)}:${endpoint.line}${evidence}</span>
+        </li>`;
+        }).join('');
+        const more = items.length > MAX_LOCATIONS ? `<li class="note">${view.t('and {count} more — open the exported report for the full list.', { count: items.length - MAX_LOCATIONS })}</li>` : '';
+        return `<div class="field-label">${view.t(title)} (${items.length})</div><ul class="location-list">${rows}${more}</ul>`;
+    }).join('');
+}
 function buildRuleRows(view, state) {
     const scan = state.scan;
     if (!scan)
@@ -31,23 +57,28 @@ function buildRuleRows(view, state) {
             ? `<li class="note">${view.t('and {count} more — open the exported report for the full list.', { count: rule.locations.length - MAX_LOCATIONS })}</li>`
             : '';
         const steps = rule.checkSteps.map((step) => `<li>${(0, format_1.escapeHtmlAttr)(step)}</li>`).join('');
-        const badge = rule.status === 'flow_detected'
-            ? `<span class="badge badge-alert">${view.t('Input reaches: {count}', { count: rule.candidateCount })}</span>`
-            : rule.status === 'no_flow_detected'
-                ? `<span class="badge badge-ok">${view.t('No flow found')}</span>`
-                : rule.status === 'no_target_files'
-                    ? `<span class="badge">${view.t('No files to analyze')}</span>`
-                    : rule.status === 'not_evaluated'
-                        ? `<span class="badge badge-warn">${view.t('Not evaluated')}</span>`
-                        : rule.candidateCount > 0
-                            ? `<span class="badge ${rule.severity === 'error' ? 'badge-alert' : 'badge-warn'}">${view.t('{count} to review', { count: rule.candidateCount })}</span>`
-                            : `<span class="badge">${view.t('Manual check')}</span>`;
-        const method = `<span class="method">${view.t(rule.method === 'dataflow' ? 'Data flow' : rule.method === 'pattern' ? 'Pattern' : 'Manual')}</span>`;
+        const badge = rule.status === 'owner_check_missing'
+            ? `<span class="badge badge-alert">${view.t('No ownership check: {count}', { count: rule.candidateCount })}</span>`
+            : rule.status === 'no_owner_check_missing'
+                ? `<span class="badge badge-ok">${view.t('Ownership checks found')}</span>`
+                : rule.status === 'flow_detected'
+                    ? `<span class="badge badge-alert">${view.t('Input reaches: {count}', { count: rule.candidateCount })}</span>`
+                    : rule.status === 'no_flow_detected'
+                        ? `<span class="badge badge-ok">${view.t('No flow found')}</span>`
+                        : rule.status === 'no_target_files'
+                            ? `<span class="badge">${view.t('No files to analyze')}</span>`
+                            : rule.status === 'not_evaluated'
+                                ? `<span class="badge badge-warn">${view.t('Not evaluated')}</span>`
+                                : rule.candidateCount > 0
+                                    ? `<span class="badge ${rule.severity === 'error' ? 'badge-alert' : 'badge-warn'}">${view.t('{count} to review', { count: rule.candidateCount })}</span>`
+                                    : `<span class="badge">${view.t('Manual check')}</span>`;
+        const method = `<span class="method">${view.t(rule.method === 'access' ? 'Access' : rule.method === 'dataflow' ? 'Data flow' : rule.method === 'pattern' ? 'Pattern' : 'Manual')}</span>`;
         return `<details class="rule-row">
         <summary><span class="rule-title">${method}${(0, format_1.escapeHtmlAttr)(rule.title)}</span>${badge}</summary>
         <div class="rule-body">
           <div class="note">${(0, format_1.escapeHtmlAttr)(rule.ruleId)} · ${view.t('Management sheet column')}: ${(0, format_1.escapeHtmlAttr)(rule.excelColumn)} → ${(0, format_1.escapeHtmlAttr)(rule.actionRequired)}</div>
           ${shown || more ? `<ul class="location-list">${shown}${more}</ul>` : ''}
+          ${buildEndpoints(view, rule)}
           ${steps ? `<div class="field-label">${view.t('Check steps')}</div><ul class="steps">${steps}</ul>` : ''}
         </div>
       </details>`;
@@ -76,6 +107,7 @@ function buildResults(view, state) {
       <span class="history-meta">${view.t('{files} files scanned', { files: scan.scannedFiles })}${scan.testFilesExcluded ? ` · ${view.t('{count} test files excluded', { count: scan.testFilesExcluded })}` : ''} · ${(0, format_1.escapeHtmlAttr)(new Date(scan.at).toLocaleString(locale))}</span></div>
     ${buildCoverage(view, scan)}
     <div class="note">${view.t('"Data flow" items follow untrusted input to dangerous calls within each file, including through functions in the same file and past validation checks. "No flow found" is not proof of safety: flows through other files are not followed. "Manual check" items still need a manual check.')}</div>
+    ${scan.rules.some((rule) => rule.method === 'access') ? `<div class="note">${view.t('"Access" items list request handlers where a requested ID selects an object with no ownership check found. Whether an object may be public cannot be judged from code.')}</div>` : ''}
     ${buildRuleRows(view, state)}`;
 }
 function buildSecurityRulesSection(view) {

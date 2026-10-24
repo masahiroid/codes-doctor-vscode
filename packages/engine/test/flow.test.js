@@ -277,3 +277,154 @@ class OrderController {
 }`;
   assert.deepEqual(sinks(await analyzeFlows('php', php)), ['SQL Injection@4']);
 });
+
+test('flows across files: imports, require, this-calls and unique names connect; packages and ambiguous names do not', async () => {
+  const { buildFlowIndex, analyzeFileWithIndex } = require('../dist/analyzer/flow/project');
+  const { FLOW_SPECS } = require('../dist/analyzer/flow/languages');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'codes-project-'));
+  const files = {
+    'src/users.ts': "export function findUser(id: string) {\n  return db.query('SELECT * FROM users WHERE id = ' + id);\n}\nexport function safeUser(id: string) {\n  return db.query('SELECT * FROM users WHERE id = ?', [id]);\n}\n",
+    'src/shell.js': "function run(cmd) {\n  return exec('sh -c ' + cmd);\n}\nmodule.exports = { run };\n",
+    'src/fetcher.ts': "export function load(url) {\n  return fetch(url);\n}\n",
+    'src/service.ts': "export class ReportService {\n  render(name: string) {\n    return eval(name);\n  }\n}\n",
+    'src/dup-a.ts': "export function remove(p) { return unlinkSync(p); }\n",
+    'src/dup-b.ts': "export function remove(p) { return rmSync(p); }\n",
+    'src/routes.ts': [
+      "import { findUser, safeUser as safe } from './users';",
+      "import * as fetcher from './fetcher.js';",
+      "import { render } from 'templating';",
+      "const { run } = require('./shell');",
+      'function handler(req, res, service) {',
+      '  findUser(req.params.id);',
+      '  safe(req.params.id);',
+      '  fetcher.load(req.body.url);',
+      '  run(req.query.cmd);',
+      '  render(req.query.q);',
+      '  this.reportService.render(req.query.name);',
+      '  remove(req.query.path);',
+      '}',
+    ].join('\n'),
+    'app/OrderRepository.php': "<?php\nclass OrderRepository {\n  public function loadOrder($id) {\n    return DB::select(\"SELECT * FROM orders WHERE id = \" . $id);\n  }\n}\n",
+    'app/OrderController.php': "<?php\nclass OrderController {\n  public function show() {\n    $id = $_GET['id'];\n    return $this->orders->loadOrder($id);\n  }\n}\n",
+  };
+  try {
+    for (const [name, content] of Object.entries(files)) {
+      fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true });
+      fs.writeFileSync(path.join(dir, name), content);
+    }
+    const project = Object.keys(files).map((name) => ({ path: path.join(dir, name), grammar: name.endsWith('.php') ? 'php' : name.endsWith('.ts') ? 'typescript' : 'javascript' }));
+    const specsFor = (grammar) => [{ key: 'builtin', spec: FLOW_SPECS[grammar] }];
+    const index = await buildFlowIndex(project, specsFor, async (file) => fs.readFileSync(file, 'utf8'));
+    const flowsOf = async (name) => (await analyzeFileWithIndex(index, project.find((f) => f.path.endsWith(name)), files[name], specsFor)).get('builtin');
+
+    const routes = await flowsOf('src/routes.ts');
+    assert.deepEqual(routes.map((flow) => `${flow.category}@${flow.entry?.line}`), ['SQL Injection@6', 'SSRF@8', 'Command Injection@9', 'Code Injection@11']);
+    const sql = routes[0];
+    assert.equal(sql.source.line, 6);
+    assert.equal(sql.sink.line, 2);
+    assert.ok(sql.sink.file.endsWith('src/users.ts'));
+
+    const php = await flowsOf('app/OrderController.php');
+    assert.deepEqual(php.map((flow) => `${flow.category}@${flow.entry?.line}`), ['SQL Injection@5']);
+    assert.ok(php[0].sink.file.endsWith('OrderRepository.php'));
+    assert.equal(php[0].sink.line, 4);
+
+    // The helper files report nothing on their own: their parameters are not input sources.
+    assert.deepEqual(await flowsOf('src/users.ts'), []);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('object access (BOLA): ownership evidence, owner-field filters and what does not count', async () => {
+  const { analyzeAccess } = require('../dist/analyzer/flow/access');
+  const js = `router.get('/orders/:id', async (req, res) => {
+  const order = await Order.findById(req.params.id);
+  res.json(order);
+});
+router.get('/scoped/:id', async (req, res) => {
+  const order = await Order.findOne({ where: { id: req.params.id, userId: req.user.id } });
+  res.json(order);
+});
+router.get('/compared/:id', async (req, res) => {
+  const order = await Order.findByPk(req.params.id);
+  if (order.userId !== req.user.id) return res.sendStatus(403);
+  res.json(order);
+});
+router.delete('/authorized/:id', async (req, res) => {
+  const order = await prisma.order.findUnique({ where: { id: Number(req.params.id) } });
+  await authorize(req.user, 'delete', order);
+});
+router.get('/role/:id', async (req, res) => {
+  if (req.user.role !== 'admin') return res.sendStatus(403);
+  res.json(await Order.findById(req.params.id));
+});
+router.get('/field/:id', async (req, res) => {
+  res.json(await Order.findOne({ where: { id: req.params.id, UserId: req.body.UserId } }));
+});
+router.post('/login', async (req, res) => {
+  res.json(await User.findOne({ where: { email: req.body.email } }));
+});
+router.patch('/payload/:id', async (req, res) => {
+  await Review.update({ id: req.params.id }, { $set: { author: req.user.email } });
+});`;
+  const endpoints = await analyzeAccess('typescript', js);
+  const summary = endpoints.map((e) => `${e.route}=${e.status}`);
+  assert.deepEqual(summary, [
+    'GET /orders/:id=owner_check_missing',
+    'GET /scoped/:id=owner_checked',
+    'GET /compared/:id=owner_checked',
+    'DELETE /authorized/:id=owner_checked',
+    'GET /role/:id=owner_check_missing',
+    'GET /field/:id=owner_field_unverified',
+    'PATCH /payload/:id=owner_check_missing',
+  ]);
+  assert.equal(endpoints[0].findings[0].sink.line, 2);
+  assert.equal(endpoints[2].evidence.line, 11);
+
+  const php = `<?php
+$id = intval($_GET['user_id']);
+if (isset($_COOKIE['uid']) && $id == intval($_COOKIE['uid'])) {
+  $r = mysqli_query($c, "SELECT * FROM users WHERE user_id = $id");
+}
+$sessionUser = $_SESSION['user_id'];
+if ($id == $sessionUser) {
+  $stmt = mysqli_prepare($c, 'SELECT * FROM users WHERE user_id = ?');
+  mysqli_stmt_bind_param($stmt, 'i', $id);
+}`;
+  const [file] = await analyzeAccess('php', php);
+  // The session comparison makes the file count as checked even though the cookie path does not.
+  assert.equal(file.status, 'owner_checked');
+  assert.equal(file.evidence.line, 7);
+  const [cookieOnly] = await analyzeAccess('php', php.split('$sessionUser')[0]);
+  assert.equal(cookieOnly.status, 'owner_check_missing');
+
+  const laravel = `<?php
+class OrderController {
+  public function show($request) {
+    return Order::where('id', $request->route('id'))->where('user_id', auth()->id())->firstOrFail();
+  }
+  public function update($request) {
+    return Order::where('id', $request->input('order_id'))->update(['user_id' => auth()->id()]);
+  }
+}`;
+  assert.deepEqual((await analyzeAccess('php', laravel)).map((e) => `${e.function}=${e.status}`), ['show=owner_checked', 'update=owner_check_missing']);
+});
+
+test('object access rules compile from rule packs and report endpoints', async () => {
+  const { analyzeAccessRules, analyzeTaintRules } = require('../dist/analyzer/flow/ruleTaint');
+  const rule = compileTaintRule('BOLA', { type: 'object_access', languages: ['typescript'], owner_references: ['\\bsecurity\\.authenticatedUsers\\.from\\(req\\)'] });
+  assert.equal(rule.kind, 'access');
+  const code = `function h(req, res) {
+  const user = security.authenticatedUsers.from(req);
+  const basket = Basket.findOne({ where: { id: req.params.id } });
+  if (basket.UserId !== user.id) return res.sendStatus(403);
+}
+function g(req) {
+  return Basket.findOne({ where: { id: req.params.id } });
+}`;
+  const [endpoints] = await analyzeAccessRules([rule], 'typescript', 'a.ts', code);
+  assert.deepEqual(endpoints.map((e) => `${e.function}=${e.status}`), ['h=owner_checked', 'g=owner_check_missing']);
+  assert.deepEqual(await analyzeTaintRules([rule], 'typescript', 'a.ts', code), [null]);
+  assert.throws(() => compileTaintRule('X', { type: 'object_access', languages: ['typescript'], owner_references: ['(a+)+'] }), /nested quantifiers/);
+});

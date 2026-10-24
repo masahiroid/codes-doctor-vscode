@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SCAN_EXCLUDE_GLOB = exports.UNSUPPORTED_SOURCE_GLOB = exports.SCAN_GLOB = exports.SCAN_LIMITS = void 0;
+exports.flowRulesOf = exports.SCAN_EXCLUDE_GLOB = exports.UNSUPPORTED_SOURCE_GLOB = exports.SCAN_GLOB = exports.ruleKey = exports.SCAN_LIMITS = void 0;
 exports.compileRules = compileRules;
 exports.languageForFile = languageForFile;
 exports.scanText = scanText;
@@ -15,6 +15,8 @@ exports.SCAN_LIMITS = Object.freeze({ maxFileBytes: 1024 * 1024, maxPerRulePerFi
 // A quantified group that itself contains a quantifier, e.g. (a+)+. Rules arrive over the network
 // and run on the extension host thread, so patterns that can backtrack catastrophically are refused.
 const NESTED_QUANTIFIER = /\((?:[^()\\]|\\.)*[+*](?:[^()\\]|\\.)*\)\s*(?:[+*]|\{\d+,\d*\})/;
+const ruleKey = (packId, ruleId) => `${packId}/${ruleId}`;
+exports.ruleKey = ruleKey;
 function compileRules(packs, engine) {
     const compiled = [];
     const invalid = [];
@@ -108,29 +110,61 @@ function scanText(text, language, rules, limits = exports.SCAN_LIMITS) {
     return candidates;
 }
 /** Pattern matches plus data flows for the rules that have a detector. */
-async function scanFile(text, language, filePath, rules, engine) {
+/** The rules with a data-flow detector. */
+const flowRulesOf = (rules) => rules.filter((item) => item.taint !== undefined);
+exports.flowRulesOf = flowRulesOf;
+/**
+ * Pattern matches plus data flows. With a project index, calls into other files of the workspace
+ * are followed; a flow into another file is placed on the call in this file.
+ */
+async function scanFile(text, language, filePath, rules, engine, index, endpoints) {
     const candidates = scanText(text, language, rules);
     if (!engine)
         return candidates;
-    const flowRules = rules.filter((item) => item.taint !== undefined);
+    const flowRules = (0, exports.flowRulesOf)(rules);
     if (flowRules.length === 0)
         return candidates;
     let results = [];
     try {
         // One parse of the file serves every rule.
-        results = await engine.analyzeTaintRules(flowRules.map((item) => item.taint), language, filePath, text);
+        const taintRules = flowRules.map((item) => item.taint);
+        results = index
+            ? await engine.analyzeTaintRulesWithIndex(index, taintRules, language, filePath, text)
+            : await engine.analyzeTaintRules(taintRules, language, filePath, text);
     }
     catch {
         // A file the parser cannot read yields no flows; the pattern pass above still ran.
     }
-    for (const [index, { pack, rule }] of flowRules.entries()) {
-        for (const flow of results[index] ?? []) {
-            const line = Math.max(flow.sink.line - 1, 0);
-            const lineText = text.split('\n', line + 1)[line] ?? '';
-            const indent = lineText.length - lineText.trimStart().length;
-            candidates.push({ packId: pack.id, ruleId: rule.id, startLine: line, startColumn: indent, endLine: line, endColumn: Math.max(lineText.length, indent + 1), flow });
+    const place = (packId, ruleId, flow) => {
+        const line = Math.max((flow.entry ?? flow.sink).line - 1, 0);
+        const lineText = text.split('\n', line + 1)[line] ?? '';
+        const indent = lineText.length - lineText.trimStart().length;
+        candidates.push({ packId, ruleId, startLine: line, startColumn: indent, endLine: line, endColumn: Math.max(lineText.length, indent + 1), flow });
+    };
+    for (const [position, { pack, rule }] of flowRules.entries()) {
+        for (const flow of results[position] ?? [])
+            place(pack.id, rule.id, flow);
+    }
+    // Access (BOLA) rules: every handler gets a status; only lookups without an ownership check are findings.
+    const accessRules = flowRules.filter((item) => item.taint.kind === 'access');
+    if (accessRules.length > 0) {
+        let access = [];
+        try {
+            access = await engine.analyzeAccessRules(accessRules.map((item) => item.taint), language, filePath, text, index);
+        }
+        catch {
+            // As above: no endpoints for a file the parser cannot read.
+        }
+        for (const [position, { pack, rule }] of accessRules.entries()) {
+            const found = access[position];
+            if (!found || found.length === 0)
+                continue;
+            endpoints?.set((0, exports.ruleKey)(pack.id, rule.id), found);
+            for (const endpoint of found)
+                for (const flow of endpoint.findings)
+                    place(pack.id, rule.id, flow);
         }
     }
     return candidates;
 }
-module.exports = { SCAN_LIMITS: exports.SCAN_LIMITS, compileRules, languageForFile, SCAN_GLOB: exports.SCAN_GLOB, UNSUPPORTED_SOURCE_GLOB: exports.UNSUPPORTED_SOURCE_GLOB, SCAN_EXCLUDE_GLOB: exports.SCAN_EXCLUDE_GLOB, scanText, scanFile };
+module.exports = { SCAN_LIMITS: exports.SCAN_LIMITS, compileRules, flowRulesOf: exports.flowRulesOf, ruleKey: exports.ruleKey, languageForFile, SCAN_GLOB: exports.SCAN_GLOB, UNSUPPORTED_SOURCE_GLOB: exports.UNSUPPORTED_SOURCE_GLOB, SCAN_EXCLUDE_GLOB: exports.SCAN_EXCLUDE_GLOB, scanText, scanFile };

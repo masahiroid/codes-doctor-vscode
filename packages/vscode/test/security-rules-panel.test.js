@@ -74,3 +74,29 @@ test('dashboard messages are validated before reaching the service', async () =>
   await controller.handleMessage({ type: 'openSecurityLocation', file: 'src/a.ts', line: '4' });
   assert.deepEqual(panel.calls, [['pack', 'p', false], ['open', 'src/a.ts', 4]]);
 });
+
+test('access (BOLA) rules show their status and the handlers that were not findings', () => {
+  const state = {
+    ...loaded,
+    scan: {
+      ...loaded.scan,
+      rules: [{
+        ruleId: 'EMERG-BOLA', title: 'BOLA', severity: 'error', method: 'access', status: 'owner_check_missing', excelColumn: '認可不備', actionRequired: '要対応',
+        candidateCount: 1, locations: [{ file: 'src/orders.ts', line: 1, sourceLine: 1 }], checkSteps: [],
+        endpoints: [
+          { file: 'src/orders.ts', line: 1, route: 'GET /orders/:id', status: 'owner_check_missing' },
+          { file: 'src/orders.ts', line: 2, route: 'GET /mine/:id', status: 'owner_checked', evidenceLine: 2 },
+          { file: 'src/addr.ts', line: 5, function: 'getAddress', status: 'owner_field_unverified' },
+        ],
+        endpointSummary: { missing: 1, unverified: 1, checked: 1 },
+      }],
+    },
+  };
+  const html = createDashboardController(makeVsCode('ja'), { globalStorageUri: { fsPath: '/nonexistent' } }, () => {}, makePanel(state)).buildHtml();
+  assert.match(html, /所有者照合なし 1件/);
+  assert.match(html, /アクセス制御/);
+  assert.match(html, /所有者項目で絞り込み — 値の出所を確認 \(1\)/);
+  assert.match(html, /所有者照合あり \(1\)/);
+  assert.match(html, /data-security-file="src\/addr.ts" data-security-line="5"/);
+  assert.match(html, /GET \/mine\/:id/);
+});
