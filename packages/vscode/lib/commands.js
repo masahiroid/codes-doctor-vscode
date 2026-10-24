@@ -1,181 +1,20 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createCommands = createCommands;
 const i18n_1 = require("./i18n");
-const node_fs_1 = __importDefault(require("node:fs"));
-const node_path_1 = __importDefault(require("node:path"));
 const reportViewer_1 = require("./reportViewer");
-const analyzer_1 = require("./analyzer");
-const config_1 = require("./config");
-const secrets_1 = require("./secrets");
 const lastAnalysisState_1 = require("./lastAnalysisState");
 const summary_1 = require("./summary");
-const diagnostics_1 = require("./diagnostics");
-const ignoreComments_1 = require("./ignoreComments");
-const gitDiff_1 = require("./gitDiff");
 const aiFixPreview_1 = require("./aiFixPreview");
-const PROVIDER_LABELS = {
-    openai: 'OpenAI',
-    anthropic: 'Anthropic (Claude)',
-    'vscode-lm': 'VS Code Built-in AI',
-};
+const workspaceAnalysisCommands_1 = require("./workspaceAnalysisCommands");
+const apiKeyCommand_1 = require("./apiKeyCommand");
+/**
+ * The extension's command handlers. Analysis runs and API key setup live in their own modules;
+ * this keeps the small commands that work on the last analysis and the editor.
+ */
 function createCommands(vscode, context, diagnosticCollection) {
     const t = (0, i18n_1.translator)(vscode);
-    async function pickWorkspaceFolder() {
-        const folders = vscode.workspace.workspaceFolders;
-        if (!folders || folders.length === 0) {
-            vscode.window.showErrorMessage(t("No workspace folder is open. Open a folder and try again."));
-            return undefined;
-        }
-        if (folders.length === 1)
-            return folders[0];
-        const picked = await vscode.window.showQuickPick(folders.map((folder) => ({
-            label: folder.name,
-            description: folder.uri.fsPath,
-            folder,
-        })), {
-            title: t("Select Workspace Folder for Codes Doctor Analysis"),
-        });
-        return picked?.folder;
-    }
-    async function analyzeCurrentWorkspace() {
-        const targetFolder = await pickWorkspaceFolder();
-        if (!targetFolder)
-            return;
-        const language = (0, config_1.getAnalysisLanguage)(vscode);
-        await Promise.resolve(vscode.window.withProgress({
-            location: vscode.ProgressLocation.Notification,
-            title: t("Codes Doctor analysis running"),
-            cancellable: false,
-        }, async (progress) => {
-            progress.report({ message: t('Analyzing {name} ({language})...', { name: targetFolder.name, language }) });
-            const customDir = (0, config_1.getCustomOutputDir)(vscode);
-            const outputDir = customDir
-                ? (node_path_1.default.isAbsolute(customDir) ? customDir : node_path_1.default.resolve(targetFolder.uri.fsPath, customDir))
-                : (0, analyzer_1.getDefaultOutputDir)(context);
-            node_fs_1.default.mkdirSync(outputDir, { recursive: true });
-            const analysis = await (0, analyzer_1.analyzeWorkspace)(targetFolder.uri.fsPath, language, outputDir, (0, config_1.getDisplayLanguage)(vscode));
-            const filteredResult = (0, ignoreComments_1.applyIgnoreComments)(analysis.result);
-            const minSecurity = (0, config_1.getMinSecurity)(vscode);
-            const minTechnicalDebt = (0, config_1.getMinTechnicalDebt)(vscode);
-            const summary = (0, summary_1.summarize)(filteredResult, analysis.reportPath, { minSecurity, minTechnicalDebt });
-            (0, lastAnalysisState_1.setLastAnalysis)(analysis.analysisId, outputDir, analysis.reportPath, summary, filteredResult);
-            (0, diagnostics_1.updateDiagnostics)(vscode, diagnosticCollection, filteredResult);
-            progress.report({ message: t("Opening report...") });
-            await (0, reportViewer_1.openReport)(vscode, analysis.reportPath, analysis.analysisId);
-            const openText = t('Open Report');
-            const copyText = t('Copy Summary');
-            if (summary.failures.length > 0) {
-                const failures = summary.failures.join(', ');
-                vscode.window
-                    .showWarningMessage(t('Quality gate failed: {failures}', { failures }), openText, copyText)
-                    .then(async (action) => {
-                    if (action === openText)
-                        await (0, reportViewer_1.openReport)(vscode, analysis.reportPath, analysis.analysisId);
-                    else if (action === copyText) {
-                        await vscode.env.clipboard.writeText((0, summary_1.formatSummary)(summary));
-                        vscode.window.showInformationMessage(t('Analysis summary copied to clipboard.'));
-                    }
-                });
-            }
-            else {
-                const sec = summary.security ? `${summary.security.score}/100` : 'N/A';
-                const debt = summary.technicalDebt ? `${summary.technicalDebt.score}/100` : 'N/A';
-                const summaryStr = `Security: ${sec}, Debt: ${debt}`;
-                vscode.window
-                    .showInformationMessage(t('Codes Doctor analysis ready ({summary})', { summary: summaryStr }), openText, copyText)
-                    .then(async (action) => {
-                    if (action === openText)
-                        await (0, reportViewer_1.openReport)(vscode, analysis.reportPath, analysis.analysisId);
-                    else if (action === copyText) {
-                        await vscode.env.clipboard.writeText((0, summary_1.formatSummary)(summary));
-                        vscode.window.showInformationMessage(t('Analysis summary copied to clipboard.'));
-                    }
-                });
-            }
-        })).catch((error) => {
-            const message = error instanceof Error ? error.message : String(error);
-            vscode.window.showErrorMessage(t('Codes Doctor analysis failed: {message}', { message }));
-        });
-    }
-    async function analyzeGitChanges() {
-        const targetFolder = await pickWorkspaceFolder();
-        if (!targetFolder)
-            return;
-        let changedFiles;
-        try {
-            changedFiles = (0, gitDiff_1.getGitChangedFiles)(targetFolder.uri.fsPath);
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            vscode.window.showErrorMessage(t('Could not inspect Git changes: {message}', { message }));
-            return;
-        }
-        if (changedFiles.length === 0) {
-            vscode.window.showInformationMessage(t('No changed files detected in Git.'));
-            return;
-        }
-        const language = (0, config_1.getAnalysisLanguage)(vscode);
-        await Promise.resolve(vscode.window.withProgress({
-            location: vscode.ProgressLocation.Notification,
-            title: t("Codes Doctor analysis running"),
-            cancellable: false,
-        }, async (progress) => {
-            progress.report({ message: t('Analyzing {name} ({language})...', { name: targetFolder.name, language }) });
-            const customDir = (0, config_1.getCustomOutputDir)(vscode);
-            const outputDir = customDir
-                ? (node_path_1.default.isAbsolute(customDir) ? customDir : node_path_1.default.resolve(targetFolder.uri.fsPath, customDir))
-                : (0, analyzer_1.getDefaultOutputDir)(context);
-            node_fs_1.default.mkdirSync(outputDir, { recursive: true });
-            const analysis = await (0, analyzer_1.analyzeWorkspace)(targetFolder.uri.fsPath, language, outputDir, (0, config_1.getDisplayLanguage)(vscode));
-            const ignoredFiltered = (0, ignoreComments_1.applyIgnoreComments)(analysis.result);
-            const diffFiltered = (0, gitDiff_1.filterResultByChangedFiles)(ignoredFiltered, changedFiles);
-            const minSecurity = (0, config_1.getMinSecurity)(vscode);
-            const minTechnicalDebt = (0, config_1.getMinTechnicalDebt)(vscode);
-            const summary = (0, summary_1.summarize)(diffFiltered, analysis.reportPath, { minSecurity, minTechnicalDebt });
-            (0, lastAnalysisState_1.setLastAnalysis)(analysis.analysisId, outputDir, analysis.reportPath, summary, diffFiltered);
-            (0, diagnostics_1.updateDiagnostics)(vscode, diagnosticCollection, diffFiltered);
-            const openText = t('Open Report');
-            const copyText = t('Copy Summary');
-            if (summary.failures.length > 0) {
-                const failures = summary.failures.join(', ');
-                vscode.window
-                    .showWarningMessage(t('Quality gate failed: {failures}', { failures }), openText, copyText)
-                    .then(async (action) => {
-                    if (action === openText)
-                        await (0, reportViewer_1.openReport)(vscode, analysis.reportPath, analysis.analysisId);
-                    else if (action === copyText) {
-                        await vscode.env.clipboard.writeText((0, summary_1.formatSummary)(summary));
-                        vscode.window.showInformationMessage(t('Analysis summary copied to clipboard.'));
-                    }
-                });
-            }
-            else {
-                const secIssues = (diffFiltered.securityScore?.issues || []).filter((i) => i.type !== 'info').length;
-                const gcCount = (diffFiltered.godClasses || []).length;
-                const summaryStr = `Issues: ${secIssues}, God Classes: ${gcCount}`;
-                vscode.window
-                    .showInformationMessage(t('Git changes analysis ready ({count} changed files, {summary})', {
-                    count: changedFiles.length,
-                    summary: summaryStr,
-                }), openText, copyText)
-                    .then(async (action) => {
-                    if (action === openText)
-                        await (0, reportViewer_1.openReport)(vscode, analysis.reportPath, analysis.analysisId);
-                    else if (action === copyText) {
-                        await vscode.env.clipboard.writeText((0, summary_1.formatSummary)(summary));
-                        vscode.window.showInformationMessage(t('Analysis summary copied to clipboard.'));
-                    }
-                });
-            }
-        })).catch((error) => {
-            const message = error instanceof Error ? error.message : String(error);
-            vscode.window.showErrorMessage(t('Codes Doctor analysis failed: {message}', { message }));
-        });
-    }
+    const { analyzeCurrentWorkspace, analyzeGitChanges } = (0, workspaceAnalysisCommands_1.createWorkspaceAnalysisCommands)(vscode, context, diagnosticCollection);
     async function copySummary() {
         const last = (0, lastAnalysisState_1.getLastAnalysis)();
         if (!last || !last.summary) {
@@ -215,29 +54,7 @@ function createCommands(vscode, context, diagnosticCollection) {
         await vscode.window.showTextDocument(uri, { selection: range });
     }
     async function setLlmApiKey() {
-        const provider = (0, config_1.getLlmProvider)(vscode);
-        if (provider === 'vscode-lm') {
-            vscode.window.showInformationMessage(t('VS Code Built-in AI (vscode.lm) uses your signed-in editor account (such as GitHub Copilot) and does not require an API key.'));
-            return;
-        }
-        const providerLabel = PROVIDER_LABELS[provider] || provider;
-        const apiKey = await vscode.window.showInputBox({
-            title: t('Set {provider} API Key', { provider: providerLabel }),
-            prompt: t("Enter your {provider} API key. It is stored securely in VS Code's secret storage (not in settings.json).", { provider: providerLabel }),
-            password: true,
-            ignoreFocusOut: true,
-            placeHolder: provider === 'anthropic' ? 'sk-ant-...' : 'sk-...',
-        });
-        if (apiKey === undefined) {
-            return;
-        }
-        await (0, secrets_1.setApiKey)(context, provider, apiKey.trim());
-        if (apiKey.trim()) {
-            vscode.window.showInformationMessage(t('{provider} API key saved.', { provider: providerLabel }));
-        }
-        else {
-            vscode.window.showInformationMessage(t('{provider} API key cleared.', { provider: providerLabel }));
-        }
+        return (0, apiKeyCommand_1.promptForLlmApiKey)(vscode, context);
     }
     async function previewAiFix(options) {
         return (0, aiFixPreview_1.previewAndApplyAiFix)(vscode, context, options);
