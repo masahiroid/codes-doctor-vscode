@@ -1,21 +1,18 @@
 import path from 'node:path';
-import fs from 'node:fs/promises';
 import { translator } from '../i18n';
-import { EXTENSION_VERSION, PRODUCT_NAME } from '../settingsSchema';
 import { loadEngine } from '../engine';
 import { DEFAULT_MANIFEST_URL, downloadRuleset, readRulesetCache, sha256Hex, writeRulesetCache } from './ruleset';
 import type { LoadedRuleset } from './ruleset';
 import { compileRules, languageForFile, scanFile } from './scan';
 import type { Candidate, CompiledRule, FlowEngine, ProjectIndex } from './scan';
-import { auditReportToCsv, buildAuditReport } from './audit';
 import type { AuditReport } from './audit';
+import { REPORT_DIRECTORY, buildWorkspaceAuditReport, writeAuditReportFiles } from './auditExport';
 import { buildDiagnostic, buildHoverMarkdown } from './presentation';
 import { scanWorkspaceFiles } from './workspaceScan';
 import type { ScanProgress, ScanToken, WorkspaceScan } from './workspaceScan';
 
 const LAST_SYNC_KEY = 'codeDoctor.securityRules.lastSyncAt';
 const DISABLED_PACKS_KEY = 'codeDoctor.securityRules.disabledPacks';
-const REPORT_DIRECTORY = path.join('.codes-doctor', 'security-audit');
 
 export interface SecurityPackView {
   id: string;
@@ -237,31 +234,6 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
     return outcome;
   }
 
-  function buildReport(outcome: WorkspaceScan, root: string) {
-    const disabled = disabledPacks();
-    return buildAuditReport(
-      (ruleset?.packs ?? []).filter((pack) => !disabled.has(pack.id)),
-      outcome.results,
-      invalid,
-      {
-        generatedAt: new Date().toISOString(),
-        toolName: PRODUCT_NAME,
-        toolVersion: EXTENSION_VERSION,
-        workspace: path.basename(root),
-        rulesetVersion: ruleset?.manifest.version ?? '',
-        rulesSource: manifestUrl(),
-        source: ruleset?.source ?? 'cache',
-        scannedFiles: outcome.scanned,
-        skippedFiles: outcome.skipped,
-        testFilesExcluded: outcome.tests,
-        filesByLanguage: outcome.filesByLanguage,
-        unsupportedFiles: outcome.unsupported,
-      },
-      compiled,
-      engine
-    );
-  }
-
   async function runScan(progress?: ScanProgress, token?: ScanToken): Promise<AuditReport | undefined> {
     const root = workspaceRoot();
     const outcome = await scanWorkspace(progress, token);
@@ -269,7 +241,9 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
       if (token?.isCancellationRequested) vscode.window.setStatusBarMessage(t('Security rules scan cancelled.'), 5000);
       return undefined;
     }
-    const report = buildReport(outcome, root);
+    const report = buildWorkspaceAuditReport({
+      root, ruleset, disabledPacks: disabledPacks(), rulesSource: manifestUrl(), outcome, invalid, compiled, engine,
+    });
     scan = {
       at: Date.now(), scannedFiles: outcome.scanned, skippedFiles: outcome.skipped, testFilesExcluded: outcome.tests,
       unsupportedFiles: outcome.unsupported, filesByLanguage: outcome.filesByLanguage, rules: report.rules,
@@ -291,12 +265,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
     const root = workspaceRoot();
     const report = await withProgress(t('Security rules scan running'), runScan);
     if (!root || !report) return;
-    const directory = path.join(root, REPORT_DIRECTORY);
-    const stamp = report.generatedAt.replace(/[:.]/g, '-');
-    const csvPath = path.join(directory, `security-audit-${stamp}.csv`);
-    await fs.mkdir(directory, { recursive: true });
-    await fs.writeFile(path.join(directory, `security-audit-${stamp}.json`), `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-    await fs.writeFile(csvPath, auditReportToCsv(report), 'utf8');
+    const { csvPath } = await writeAuditReportFiles(root, report);
     const open = t('Open CSV');
     // Not awaited: the panel must not stay busy while a notification waits for a click.
     void Promise.resolve(vscode.window.showInformationMessage(

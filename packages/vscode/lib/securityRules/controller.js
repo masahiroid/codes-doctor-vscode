@@ -5,18 +5,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createSecurityRulesController = createSecurityRulesController;
 const node_path_1 = __importDefault(require("node:path"));
-const promises_1 = __importDefault(require("node:fs/promises"));
 const i18n_1 = require("../i18n");
-const settingsSchema_1 = require("../settingsSchema");
 const engine_1 = require("../engine");
 const ruleset_1 = require("./ruleset");
 const scan_1 = require("./scan");
-const audit_1 = require("./audit");
+const auditExport_1 = require("./auditExport");
 const presentation_1 = require("./presentation");
 const workspaceScan_1 = require("./workspaceScan");
 const LAST_SYNC_KEY = 'codeDoctor.securityRules.lastSyncAt';
 const DISABLED_PACKS_KEY = 'codeDoctor.securityRules.disabledPacks';
-const REPORT_DIRECTORY = node_path_1.default.join('.codes-doctor', 'security-audit');
 function createSecurityRulesController(vscode, context) {
     const t = (0, i18n_1.translator)(vscode);
     let engine;
@@ -206,23 +203,6 @@ function createSecurityRulesController(vscode, context) {
         }
         return outcome;
     }
-    function buildReport(outcome, root) {
-        const disabled = disabledPacks();
-        return (0, audit_1.buildAuditReport)((ruleset?.packs ?? []).filter((pack) => !disabled.has(pack.id)), outcome.results, invalid, {
-            generatedAt: new Date().toISOString(),
-            toolName: settingsSchema_1.PRODUCT_NAME,
-            toolVersion: settingsSchema_1.EXTENSION_VERSION,
-            workspace: node_path_1.default.basename(root),
-            rulesetVersion: ruleset?.manifest.version ?? '',
-            rulesSource: manifestUrl(),
-            source: ruleset?.source ?? 'cache',
-            scannedFiles: outcome.scanned,
-            skippedFiles: outcome.skipped,
-            testFilesExcluded: outcome.tests,
-            filesByLanguage: outcome.filesByLanguage,
-            unsupportedFiles: outcome.unsupported,
-        }, compiled, engine);
-    }
     async function runScan(progress, token) {
         const root = workspaceRoot();
         const outcome = await scanWorkspace(progress, token);
@@ -231,7 +211,9 @@ function createSecurityRulesController(vscode, context) {
                 vscode.window.setStatusBarMessage(t('Security rules scan cancelled.'), 5000);
             return undefined;
         }
-        const report = buildReport(outcome, root);
+        const report = (0, auditExport_1.buildWorkspaceAuditReport)({
+            root, ruleset, disabledPacks: disabledPacks(), rulesSource: manifestUrl(), outcome, invalid, compiled, engine,
+        });
         scan = {
             at: Date.now(), scannedFiles: outcome.scanned, skippedFiles: outcome.skipped, testFilesExcluded: outcome.tests,
             unsupportedFiles: outcome.unsupported, filesByLanguage: outcome.filesByLanguage, rules: report.rules,
@@ -251,15 +233,10 @@ function createSecurityRulesController(vscode, context) {
         const report = await withProgress(t('Security rules scan running'), runScan);
         if (!root || !report)
             return;
-        const directory = node_path_1.default.join(root, REPORT_DIRECTORY);
-        const stamp = report.generatedAt.replace(/[:.]/g, '-');
-        const csvPath = node_path_1.default.join(directory, `security-audit-${stamp}.csv`);
-        await promises_1.default.mkdir(directory, { recursive: true });
-        await promises_1.default.writeFile(node_path_1.default.join(directory, `security-audit-${stamp}.json`), `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-        await promises_1.default.writeFile(csvPath, (0, audit_1.auditReportToCsv)(report), 'utf8');
+        const { csvPath } = await (0, auditExport_1.writeAuditReportFiles)(root, report);
         const open = t('Open CSV');
         // Not awaited: the panel must not stay busy while a notification waits for a click.
-        void Promise.resolve(vscode.window.showInformationMessage(t('Security audit report saved to {directory}. Items are review candidates, not a compliance verdict.', { directory: REPORT_DIRECTORY }), open)).then((choice) => (choice === open ? vscode.commands.executeCommand('vscode.open', vscode.Uri.file(csvPath)) : undefined));
+        void Promise.resolve(vscode.window.showInformationMessage(t('Security audit report saved to {directory}. Items are review candidates, not a compliance verdict.', { directory: auditExport_1.REPORT_DIRECTORY }), open)).then((choice) => (choice === open ? vscode.commands.executeCommand('vscode.open', vscode.Uri.file(csvPath)) : undefined));
     });
     async function setPackEnabled(packId, enabled) {
         if (!ruleset?.packs.some((pack) => pack.id === packId))
