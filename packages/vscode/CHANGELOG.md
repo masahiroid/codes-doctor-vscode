@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.2.1
+
+- Internal: split responsibilities out of four modules without changing behavior: workspace analysis and API key commands out of the command handlers, security finding detection out of the security score, audit report output out of the security rules controller, and the module coupling report section out of the overview sections. Characterization tests were added first for the commands and the controller; report and security score output were compared byte for byte before and after.
+
 ## 7.2.0
 
 - Data flows are followed across files: a workspace scan summarizes every function first, then connects calls through relative `import` / `require` and to project functions and methods with a unique name. A flow into another file is reported on the call that passes the input, with the other file's lines in the path, Problems and hovers. Single files saved later are scanned against the last workspace scan's summaries.
