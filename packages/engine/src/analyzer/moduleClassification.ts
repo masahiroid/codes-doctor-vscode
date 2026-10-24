@@ -5,7 +5,7 @@ import { ModuleMetrics } from '../types';
  * orchestrator naturally imports many sub-modules.
  *
  * Shared by technicalDebt.ts (excludes these from the maintainability average) and
- * overviewSections.ts (labels them "entrypoint" in the report table) — both must agree
+ * moduleMetricsSection.ts (labels them "entrypoint" in the report table) — both must agree
  * on the same definition, so it lives here as the single source of truth. */
 const THIN_ORCHESTRATOR_MAX_LINES = 150;
 const THIN_ORCHESTRATOR_MAX_FAN_IN = 2;
