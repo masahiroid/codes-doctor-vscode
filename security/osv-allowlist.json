@@ -1,1 +1,8 @@
-[]
+[
+  {
+    "id": "GHSA-xcx6-jx8p-x3h5",
+    "package": "@azure/msal-node@6.0.1",
+    "reason": "Development dependency of @vscode/vsce through @azure/identity (no release of @azure/identity allows the fixed @azure/msal-node 7.1 yet). The advisory affects only the authorization code flow (acquireTokenByCode); vsce authenticates with EnvironmentCredential, AzureCliCredential, ManagedIdentityCredential, AzurePowerShellCredential and AzureDeveloperCliCredential, none of which use it. Remove when @azure/identity accepts @azure/msal-node >=7.1.0.",
+    "expires": "2026-11-24"
+  }
+]

@@ -36,7 +36,7 @@ npm run package:vsix  # clean install, then packages/vscode/releases/codes-docto
 Builds refuse to run when `node_modules` does not match `package-lock.json`; run `npm ci` in that package. Dependency rules:
 
 - An install script runs only when the package is listed as `true` under `allowScripts` in that package's `package.json`; deny it with `false` when it is not needed. Unlisted install scripts fail CI.
-- A known vulnerability fails CI. If it cannot be fixed yet and does not affect Codes Doctor, add it to `security/osv-allowlist.json` with the reason and an expiry date.
+- A known vulnerability (npm advisories or OSV) fails CI. If it cannot be fixed yet and does not affect Codes Doctor, add it to `security/osv-allowlist.json` with the reason and an expiry date; the same list applies to both checks.
 
 The engine build (`npm run build` in `packages/engine`) bundles the report's browser libraries, compiles the engine, and generates its English build. `scripts/vendor-engine.mjs` copies that output into the extension and the CLI.
 
