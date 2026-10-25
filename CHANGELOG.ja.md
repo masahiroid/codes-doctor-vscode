@@ -7,6 +7,10 @@ Codes Doctor モノレポ（`@codes-doctor/engine`、`codes-doctor` CLI、およ
 
 ---
 
+## 7.2.5
+
+- **CIアクションとランナー除外対応**: 任意のリポジトリから GitHub Actions 経由で呼び出し可能な複合アクション（`action.yml`）を追加。`fileWalker` においてランナー・キャッシュ用ディレクトリ（`.codes-doctor*`）を自動的にスキャン対象外とする除外設定を追加。
+
 ## 7.2.4
 
 - **技術的負債解消・神クラスのリファクタリング**: `FindingsTreeDataProvider` からアイテム描画・階層生成処理を分離して責務を限定（God Score: 27 → 19）。テイント解析エンジン内の `FlowAnalysis` からフロー収集・重複排除・サマリー追跡責務を `FlowCollector` へ分離（God Score: 45 → 38、プロジェクト平均God Score: 30 → 22に改善、テクニカルデットスコア: 85 → 86/100へ向上）。

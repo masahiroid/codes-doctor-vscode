@@ -16,14 +16,14 @@ runs:
       uses: actions/checkout@v4
       with:
         repository: masahiroid/codes-doctor-vscode
-        path: ${{ runner.temp }}/codes-doctor
+        path: .codes-doctor-tool
     - name: Build Codes Doctor Engine & CLI
       shell: bash
       run: |
-        cd ${{ runner.temp }}/codes-doctor
+        cd .codes-doctor-tool
         npm ci
         npm run build
     - name: Run Codes Doctor Analysis
       shell: bash
       run: |
-        node ${{ runner.temp }}/codes-doctor/packages/cli/bin/codes-doctor.js analyze ${{ inputs.path }}
+        node .codes-doctor-tool/packages/cli/bin/codes-doctor.js analyze ${{ inputs.path }}

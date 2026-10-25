@@ -110,8 +110,14 @@ function shouldExclude(itemName: string, fullPath: string, scopes: readonly Giti
     'android/app/build', 'ios/build', '.gradle', 'Pods', 'DerivedData',
     '.terraform', 'target', 'bin', 'obj', '.vs', '.idea', '.vscode',
     'tmp', 'temp', '.tmp', '.DS_Store', 'thumbs.db', 'vscode-extension', 'releases',
-    '.parcel-cache', '.docusaurus', '.serverless', '.svelte-kit'
+    '.parcel-cache', '.docusaurus', '.serverless', '.svelte-kit',
+    '.codes-doctor', '.codes-doctor-tool'
   ];
+
+  // Exclude Codes Doctor runner/cache directories
+  if (itemName.startsWith('.codes-doctor')) {
+    return true;
+  }
 
   // Check standard exclusions
   if (standardExcludes.includes(itemName)) {

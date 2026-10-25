@@ -7,6 +7,10 @@ All notable changes to the Codes Doctor monorepo (`@codes-doctor/engine`, `codes
 
 ---
 
+## 7.2.5
+
+- CI action & runner exclusion: Added reusable composite GitHub Action (`action.yml`) enabling automated Codes Doctor analysis across any project repo. Updated `fileWalker` to automatically ignore runner directory patterns (`.codes-doctor*`).
+
 ## 7.2.4
 
 - Refactoring & Debt Reduction: Separated tree item presentation and child generation out of `FindingsTreeDataProvider` into pure helper functions (reducing God Score from 27 to 19). Extracted `FlowCollector` out of `FlowAnalysis` in the taint engine to isolate flow deduplication and summary sink tracking from AST traversal (reducing God Score from 45 to 38, lowering workspace average God score from 30 to 22, and boosting Technical Debt score from 85 to 86/100).
