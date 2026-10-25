@@ -13,7 +13,9 @@ Codes Doctor は、ソースコードの構造診断、God Class（肥大化ク�
 
 TypeScript/JavaScript、PHP、Python、Go、Swift、C#、Java、Kotlin、Rust、C++、Dart に対応しています。解析エンジンは手元のプロセス内で直接動作するため、ソースコードが外部サーバーへ送信されることは一切ありません。
 
-📘 **利用マニュアル**: [USER_GUIDE.ja.md](packages/vscode/docs/USER_GUIDE.ja.md) / [USER_GUIDE.md](packages/vscode/docs/USER_GUIDE.md) — 導入方法、レポート各タブの読み方、AI機能、設定、トラブルシューティング。過去の更新履歴は **[更新履歴 (Changelog)](CHANGELOG.ja.md)** をご覧ください。
+📘 **利用マニュアル**: [USER_GUIDE.ja.md](packages/vscode/docs/USER_GUIDE.ja.md) / [USER_GUIDE.md](packages/vscode/docs/USER_GUIDE.md) — 導入方法、レポート各タブの読み方、設定、トラブルシューティング。
+🤖 **AI 連携ガイド**: [AI_INTEGRATION.ja.md](packages/vscode/docs/AI_INTEGRATION.ja.md) / [AI_INTEGRATION.md](packages/vscode/docs/AI_INTEGRATION.md) — `@codedoctor` チャット、GitHub Copilot（`vscode-lm` / APIキー不要）、Claude Code、Antigravity、Codex 連携。
+📜 **過去の更新履歴**: **[CHANGELOG.ja.md](CHANGELOG.ja.md)** / **[CHANGELOG.md](CHANGELOG.md)** をご覧ください。
 
 ---
 

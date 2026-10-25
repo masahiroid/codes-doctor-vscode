@@ -11,7 +11,8 @@
 
 Codes Doctor は、現在開いているワークスペースフォルダーを分析し、God Class・技術的負債・セキュリティ問題・依存グラフ・SBOM を含む構造診断レポートを VS Code 内で直接生成します。解析エンジンはプロセス内で実行されるため、外部サーバーは不要です。
 
-📘 **はじめての方は [利用マニュアル](https://github.com/masahiroid/codes-doctor-vscode/blob/main/packages/vscode/docs/USER_GUIDE.ja.md) をご覧ください** — 導入、レポートの各タブの読み方、AI 機能、設定、トラブルシューティングをまとめています。
+📘 **はじめての方は [利用マニュアル](docs/USER_GUIDE.ja.md) をご覧ください** — 導入、レポートの各タブの読み方、設定、トラブルシューティングをまとめています。
+🤖 **AI 連携ガイド: [AI_INTEGRATION.ja.md](docs/AI_INTEGRATION.ja.md)** — `@codedoctor`、GitHub Copilot（`vscode-lm` / APIキー不要）、Claude Code、Antigravity、Codex 連携。
 
 ## 6.x でできること
 

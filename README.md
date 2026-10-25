@@ -11,7 +11,9 @@
 
 Static structural diagnosis for codebases: God Classes, technical debt, security findings with taint data-flow tracking, dependency graphs and an SBOM, in a self-contained HTML report. Supports TypeScript/JavaScript, PHP, Python, Go, Swift, C#, Java, Kotlin, Rust, C++ and Dart. All analysis runs completely in-process; no code leaves your machine.
 
-📘 **New here? Read the [User Guide](packages/vscode/docs/USER_GUIDE.md)** / **[利用マニュアル](packages/vscode/docs/USER_GUIDE.ja.md)** — setup, report tabs, AI features, settings, and troubleshooting. See **[Changelog](CHANGELOG.md)** for release history.
+📘 **New here? Read the [User Guide](packages/vscode/docs/USER_GUIDE.md)** / **[利用マニュアル](packages/vscode/docs/USER_GUIDE.ja.md)** — setup, report tabs, settings, and troubleshooting.
+🤖 **AI Integration Guide: [AI_INTEGRATION.md](packages/vscode/docs/AI_INTEGRATION.md)** / **[AI_INTEGRATION.ja.md](packages/vscode/docs/AI_INTEGRATION.ja.md)** — `@codedoctor` chat, GitHub Copilot (`vscode-lm` / no API key required), Claude Code, Antigravity, and Codex.
+📜 **Release History: [Changelog](CHANGELOG.md)** / **[CHANGELOG.ja.md](CHANGELOG.ja.md)**
 
 ---
 

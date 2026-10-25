@@ -11,7 +11,8 @@
 
 Codes Doctor analyzes the currently opened workspace folder and generates a structural diagnosis report — God Classes, technical debt, security issues, dependency graphs, and an SBOM — directly inside VS Code. The analysis engine runs in-process; no external server is required.
 
-📘 **New here? Read the [User Guide](https://github.com/masahiroid/codes-doctor-vscode/blob/main/packages/vscode/docs/USER_GUIDE.md)** — setup, every report tab explained, AI features, settings, and troubleshooting.
+📘 **New here? Read the [User Guide](docs/USER_GUIDE.md)** — setup, every report tab explained, settings, and troubleshooting.
+🤖 **AI Integration Guide: [AI_INTEGRATION.md](docs/AI_INTEGRATION.md)** — `@codedoctor`, GitHub Copilot (`vscode-lm` / no API key required), Claude Code, Antigravity, and Codex.
 
 ## What you can do in 6.x
 

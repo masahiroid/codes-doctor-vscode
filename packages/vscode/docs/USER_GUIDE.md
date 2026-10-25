@@ -123,11 +123,14 @@ The dependencies listed in `package.json` and lock files, split into direct, tra
 
 ## 7. AI review and AI coding prompts
 
-The AI features are optional and use your own API key from OpenAI or Anthropic.
+The AI features are optional. You can use your own API keys from OpenAI or Anthropic, or use **`vscode-lm` to leverage your signed-in GitHub Copilot account with no external API keys or extra fees**.
 
-1. Choose a provider in **LLM Provider**.
-2. Click **Set API Key** and paste your key. It is stored in VS Code's secret storage (your OS keychain), never in `settings.json` or the workspace.
-3. Click **Fetch** to load the models your key can use, then choose one.
+> [!TIP]
+> For interactive chat (`@codedoctor`), 1-click diff previews, and autonomous agent workflows (Claude Code, Antigravity, Codex), see the **[AI Integration Guide](AI_INTEGRATION.md)**.
+
+1. Choose a provider in **LLM Provider** (`vscode-lm`, `openai`, or `anthropic`).
+2. For `openai` or `anthropic`, click **Set API Key** and paste your key (no key needed for `vscode-lm`). It is stored securely in VS Code's secret storage (your OS keychain).
+3. Click **Fetch** to load the models available to your account, then choose one.
 4. Run an analysis if you have not already.
 5. Choose an **Output Mode** and click **Run LLM Review** or **Generate AI Coding Prompt**. The result is written into the report, and the report reopens.
 
@@ -156,7 +159,7 @@ The default is 16,000. Typical starting points are 4,000–8,000 for non-reasoni
 | `codeDoctor.displayLanguage` | `en` | `en`, `ja`. Stored as an application-wide preference. |
 | `codeDoctor.analysisLanguage` | `auto` | `auto`, `typescript`, `javascript`, `php`, `dart`, `python`, `go`, `swift`, `csharp`, `java`, `kotlin`, `rust`, `cpp` |
 | `codeDoctor.reportOpenMode` | `external` | `external`, `webview`, `vscode` |
-| `codeDoctor.llmProvider` | `openai` | `openai`, `anthropic` |
+| `codeDoctor.llmProvider` | `openai` | `openai`, `anthropic`, `vscode-lm` |
 | `codeDoctor.llmOutputMode` | `review` | `review`, `agentPrompt` |
 | `codeDoctor.llmModel` | empty | Set from the Dashboard after **Fetch** |
 | `codeDoctor.llmMaxOutputTokens` | `16000` | 200 – 1,000,000 |

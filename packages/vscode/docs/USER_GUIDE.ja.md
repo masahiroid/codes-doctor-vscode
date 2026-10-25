@@ -123,11 +123,14 @@ AI レビューと AI コーディング用プロンプトを実行すると、�
 
 ## 7. AI レビューと AI コーディング用プロンプト
 
-AI 機能は任意です。OpenAI または Anthropic の、ご自身の API キーを使います。
+AI 機能は任意です。自身の OpenAI や Anthropic の API キーを利用できるほか、**VS Code にサインイン済みの GitHub Copilot（`vscode-lm`）を利用することで、API キー不要・追加費用なしで AI レビューやチャット対話、ワンクリック修正** を活用できます。
 
-1. **LLMプロバイダー** を選びます。
-2. **APIキーを設定** を押してキーを貼り付けます。キーは VS Code のシークレットストレージ（OS のキーチェーン）に保存され、`settings.json` やワークスペースには保存されません。
-3. **取得** を押して、そのキーで使えるモデルの一覧を読み込み、モデルを選びます。
+> [!TIP]
+> チャット対話（`@codedoctor`）、差分プレビュー（1-Click AI Fix）、Claude Code や Antigravity との連携手順など、詳細な解説は **[AI 連携・活用ガイド](AI_INTEGRATION.ja.md)** をご覧ください。
+
+1. **LLMプロバイダー** を選びます（`vscode-lm`、`openai`、`anthropic`）。
+2. `openai` または `anthropic` の場合は **APIキーを設定** を押してキーを貼り付けます（`vscode-lm` の場合はキー設定は不要です）。キーは VS Code のシークレットストレージ（OS のキーチェーン）に安全に保存されます。
+3. **取得** を押して、利用可能なモデルの一覧を読み込み、モデルを選びます。
 4. まだなら解析を実行します。
 5. **出力モード** を選び、**LLMレビューを実行** または **AIコーディング用プロンプトを生成** を押します。結果はレポートに書き込まれ、レポートが開き直されます。
 
@@ -156,7 +159,7 @@ Claude Code、Cursor、GitHub Copilot、Codex にそのまま貼り付けられ�
 | `codeDoctor.displayLanguage` | `en` | `en`、`ja`。アプリケーション全体の設定として保存されます。 |
 | `codeDoctor.analysisLanguage` | `auto` | `auto`、`typescript`、`javascript`、`php`、`dart`、`python`、`go`、`swift`、`csharp`、`java`、`kotlin`、`rust`、`cpp` |
 | `codeDoctor.reportOpenMode` | `external` | `external`、`webview`、`vscode` |
-| `codeDoctor.llmProvider` | `openai` | `openai`、`anthropic` |
+| `codeDoctor.llmProvider` | `openai` | `openai`、`anthropic`、`vscode-lm` |
 | `codeDoctor.llmOutputMode` | `review` | `review`、`agentPrompt` |
 | `codeDoctor.llmModel` | 空 | ダッシュボードで **取得** した後に選択 |
 | `codeDoctor.llmMaxOutputTokens` | `16000` | 200〜1,000,000 |
