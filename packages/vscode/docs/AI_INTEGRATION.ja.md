@@ -28,7 +28,7 @@ Codes Doctor は、決定論的な静的解析（AST 構文解析、汚染デー
 | ツール / AI | 連携方式 | APIキー | 主な用途・特徴 |
 | :--- | :--- | :---: | :--- |
 | **GitHub Copilot** | `@codedoctor` / `vscode-lm` | **不要** | チャットでの対話、AI レビュー生成、AI Fix 差分プレビュー。サインイン済みアカウントで即座に動作。 |
-| **Claude (Anthropic)** | ① `anthropic` (直接API)<br>② `vscode-lm` (Copilot経由) | ① 必要<br>② **不要** | Claude 3.5 Sonnet や Claude 3 Opus による高精度な脆弱性レビューやリファクタリング提案。 |
+| **Claude (Anthropic)** | ① `anthropic` (直接API)<br>② `vscode-lm` (Copilot経由) | ① 必要<br>② **不要** | Claude Sonnet や Opus による高精度な脆弱性レビューやリファクタリング提案。 |
 | **Codex / OpenAI** | ① `openai` (直接API)<br>② `vscode-lm` (Copilot経由) | ① 必要<br>② **不要** | GPT-4o や Codex 系モデルを使ったコードレビュー、修正コード生成。 |
 | **Claude Code** | CLI (`codes-doctor`) | 各自設定 | ターミナルで解析を実行させ、出力された指摘を Claude Code が自律的にコード修正。 |
 | **Antigravity** | CLI / エディタ拡張 | 各自設定 | エージェントが解析結果を読み取り、安全なパッチ作成と自動テスト検証を自律実行。 |
