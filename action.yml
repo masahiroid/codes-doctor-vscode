@@ -21,8 +21,10 @@ runs:
       shell: bash
       run: |
         cd .codes-doctor-tool
-        npm ci
-        npm run build
+        (cd packages/engine && npm ci)
+        (cd packages/cli && npm ci)
+        npm run build --prefix packages/engine
+        npm run build --prefix packages/cli
     - name: Run Codes Doctor Analysis
       shell: bash
       run: |
