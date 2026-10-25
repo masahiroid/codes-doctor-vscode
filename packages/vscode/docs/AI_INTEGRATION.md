@@ -153,3 +153,4 @@ If you prefer to use your own direct API account for higher rate limits or speci
 - **AI Requests**:
   - Code snippets and analysis metadata are transmitted to AI providers **only when you explicitly trigger an AI action** (running an LLM review, prompting `@codedoctor`, or requesting an AI Fix Preview).
   - When AI features are not invoked, zero external network requests are made.
+

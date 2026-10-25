@@ -154,3 +154,4 @@ npx @codes-doctor/cli analyze . --min-security 80 --min-debt 75
 - **AI 機能の利用時**:
   - AI 機能（レビュー生成、`@codedoctor` チャット、AI Fix プレビュー）を**明示的に実行した場合のみ**、問題箇所のスニペットや解析サマリーが選択されたプロバイダー（VS Code LM / OpenAI / Anthropic）に送信されます。
   - AI 機能を実行しない限り、外部通信は一切発生しません。
+

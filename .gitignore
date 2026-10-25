@@ -42,6 +42,7 @@ output/
 # Internal Developer Notes & Private Specifications
 # =============================================================================
 local-notes/
+AGENTS.md
 .vscode/
 .idea/
 docs/security-rules/
