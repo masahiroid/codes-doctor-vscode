@@ -113,14 +113,45 @@ The review is generated using your signed-in editor AI account (Claude extension
 Codes Doctor ships with `@codes-doctor/cli` and supports **MCP (Model Context Protocol)**, making it an ideal companion for autonomous agentic workflows.
 
 ### Claude Code (Anthropic Terminal Agent)
-Run `claude` in your terminal and instruct it to leverage Codes Doctor:
+
+> [!IMPORTANT]
+> **"Does it work out of the box just by installing the VS Code extension?"**
+> Installing Codes Doctor as a VS Code extension registers `@codedoctor` within the **VS Code Chat panel**. However, because **Claude Code** runs as an autonomous agent in a terminal shell outside the VS Code extension host, it does not automatically receive the `@codedoctor` participant.
+> To use Codes Doctor with Claude Code, choose one of the three workflows below.
+
+#### Method 1: 1-Click Copy AI Agent Prompt (Recommended)
+This method is deterministic, zero-cost (no LLM API needed), and delivers exact AST metrics to Claude Code:
+
+1. Run **"Codes Doctor: Analyze Current Workspace"** in VS Code.
+2. In the dashboard overview card, click **`📋 Copy Prompt for AI Agents`** (or press `Cmd+Shift+P` → `Codes Doctor: Copy Prompt for AI Agents`).
+3. An actionable Markdown task prompt (containing ranked God Classes, line counts, method counts, circular imports, and taint flow traces) is copied to your clipboard.
+4. **Paste (`Cmd+V` / `Ctrl+V`)** directly into Claude Code.
+5. Claude Code will autonomously refactor the code according to the verified AST metrics without hallucinations.
+
+#### Method 2: Direct CLI Execution in Claude Code
+Because Claude Code has shell execution capabilities, you can prompt it to run the analysis directly:
 
 ```bash
-$ claude
-> Run "npx @codes-doctor/cli analyze ." and fix all reported Critical and High security vulnerabilities. Verify with tests.
+# In Claude Code
+> Run "npx @codes-doctor/cli analyze ." and refactor the detected God classes and High/Critical security vulnerabilities. Verify with tests.
 ```
 
-Claude Code invokes the CLI, parses the deterministic findings, edits the vulnerable code paths, and runs the test suite to verify the fixes.
+#### Method 3: Instruct Claude Code via `CLAUDE.md`
+Add a `CLAUDE.md` file to your project root so Claude Code knows about Codes Doctor automatically:
+
+```markdown
+# Codes Doctor Quality Inspection
+- When asked to inspect code health or refactor, run `npx @codes-doctor/cli analyze .`.
+- Follow the deterministic findings in the generated report to refactor monolithic classes and resolve circular dependencies.
+```
+
+---
+
+### Google Cloud Code (Gemini Code Assist)
+If you use Google Cloud Code / Gemini Code Assist in VS Code:
+1. In VS Code settings, set `codeDoctor.llmProvider` to **`vscode-lm`**.
+2. Set `codeDoctor.llmModel` to the Cloud Code / Gemini model provided by the extension.
+3. Codes Doctor will utilize your signed-in Google Cloud account without requiring manual API key configuration.
 
 ### Antigravity (Google Coding Agent)
 In Antigravity agent workflows, deterministic static analysis identifies exact taint paths without hallucination, enabling the agent to create robust, verifiable patches.

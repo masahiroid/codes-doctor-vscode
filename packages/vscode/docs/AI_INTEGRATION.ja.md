@@ -112,16 +112,49 @@ VS Code 内でサインインしている AI アカウント（Claude 拡張、C
 
 Codes Doctor は、独立した CLI パッケージ（`@codes-doctor/cli`）および **MCP（Model Context Protocol）** を通じて、外部の自律型 AI エージェントと深く連携できます。
 
-### Claude Code（Anthropic ターミナルエージェント）
-ターミナルで動作する `claude` CLI に対し、Codes Doctor の解析結果をそのまま指示として渡すことができます。
+### Claude Code（Anthropic ターミナルエージェント）との連携
+
+> [!IMPORTANT]
+> **「普通にインストールしただけでは動かない？」への回答**
+> VS Code 拡張機能として Codes Doctor をインストールすると、VS Code 本体のチャットパネルで `@codedoctor` が使えるようになりますが、**ターミナルで動作する Claude Code（CLI や Claude 専用ツール）側には自動的には引き継がれません**。
+> Claude Code はエディタの拡張機能環境とは独立したサンドボックスで動作しているため、Claude Code に Codes Doctor の解析結果を渡すには、以下のいずれかの方法を取る必要があります。
+
+#### 方法 1: ワンクリックで AI エージェント用プロンプトをコピーして貼り付ける（最もおすすめ）
+外部 LLM の API 費用をかけず、Codes Doctor の確定的な静的解析結果（God Class の行数やメソッド数、循環参照ループ、テイントフロー脆弱性）をそのまま Claude Code に渡す方法です。
+
+1. VS Code で **「現在のワークスペースを解析」** を実行します。
+2. ダッシュボードの概要カードにある **`📋 AIエージェント用プロンプトをコピー`** ボタンをクリックします（または `Cmd+Shift+P` → `Codes Doctor: AIエージェント用プロンプトをコピー`）。
+3. クリップボードにマークダウン形式の「AIエージェント用リファクタリング指示書」がコピーされます。
+4. Claude Code のプロンプト入力欄にそのまま **貼り付け（`Cmd+V` / `Ctrl+V`）** して送信します。
+5. Claude Code は幻覚（ハルシネーション）なく、指定されたファイル・クラスの安全な分割や脆弱性の修正を自律的に進めます。
+
+#### 方法 2: Claude Code に直接 CLI を実行させる
+Claude Code はシェルコマンドの実行権限を持っているため、Claude Code の対話画面で直接指示してスキャンさせることができます。
 
 ```bash
-# ターミナルでの対話例
-$ claude
-> npx @codes-doctor/cli analyze . を実行して、検出されたセキュリティ警告（Critical/High）をすべて修正し、テストを実行してください。
+# Claude Code 画面での指示例
+> npx @codes-doctor/cli analyze . を実行して、出力されたレポートから技術的負債やセキュリティ警告（Critical/High）を把握し、コードをリファクタリングしてテストを実行してください。
 ```
 
-Claude Code は CLI を実行し、出力されたファイル名・行番号・脆弱性タイプを解析して、コードの修正とテスト確認まで自動で完了させます。
+#### 方法 3: `CLAUDE.md` で Claude Code に Codes Doctor を自動認識させる
+プロジェクトのルートに **`CLAUDE.md`**（Claude Code 専用のプロジェクト指示書）を配置しておくと、Claude Code は起動時にこれを自動学習します。
+
+```markdown
+# CLAUDE.md 設定例
+## コード品質・セキュリティ点検
+- このプロジェクトでは静的解析ツール Codes Doctor を利用しています。
+- コードの点検やリファクタリングを行う際は、まず `node packages/cli/bin/codes-doctor.js analyze .`（または `npx @codes-doctor/cli analyze .`）を実行して、検出された God Class や循環依存、セキュリティ指摘を確認してください。
+- ユーザーから「@codedoctor」や「リファクタリングして」と指示された場合は、上記コマンドを実行してその結果に基づき作業してください。
+```
+
+---
+
+### Google Cloud Code（Gemini Code Assist）との連携
+Google Cloud Code（Cloud Code 拡張機能 / Gemini Code Assist）を VS Code 内で利用している場合は、VS Code 標準の **`vscode.lm`（Language Model API）** を通じてシームレスに連携できます。
+
+1. VS Code 設定で `codeDoctor.llmProvider` を **`vscode-lm`** に設定します。
+2. `codeDoctor.llmModel` に Cloud Code 提供のモデル（または既定値）を選択します。
+3. これにより、個別 API キーを設定することなく、VS Code にサインイン中の Google Cloud アカウントの権限で AI レビューや自動修正が利用できます。
 
 ### Antigravity（Google コーディングエージェント）
 Antigravity などのエージェント環境では、ワークスペース内で静的解析を実行し、AST レベルの正確な問題箇所（Source -> Sink のデータフロー）を把握させた上で、的確なリファクタリングを指示できます。

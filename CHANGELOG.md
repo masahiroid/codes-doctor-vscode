@@ -7,6 +7,10 @@ All notable changes to the Codes Doctor monorepo (`@codes-doctor/engine`, `codes
 
 ---
 
+## 7.2.6
+
+- Documentation & Agent Integration: Added comprehensive Claude Code & Google Cloud Code integration guide to `AI_INTEGRATION.ja.md` and `AI_INTEGRATION.md`, explaining why CLI agents require prompt copy or CLI execution instead of in-editor `@` mentions, and added `CLAUDE.md` to project root.
+
 ## 7.2.5
 
 - CI action & runner exclusion: Added reusable composite GitHub Action (`action.yml`) enabling automated Codes Doctor analysis across any project repo. Updated `fileWalker` to automatically ignore runner directory patterns (`.codes-doctor*`).

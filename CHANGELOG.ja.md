@@ -7,6 +7,10 @@ Codes Doctor モノレポ（`@codes-doctor/engine`、`codes-doctor` CLI、およ
 
 ---
 
+## 7.2.6
+
+- **ドキュメント・エージェント連携ガイドの拡充**: `AI_INTEGRATION.ja.md` および `AI_INTEGRATION.md` に、Claude Code（ターミナルCLI）および Google Cloud Code（Gemini Code Assist）との連携マニュアルを追記。エディタ外の自律エージェントで利用する3つの手順（ワンクリックプロンプト連携、CLI直接実行、`CLAUDE.md`）を解説し、プロジェクト直下に `CLAUDE.md` を追加。
+
 ## 7.2.5
 
 - **CIアクションとランナー除外対応**: 任意のリポジトリから GitHub Actions 経由で呼び出し可能な複合アクション（`action.yml`）を追加。`fileWalker` においてランナー・キャッシュ用ディレクトリ（`.codes-doctor*`）を自動的にスキャン対象外とする除外設定を追加。
