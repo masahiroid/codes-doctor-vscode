@@ -1,0 +1,29 @@
+name: 'Codes Doctor Codebase Health Check'
+description: 'Automated static analysis, God class detection, circular dependency tracking, and security audit'
+inputs:
+  path:
+    description: 'Path or directory to analyze'
+    required: false
+    default: '.'
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+    - name: Checkout Codes Doctor
+      uses: actions/checkout@v4
+      with:
+        repository: masahiroid/codes-doctor-vscode
+        path: ${{ runner.temp }}/codes-doctor
+    - name: Build Codes Doctor Engine & CLI
+      shell: bash
+      run: |
+        cd ${{ runner.temp }}/codes-doctor
+        npm ci
+        npm run build
+    - name: Run Codes Doctor Analysis
+      shell: bash
+      run: |
+        node ${{ runner.temp }}/codes-doctor/packages/cli/bin/codes-doctor.js analyze ${{ inputs.path }}
