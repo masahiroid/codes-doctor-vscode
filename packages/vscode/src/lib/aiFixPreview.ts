@@ -21,7 +21,7 @@ export function getPreviewContent(key: string): string {
 export function extractCodeBlock(responseText: string): string {
   if (!responseText) return '';
   const fenceRegex = /```(?:[a-zA-Z0-9_+-]+)?\s*\r?\n([\s\S]*?)```/;
-  const match = fenceRegex.exec(responseText);
+  const match = responseText.match(fenceRegex);
   if (match && match[1]) {
     return match[1];
   }

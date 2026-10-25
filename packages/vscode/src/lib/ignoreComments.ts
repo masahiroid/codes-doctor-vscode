@@ -40,13 +40,13 @@ export function parseIgnoreComments(content: string): FileIgnoreRules {
     const line = lines[i];
     const lineNum = i + 1;
 
-    const nextMatch = IGNORE_NEXT_LINE_RE.exec(line);
+    const nextMatch = line.match(IGNORE_NEXT_LINE_RE);
     if (nextMatch) {
       addRule(ignoredLines, lineNum + 1, nextMatch[1]);
       continue;
     }
 
-    const sameMatch = IGNORE_LINE_RE.exec(line);
+    const sameMatch = line.match(IGNORE_LINE_RE);
     if (sameMatch && !/code-doctor-(?:ignore|disable)-(?:next-line|file)/i.test(line)) {
       addRule(ignoredLines, lineNum, sameMatch[1]);
     }

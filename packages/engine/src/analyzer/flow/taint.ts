@@ -58,18 +58,91 @@ export type SummaryResolver = (callee: string) => FunctionSummary | undefined;
 /** Longest code excerpt kept for a flow step. */
 const STEP_CODE_LIMIT = 160;
 
+function createFlowStep(lines: string[], node: Node): FlowStep {
+  const line = node.startPosition.row + 1;
+  return { line, code: (lines[line - 1] ?? '').trim().slice(0, STEP_CODE_LIMIT) };
+}
+
+function extractTargetNames(spec: FlowSpec<string>, target: Node | null): string[] {
+  if (!target) return [];
+  const names = new Set<string>();
+  walk(target, (node) => {
+    if (spec.identifierTypes.has(node.type)) names.add(node.text);
+    return true;
+  });
+  names.add(target.text);
+  return [...names];
+}
+
+/** Manages recorded data flows and summary sinks. */
+export class FlowCollector<C extends string> {
+  readonly flows = new Map<string, DataFlow<C>>();
+  currentFunction: string | undefined;
+
+  record(category: C, taint: Taint, sink: FlowStep, summary: FunctionSummary | null): void {
+    if (summary) {
+      if (taint.param !== undefined) summary.sinks.push({ param: taint.param, category, sink, steps: taint.steps });
+      return;
+    }
+    const key = `${category}:${sink.line}`;
+    // Steps on the source or sink line add nothing to the path.
+    const steps = taint.steps.filter((step) => step.line !== taint.source.line && step.line !== sink.line);
+    if (this.flows.has(key)) return;
+    const flow: DataFlow<C> = { category, source: taint.source, steps, sink };
+    if (this.currentFunction) flow.function = this.currentFunction;
+    this.flows.set(key, flow);
+  }
+
+  recordThroughCall(
+    call: Node,
+    callee: string,
+    tainted: Map<string, Taint>,
+    summary: FunctionSummary | null,
+    summaryFor: (callee: string) => FunctionSummary | undefined,
+    taintOf: (node: Node | null, tainted: Map<string, Taint>) => Taint | null,
+    stepOf: (node: Node) => FlowStep
+  ): void {
+    const targetSummary = summaryFor(callee);
+    if (!targetSummary || targetSummary.sinks.length === 0) return;
+    const args = callArguments(call);
+    for (const inner of targetSummary.sinks) {
+      const taint = taintOf(args[inner.param] ?? null, tainted);
+      if (!taint || taint.escaped) continue;
+      const through: Taint = { ...taint, steps: [...taint.steps, stepOf(call), ...inner.steps] };
+      if (summary) {
+        if (through.param !== undefined) summary.sinks.push({ param: through.param, category: inner.category, sink: inner.sink, steps: through.steps });
+        continue;
+      }
+      // A sink in another file is reported at the call here; one in this file at the sink itself.
+      const entry = inner.sink.file ? stepOf(call) : undefined;
+      const at = entry ?? inner.sink;
+      const key = `${inner.category}:${at.line}`;
+      if (this.flows.has(key)) continue;
+      const local = (step: FlowStep) => !step.file && (step.line === through.source.line || step.line === at.line);
+      const steps = through.steps.filter((step) => !local(step));
+      const flow: DataFlow<C> = { category: inner.category as C, source: through.source, steps, sink: inner.sink };
+      if (entry) flow.entry = entry;
+      if (this.currentFunction) flow.function = this.currentFunction;
+      this.flows.set(key, flow);
+    }
+  }
+}
+
 export class FlowAnalysis<C extends string> {
   private readonly lines: string[];
-  private currentFunction: string | undefined;
   private guards: GuardRegion[] = [];
   /** Same-file function summaries, keyed by function name; empty until `summarize` runs. */
   private readonly summaries = new Map<string, FunctionSummary>();
   /** Set while summarizing: findings that start at a parameter are recorded here, not reported. */
   private summary: FunctionSummary | null = null;
-  readonly flows = new Map<string, DataFlow<C>>();
+  private readonly collector = new FlowCollector<C>();
 
   constructor(private readonly spec: FlowSpec<C>, content: string, private readonly resolve: SummaryResolver = () => undefined) {
     this.lines = content.split('\n');
+  }
+
+  get flows(): Map<string, DataFlow<C>> {
+    return this.collector.flows;
   }
 
   /** Summary for a call: a function of this file first, then one in another file. */
@@ -83,8 +156,7 @@ export class FlowAnalysis<C extends string> {
   }
 
   private step(node: Node): FlowStep {
-    const line = node.startPosition.row + 1;
-    return { line, code: (this.lines[line - 1] ?? '').trim().slice(0, STEP_CODE_LIMIT) };
+    return createFlowStep(this.lines, node);
   }
 
   /**
@@ -172,62 +244,9 @@ export class FlowAnalysis<C extends string> {
     this.flows.clear();
   }
 
-  private targetNames(target: Node | null): string[] {
-    if (!target) return [];
-    const names = new Set<string>();
-    walk(target, (node) => {
-      if (this.spec.identifierTypes.has(node.type)) names.add(node.text);
-      return true;
-    });
-    names.add(target.text);
-    return [...names];
-  }
-
-  private report(category: C, taint: Taint, sinkNode: Node): void {
-    const sink = this.step(sinkNode);
-    if (this.summary) {
-      if (taint.param !== undefined) this.summary.sinks.push({ param: taint.param, category, sink, steps: taint.steps });
-      return;
-    }
-    const key = `${category}:${sink.line}`;
-    // Steps on the source or sink line add nothing to the path.
-    const steps = taint.steps.filter((step) => step.line !== taint.source.line && step.line !== sink.line);
-    if (this.flows.has(key)) return;
-    const flow: DataFlow<C> = { category, source: taint.source, steps, sink };
-    if (this.currentFunction) flow.function = this.currentFunction;
-    this.flows.set(key, flow);
-  }
-
-  /** A tainted argument to a same-file function whose parameter reaches a dangerous call inside it. */
-  private reportThroughCall(call: Node, callee: string, tainted: Map<string, Taint>): void {
-    const summary = this.summaryFor(callee);
-    if (!summary || summary.sinks.length === 0) return;
-    const args = callArguments(call);
-    for (const inner of summary.sinks) {
-      const taint = this.taintOf(args[inner.param] ?? null, tainted);
-      if (!taint || taint.escaped) continue;
-      const through: Taint = { ...taint, steps: [...taint.steps, this.step(call), ...inner.steps] };
-      if (this.summary) {
-        if (through.param !== undefined) this.summary.sinks.push({ param: through.param, category: inner.category, sink: inner.sink, steps: through.steps });
-        continue;
-      }
-      // A sink in another file is reported at the call here; one in this file at the sink itself.
-      const entry = inner.sink.file ? this.step(call) : undefined;
-      const at = entry ?? inner.sink;
-      const key = `${inner.category}:${at.line}`;
-      if (this.flows.has(key)) continue;
-      const local = (step: FlowStep) => !step.file && (step.line === through.source.line || step.line === at.line);
-      const steps = through.steps.filter((step) => !local(step));
-      const flow: DataFlow<C> = { category: inner.category as C, source: through.source, steps, sink: inner.sink };
-      if (entry) flow.entry = entry;
-      if (this.currentFunction) flow.function = this.currentFunction;
-      this.flows.set(key, flow);
-    }
-  }
-
   /** Analyze one function (or the module's top level), not descending into nested functions. */
   analyzeScope(scope: Node, seed?: Map<string, Taint>): void {
-    this.currentFunction = scope.parent ? functionName(scope) : undefined;
+    this.collector.currentFunction = scope.parent ? functionName(scope) : undefined;
     this.guards = collectGuards(this.spec, scope);
     const tainted = new Map<string, Taint>(seed);
     walk(scope, (node) => {
@@ -236,12 +255,14 @@ export class FlowAnalysis<C extends string> {
       const assignment = this.spec.assignment(node);
       if (assignment) {
         const taint = this.taintOf(assignment.value, tainted);
-        const names = this.targetNames(assignment.targets);
+        const names = extractTargetNames(this.spec, assignment.targets);
         if (taint) {
           const next = { ...taint, steps: [...taint.steps, this.step(node)] };
           for (const name of names) tainted.set(name, next);
           for (const rule of this.spec.sinkAssignments ?? []) {
-            if (!taint.escaped && assignment.targets && rule.target.test(assignment.targets.text)) this.report(rule.category, taint, node);
+            if (!taint.escaped && assignment.targets && rule.target.test(assignment.targets.text)) {
+              this.collector.record(rule.category, taint, this.step(node), this.summary);
+            }
           }
         } else if (!assignment.compound) {
           for (const name of names) tainted.delete(name);
@@ -256,9 +277,17 @@ export class FlowAnalysis<C extends string> {
           const args = callArguments(node);
           const checked = rule.argument === undefined ? args : args.slice(rule.argument, rule.argument + 1);
           const taint = checked.map((arg) => this.taintOf(arg, tainted)).find((found) => found !== null && !found.escaped);
-          if (taint) this.report(rule.category, taint, node);
+          if (taint) this.collector.record(rule.category, taint, this.step(node), this.summary);
         } else {
-          this.reportThroughCall(node, callee, tainted);
+          this.collector.recordThroughCall(
+            node,
+            callee,
+            tainted,
+            this.summary,
+            (c) => this.summaryFor(c),
+            (n, t) => this.taintOf(n, t),
+            (n) => this.step(n)
+          );
         }
       }
 
@@ -273,7 +302,7 @@ export class FlowAnalysis<C extends string> {
       for (const rule of this.spec.sinkStatements ?? []) {
         if (node.type !== rule.type) continue;
         const taint = this.taintOf(node, tainted);
-        if (taint && !taint.escaped) this.report(rule.category, taint, node);
+        if (taint && !taint.escaped) this.collector.record(rule.category, taint, this.step(node), this.summary);
       }
       return true;
     });

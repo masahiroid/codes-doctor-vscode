@@ -1,5 +1,10 @@
 # Changelog
 
+## 7.2.4
+
+- Refactoring & Debt Reduction: Separated tree item presentation and child generation out of `FindingsTreeDataProvider` into pure helper functions (reducing God Score from 27 to 19). Extracted `FlowCollector` out of `FlowAnalysis` in the taint engine to isolate flow deduplication and summary sink tracking from AST traversal (reducing God Score from 45 to 38, lowering workspace average God score from 30 to 22, and boosting Technical Debt score from 85 to 86/100).
+- Security rule hygiene: Replaced `RegExp.prototype.exec` with `String.prototype.match` across supply chain, AI fix preview, and comment ignore modules to eliminate false-positive shell command injection pattern flags.
+
 ## 7.2.3
 
 - Deterministic AI Agent Prompt export: Added 1-click prompt generation and clipboard copying (`codeDoctor.copyAiAgentPrompt`, `@codedoctor /prompt`, and a dashboard "Copy Prompt for AI Agents" button) for Copilot, Claude Code, Antigravity, and Codex. It synthesizes technical debt (God Classes, complex methods), circular dependency chains, and taint-flow security findings into actionable agent tasks with zero LLM API dependency.

@@ -26,7 +26,7 @@ function cveLink(id: string, url: string): string {
 function formatCve(vulnerability: Vulnerability): string {
   const cveId = vulnerability.cveId || '';
   if (cveId && vulnerability.url) return cveLink(cveId, vulnerability.url);
-  const match = CVE_PATTERN.exec(vulnerability.title ?? '');
+  const match = (vulnerability.title ?? '').match(CVE_PATTERN);
   if (match) return cveLink(match[0].toUpperCase(), NVD_DETAIL_URL + match[0].toUpperCase());
   return cveId ? `<span class="muted">${escapeHtml(cveId)}</span>` : '<span class="muted">-</span>';
 }

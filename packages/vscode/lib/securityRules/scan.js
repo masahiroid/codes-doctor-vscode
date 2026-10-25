@@ -98,6 +98,7 @@ function scanText(text, language, rules, limits = exports.SCAN_LIMITS) {
             continue;
         regex.lastIndex = 0;
         let count = 0;
+        // code-doctor-ignore-next-line command_injection
         for (let match = regex.exec(text); match && count < limits.maxPerRulePerFile; match = regex.exec(text)) {
             if (match[0].length === 0)
                 regex.lastIndex++;

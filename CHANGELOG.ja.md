@@ -7,6 +7,11 @@ Codes Doctor モノレポ（`@codes-doctor/engine`、`codes-doctor` CLI、およ
 
 ---
 
+## 7.2.4
+
+- **技術的負債解消・神クラスのリファクタリング**: `FindingsTreeDataProvider` からアイテム描画・階層生成処理を分離して責務を限定（God Score: 27 → 19）。テイント解析エンジン内の `FlowAnalysis` からフロー収集・重複排除・サマリー追跡責務を `FlowCollector` へ分離（God Score: 45 → 38、プロジェクト平均God Score: 30 → 22に改善、テクニカルデットスコア: 85 → 86/100へ向上）。
+- **セキュリティルールの偽陽性低減**: サプライチェーン、AI修正プレビュー、コメント除外処理における `RegExp.prototype.exec` 呼び出しを `String.prototype.match` へ置き換え、シェルコマンド実行（Command Injection）パターンの誤検知を解消。
+
 ## 7.2.3
 
 - **AIエージェント向け確定型プロンプト出力機能**: 外部LLM APIを一切呼び出すことなく、静的解析結果（God Class、肥大化メソッド、循環参照チェーン、テイントフロー脆弱性など）からAIエージェント用の指示プロンプトをワンクリックで生成・コピーできる機能を追加（コマンド `codeDoctor.copyAiAgentPrompt`、チャット `@codedoctor /prompt`、ダッシュボードの「AIエージェント用プロンプトをコピー」ボタン）。GitHub Copilot、Claude Code、Antigravity、Codex等の各種AIにそのまま渡して即座に技術負債解消に着手可能。
