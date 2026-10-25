@@ -6,6 +6,7 @@ import { getLastAnalysis } from './lastAnalysisState';
 import { COMMANDS } from './settingsSchema';
 import { formatSummary } from './summary';
 import { generateAdHocAiResponse } from './vscodeLm';
+import { buildDeterministicAiAgentPrompt } from './agentPrompt';
 
 export const CHAT_PARTICIPANT_ID = 'codeDoctor.participant';
 
@@ -98,6 +99,20 @@ export async function handleChatRequest(
     stream.button({
       command: COMMANDS.analyzeCurrentWorkspace,
       title: t('Analyze Current Workspace'),
+    });
+    return { metadata: { command: cmd } };
+  }
+
+  if (cmd === 'prompt') {
+    const promptText = buildDeterministicAiAgentPrompt(last, lang);
+    stream.markdown(
+      `### 📋 ${t('AI Agent Task Instructions (Deterministic — No API Keys Used)')}\n\n` +
+        promptText +
+        '\n\n'
+    );
+    stream.button({
+      command: COMMANDS.copyAiAgentPrompt,
+      title: t('📋 Copy for AI Agents (Copilot, Claude, Antigravity)'),
     });
     return { metadata: { command: cmd } };
   }

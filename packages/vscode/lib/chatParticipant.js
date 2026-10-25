@@ -14,6 +14,7 @@ const lastAnalysisState_1 = require("./lastAnalysisState");
 const settingsSchema_1 = require("./settingsSchema");
 const summary_1 = require("./summary");
 const vscodeLm_1 = require("./vscodeLm");
+const agentPrompt_1 = require("./agentPrompt");
 exports.CHAT_PARTICIPANT_ID = 'codeDoctor.participant';
 function buildChatContextSummary(last, activeFilePath, selectedText) {
     const sections = [];
@@ -72,6 +73,17 @@ async function handleChatRequest(vscode, context, request, stream, token) {
         stream.button({
             command: settingsSchema_1.COMMANDS.analyzeCurrentWorkspace,
             title: t('Analyze Current Workspace'),
+        });
+        return { metadata: { command: cmd } };
+    }
+    if (cmd === 'prompt') {
+        const promptText = (0, agentPrompt_1.buildDeterministicAiAgentPrompt)(last, lang);
+        stream.markdown(`### 📋 ${t('AI Agent Task Instructions (Deterministic — No API Keys Used)')}\n\n` +
+            promptText +
+            '\n\n');
+        stream.button({
+            command: settingsSchema_1.COMMANDS.copyAiAgentPrompt,
+            title: t('📋 Copy for AI Agents (Copilot, Claude, Antigravity)'),
         });
         return { metadata: { command: cmd } };
     }

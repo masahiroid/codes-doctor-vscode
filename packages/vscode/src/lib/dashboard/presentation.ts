@@ -44,6 +44,7 @@ export function buildHtml(view: DashboardHost) {
 
   <button data-command="${COMMANDS.analyzeCurrentWorkspace}">${view.t("Analyze Current Workspace")}</button>
   <button class="secondary" data-command="${COMMANDS.analyzeGitChanges}">${view.t("Analyze Git Changes")}</button>
+  <button class="secondary" data-command="${COMMANDS.copyAiAgentPrompt}">📋 ${view.t("Copy Prompt for AI Agents")}</button>
 
   ${buildSecurityRulesSection(view)}
 

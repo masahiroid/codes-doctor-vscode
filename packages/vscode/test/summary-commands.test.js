@@ -114,5 +114,49 @@ test('copySummary and copySummaryJson: copies to clipboard correctly', async () 
   const parsed = JSON.parse(clipboardText);
   assert.equal(parsed.analyzedFiles, 3);
   assert.equal(parsed.security.score, 100);
+
+  // Test copyAiAgentPrompt
+  const mockResult = {
+    summary: { totalFiles: 10 },
+    technicalDebt: { overallScore: 70, grade: 'C' },
+    securityScore: {
+      overallScore: 85,
+      grade: 'B',
+      issues: [
+        {
+          type: 'error',
+          category: 'SQL Injection',
+          filePath: 'src/db.ts',
+          lineNumber: 42,
+          confidence: 'flow',
+          description: 'Unsanitized parameter in query',
+          recommendation: 'Use prepared statements',
+          flow: { source: { line: 10 }, sink: { line: 42 } },
+        },
+      ],
+    },
+    godClasses: [
+      {
+        className: 'BigManager',
+        filePath: 'src/BigManager.ts',
+        godScore: 88,
+        rank: 'critical',
+        lineCount: 1200,
+        methodCount: 45,
+        propertyCount: 20,
+        importCount: 30,
+      },
+    ],
+    circularDependencies: [{ cycle: ['src/a.ts', 'src/b.ts', 'src/a.ts'] }],
+  };
+
+  setLastAnalysis('test-id', '/test', '/test/report.html', mockSummary, mockResult);
+  await commands.copyAiAgentPrompt();
+  assert.ok(clipboardText.includes('Codes Doctor — Technical Debt & Refactoring Instructions for AI Agent'));
+  assert.ok(clipboardText.includes('BigManager'));
+  assert.ok(clipboardText.includes('src/a.ts -> src/b.ts -> src/a.ts'));
+  assert.ok(clipboardText.includes('SQL Injection'));
+  assert.ok(clipboardText.includes('Use prepared statements'));
+  assert.ok(infoMessage.includes('AI agent prompt copied to clipboard'));
 });
 

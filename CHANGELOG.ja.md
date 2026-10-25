@@ -7,6 +7,10 @@ Codes Doctor モノレポ（`@codes-doctor/engine`、`codes-doctor` CLI、およ
 
 ---
 
+## 7.2.3
+
+- **AIエージェント向け確定型プロンプト出力機能**: 外部LLM APIを一切呼び出すことなく、静的解析結果（God Class、肥大化メソッド、循環参照チェーン、テイントフロー脆弱性など）からAIエージェント用の指示プロンプトをワンクリックで生成・コピーできる機能を追加（コマンド `codeDoctor.copyAiAgentPrompt`、チャット `@codedoctor /prompt`、ダッシュボードの「AIエージェント用プロンプトをコピー」ボタン）。GitHub Copilot、Claude Code、Antigravity、Codex等の各種AIにそのまま渡して即座に技術負債解消に着手可能。
+
 ## 7.2.2
 
 - **依存ライブラリの更新**: モノレポ各パッケージの依存関係を最新のマイナー・パッチバージョンに更新（`@azure/identity` 4.14.0, `@azure/msal-browser` 5.26.0, `@azure/msal-common` 16.14.3, `open` 11.0.4, `qs` 6.16.1, `es-toolkit` 1.53.0, `cytoscape` 3.34.4）。

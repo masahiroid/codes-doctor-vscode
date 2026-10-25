@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.2.3
+
+- Deterministic AI Agent Prompt export: Added 1-click prompt generation and clipboard copying (`codeDoctor.copyAiAgentPrompt`, `@codedoctor /prompt`, and a dashboard "Copy Prompt for AI Agents" button) for Copilot, Claude Code, Antigravity, and Codex. It synthesizes technical debt (God Classes, complex methods), circular dependency chains, and taint-flow security findings into actionable agent tasks with zero LLM API dependency.
+
 ## 7.2.2
 
 - Update dependencies across monorepo packages to latest minor/patch versions (`@azure/identity` 4.14.0, `@azure/msal-browser` 5.26.0, `@azure/msal-common` 16.14.3, `open` 11.0.4, `qs` 6.16.1, `es-toolkit` 1.53.0, `cytoscape` 3.34.4).

@@ -2,7 +2,7 @@
   "name": "codes-doctor",
   "displayName": "Codes Doctor",
   "description": "%extension.description%",
-  "version": "7.2.2",
+  "version": "7.2.3",
   "publisher": "masahirocom",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -83,6 +83,10 @@
         "title": "%codeDoctor.copySummaryJson%"
       },
       {
+        "command": "codeDoctor.copyAiAgentPrompt",
+        "title": "%codeDoctor.copyAiAgentPrompt%"
+      },
+      {
         "command": "codeDoctor.openLastReport",
         "title": "%codeDoctor.openLastReport%"
       },
@@ -138,6 +142,10 @@
           {
             "name": "fix",
             "description": "%chatParticipant.cmd.fix%"
+          },
+          {
+            "name": "prompt",
+            "description": "%chatParticipant.cmd.prompt%"
           }
         ]
       }

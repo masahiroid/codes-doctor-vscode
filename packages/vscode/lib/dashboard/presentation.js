@@ -52,6 +52,7 @@ function buildHtml(view) {
 
   <button data-command="${settingsSchema_1.COMMANDS.analyzeCurrentWorkspace}">${view.t("Analyze Current Workspace")}</button>
   <button class="secondary" data-command="${settingsSchema_1.COMMANDS.analyzeGitChanges}">${view.t("Analyze Git Changes")}</button>
+  <button class="secondary" data-command="${settingsSchema_1.COMMANDS.copyAiAgentPrompt}">📋 ${view.t("Copy Prompt for AI Agents")}</button>
 
   ${(0, securityRules_1.buildSecurityRulesSection)(view)}
 

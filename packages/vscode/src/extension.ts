@@ -30,6 +30,7 @@ export function activate(context: import('vscode').ExtensionContext) {
     vscode.commands.registerCommand(COMMANDS.setLlmApiKey, commands.setLlmApiKey),
     vscode.commands.registerCommand(COMMANDS.copySummary, commands.copySummary),
     vscode.commands.registerCommand(COMMANDS.copySummaryJson, commands.copySummaryJson),
+    vscode.commands.registerCommand(COMMANDS.copyAiAgentPrompt, commands.copyAiAgentPrompt),
     vscode.commands.registerCommand(COMMANDS.openLastReport, commands.openLastReport),
     vscode.commands.registerCommand(COMMANDS.clearDiagnostics, commands.clearDiagnostics),
     vscode.commands.registerCommand(COMMANDS.syncSecurityRules, securityRules.syncRules),

@@ -65,6 +65,7 @@ function activate(context) {
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.setLlmApiKey, commands.setLlmApiKey),
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.copySummary, commands.copySummary),
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.copySummaryJson, commands.copySummaryJson),
+        vscode.commands.registerCommand(settingsSchema_1.COMMANDS.copyAiAgentPrompt, commands.copyAiAgentPrompt),
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.openLastReport, commands.openLastReport),
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.clearDiagnostics, commands.clearDiagnostics),
         vscode.commands.registerCommand(settingsSchema_1.COMMANDS.syncSecurityRules, securityRules.syncRules),

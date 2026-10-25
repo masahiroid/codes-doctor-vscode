@@ -8,6 +8,8 @@ const summary_1 = require("./summary");
 const aiFixPreview_1 = require("./aiFixPreview");
 const workspaceAnalysisCommands_1 = require("./workspaceAnalysisCommands");
 const apiKeyCommand_1 = require("./apiKeyCommand");
+const agentPrompt_1 = require("./agentPrompt");
+const config_1 = require("./config");
 /**
  * The extension's command handlers. Analysis runs and API key setup live in their own modules;
  * this keeps the small commands that work on the last analysis and the editor.
@@ -32,6 +34,16 @@ function createCommands(vscode, context, diagnosticCollection) {
         }
         await vscode.env.clipboard.writeText(JSON.stringify(last.summary, null, 2));
         vscode.window.showInformationMessage(t('Analysis summary copied to clipboard.'));
+    }
+    async function copyAiAgentPrompt() {
+        const last = (0, lastAnalysisState_1.getLastAnalysis)();
+        if (!last || !last.result) {
+            vscode.window.showWarningMessage(t('No analysis results available yet. Run "Analyze Current Workspace" first.'));
+            return;
+        }
+        const prompt = (0, agentPrompt_1.buildDeterministicAiAgentPrompt)(last, (0, config_1.getDisplayLanguage)(vscode));
+        await vscode.env.clipboard.writeText(prompt);
+        vscode.window.showInformationMessage(t('AI agent prompt copied to clipboard! You can paste it into Copilot, Claude Code, Antigravity, or Codex.'));
     }
     async function openLastReport() {
         const last = (0, lastAnalysisState_1.getLastAnalysis)();
@@ -65,6 +77,7 @@ function createCommands(vscode, context, diagnosticCollection) {
         setLlmApiKey,
         copySummary,
         copySummaryJson,
+        copyAiAgentPrompt,
         openLastReport,
         clearDiagnostics,
         openFindingLocation,
