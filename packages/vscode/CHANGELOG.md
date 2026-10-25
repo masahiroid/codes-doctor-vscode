@@ -1,5 +1,10 @@
 # Changelog
 
+## 7.2.2
+
+- Update dependencies across monorepo packages to latest minor/patch versions (`@azure/identity` 4.14.0, `@azure/msal-browser` 5.26.0, `@azure/msal-common` 16.14.3, `open` 11.0.4, `qs` 6.16.1, `es-toolkit` 1.53.0, `cytoscape` 3.34.4).
+- Verified dependency supply chain, signatures, and lockfiles across all packages (`npm run verify:deps`).
+
 ## 7.2.1
 
 - Internal: split responsibilities out of four modules without changing behavior: workspace analysis and API key commands out of the command handlers, security finding detection out of the security score, audit report output out of the security rules controller, and the module coupling report section out of the overview sections. Characterization tests were added first for the commands and the controller; report and security score output were compared byte for byte before and after.

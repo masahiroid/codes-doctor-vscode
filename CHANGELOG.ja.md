@@ -7,6 +7,11 @@ Codes Doctor モノレポ（`@codes-doctor/engine`、`codes-doctor` CLI、およ
 
 ---
 
+## 7.2.2
+
+- **依存ライブラリの更新**: モノレポ各パッケージの依存関係を最新のマイナー・パッチバージョンに更新（`@azure/identity` 4.14.0, `@azure/msal-browser` 5.26.0, `@azure/msal-common` 16.14.3, `open` 11.0.4, `qs` 6.16.1, `es-toolkit` 1.53.0, `cytoscape` 3.34.4）。
+- **サプライチェーン・セキュリティ検証**: 全パッケージのレジストリ署名、アテステーション、未許可スクリプトの不在、および OSV / npm audit による脆弱性監査を検証済み（`npm run verify:deps`）。
+
 ## 7.2.1
 
 - **内部構造の改善**: 動作を変更することなく4つのモジュールの責務を分離。
