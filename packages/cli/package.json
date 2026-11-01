@@ -21,12 +21,12 @@
     "test": "npm run build && node --test test/*.test.js"
   },
   "dependencies": {
-    "@typescript-eslint/typescript-estree": "^8.71.2",
+    "@typescript-eslint/typescript-estree": "^8.72.1",
     "@vscode/tree-sitter-wasm": "^0.3.1",
     "php-parser": "^3.7.0",
     "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "@types/node": "^26.6.4"
+    "@types/node": "^26.6.6"
   }
 }
