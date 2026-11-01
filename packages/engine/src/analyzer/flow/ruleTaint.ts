@@ -32,7 +32,7 @@ export interface CompiledTaintRule {
   access?: AccessOptions;
 }
 
-const BUILTIN_SINKS: ReadonlySet<string> = new Set<SinkCategory>(['Command Injection', 'SQL Injection', 'Code Injection', 'Path Traversal', 'SSRF', 'XSS']);
+const BUILTIN_SINKS: ReadonlySet<string> = new Set<SinkCategory>(['Command Injection', 'SQL Injection', 'NoSQL Injection', 'Code Injection', 'Path Traversal', 'SSRF', 'XSS']);
 const MAX_PATTERN_LENGTH = 300;
 // A quantified group that itself contains a quantifier, e.g. (a+)+. Rules arrive over the network
 // and run on the analysis thread, so patterns that can backtrack catastrophically are refused.
@@ -56,8 +56,15 @@ const union = (parts: string[]) => new RegExp(parts.map((part) => `(?:${part})`)
 
 /** Grammars a rule language runs on; TypeScript covers TS, TSX and plain JavaScript files. */
 function grammarsFor(language: string): FlowGrammar[] {
-  if (language === 'typescript') return ['typescript', 'tsx', 'javascript'];
-  return language in FLOW_SPECS ? [language as FlowGrammar] : [];
+  const norm = language.toLowerCase();
+  if (norm === 'typescript' || norm === 'ts' || norm === 'javascript' || norm === 'js') {
+    return ['typescript', 'tsx', 'javascript'];
+  }
+  if (norm === 'py') return ['python'];
+  if (norm === 'cs') return ['csharp'];
+  if (norm === 'rs') return ['rust'];
+  if (norm === 'c++' || norm === 'c') return ['cpp'];
+  return norm in FLOW_SPECS ? [norm as FlowGrammar] : [];
 }
 
 /** Validate a distributed rule and build one flow spec per grammar. Throws on anything unusable. */

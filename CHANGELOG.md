@@ -7,6 +7,12 @@ All notable changes to the Codes Doctor monorepo (`@codes-doctor/engine`, `codes
 
 ---
 
+## 7.3.0
+
+- **NoSQL Injection Detection**: Added deterministic taint flow analysis for MongoDB / NoSQL injection across JavaScript/TypeScript, PHP, Python, Go, and Java. Untrusted input reaching sinks like `$where`, `find`, `findOne`, `aggregate`, `updateOne`, `deleteMany`, etc. is now traced to the exact source and line.
+- **Rule Scanning Language Expansion**: Opened distributed security rule scanning (`detect: { type: 'taint' }`) to Python, Go, Java, C#, Rust, and C++ (in addition to TypeScript/JavaScript and PHP).
+- **Workspace File Discovery**: Expanded `SCAN_GLOB` and language recognition to scan Python (`.py`), Go (`.go`), Java (`.java`), C# (`.cs`), Rust (`.rs`), and C/C++ (`.c`, `.cc`, `.cpp`, `.h`, `.hpp`) files for distributed security rules.
+
 ## 7.2.6
 
 - Documentation & Agent Integration: Added comprehensive Claude Code & Google Cloud Code integration guide to `AI_INTEGRATION.ja.md` and `AI_INTEGRATION.md`, explaining why CLI agents require prompt copy or CLI execution instead of in-editor `@` mentions, and added `CLAUDE.md` to project root.

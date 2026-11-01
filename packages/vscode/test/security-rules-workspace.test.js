@@ -17,7 +17,7 @@ function workspace(files) {
   const vscode = {
     workspace: {
       findFiles: async (glob) => Object.keys(files)
-        .filter((file) => (glob === rules.SCAN_GLOB ? /\.(?:[cm]?[jt]sx?|json|php)$/ : /\.(?:py|go)$/).test(file))
+        .filter((file) => (glob === rules.SCAN_GLOB ? /\.(?:[cm]?[jt]sx?|json|php|py|go|java|cs|rs|c|cc|cpp|h|hpp)$/ : /\.(?:kt|rb|swift)$/).test(file))
         .map(uri),
     },
   };
@@ -49,7 +49,7 @@ test('workspace scan reports findings, excludes test code and counts what it cov
     'src/safe.ts': "db.query('SELECT 1');\n",
     'app/db.php': "<?php\n$pdo->query('SELECT ' . $_GET['id']);\n",
     'test/routes.test.ts': VULNERABLE,
-    'tools/report.py': 'print(1)\n',
+    'tools/report.rb': 'puts 1\n',
   });
   try {
     const published = [];

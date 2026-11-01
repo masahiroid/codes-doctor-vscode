@@ -113,6 +113,12 @@ const LANGUAGE_BY_EXTENSION: Record<string, string> = {
   '.js': 'javascript', '.jsx': 'javascript', '.mjs': 'javascript', '.cjs': 'javascript',
   '.json': 'json',
   '.php': 'php',
+  '.py': 'python',
+  '.go': 'go',
+  '.java': 'java',
+  '.cs': 'csharp',
+  '.rs': 'rust',
+  '.cpp': 'cpp', '.cc': 'cpp', '.cxx': 'cpp', '.c': 'cpp', '.h': 'cpp', '.hpp': 'cpp',
 };
 
 export function languageForFile(fileName: string): string | undefined {
@@ -121,9 +127,9 @@ export function languageForFile(fileName: string): string | undefined {
   return LANGUAGE_BY_EXTENSION[path.extname(lower)];
 }
 
-export const SCAN_GLOB = '**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs,json,php}';
+export const SCAN_GLOB = '**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs,json,php,py,go,java,cs,rs,c,cc,cpp,h,hpp}';
 /** Source files no security rule can analyze yet; counted so the panel can say they were not checked. */
-export const UNSUPPORTED_SOURCE_GLOB = '**/*.{py,go,java,kt,kts,rb,cs,rs,swift,dart,c,cc,cpp,h,hpp,scala}';
+export const UNSUPPORTED_SOURCE_GLOB = '**/*.{kt,kts,rb,swift,dart,scala}';
 export const SCAN_EXCLUDE_GLOB = '**/{node_modules,.git,dist,dist-en,out,build,coverage,vendor,.venv,.codes-doctor}/**';
 
 export function scanText(text: string, language: string, rules: CompiledRule[], limits = SCAN_LIMITS): Candidate[] {

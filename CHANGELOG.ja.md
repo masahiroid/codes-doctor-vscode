@@ -7,6 +7,12 @@ Codes Doctor モノレポ（`@codes-doctor/engine`、`codes-doctor` CLI、およ
 
 ---
 
+## 7.3.0
+
+- **NoSQLインジェクション検出の導入**: JavaScript/TypeScript、PHP、Python、Go、Java のデータフロー解析（Taint Flow）に NoSQL インジェクション判定を追加。MongoDB等の `$where`、`find`、`findOne`、`aggregate`、`updateOne`、`deleteMany` 等へ未サニタイズの外部入力が渡る経路を決定論的に追跡し、正確な入力元と到達行を提示。
+- **配信セキュリティルールの対象言語拡大**: 配信ルール（`detect: { type: 'taint' }`）による汚染解析を、TS/JS/PHP に加え Python、Go、Java、C#、Rust、C++ へ開放。
+- **ワークスペース走査対象の拡大**: 拡張機能のセキュリティ走査対象（`SCAN_GLOB`）に Python (`.py`)、Go (`.go`)、Java (`.java`)、C# (`.cs`)、Rust (`.rs`)、C/C++ (`.c`, `.cc`, `.cpp`, `.h`, `.hpp`) を含め、多言語プロジェクトでのルール点検を可能に改善。
+
 ## 7.2.6
 
 - **ドキュメント・エージェント連携ガイドの拡充**: `AI_INTEGRATION.ja.md` および `AI_INTEGRATION.md` に、Claude Code（ターミナルCLI）および Google Cloud Code（Gemini Code Assist）との連携マニュアルを追記。エディタ外の自律エージェントで利用する3つの手順（ワンクリックプロンプト連携、CLI直接実行、`CLAUDE.md`）を解説し、プロジェクト直下に `CLAUDE.md` を追加。

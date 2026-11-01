@@ -14,6 +14,11 @@ const FLOW_FINDINGS: Record<SinkCategory, Pick<SecurityIssue, 'type' | 'descript
     description: '外部からの入力が SQL 文の組み立てに使われています',
     recommendation: 'プレースホルダー付きのクエリ（プリペアドステートメント）を使ってください',
   },
+  'NoSQL Injection': {
+    type: 'critical',
+    description: '外部からの入力が NoSQL クエリの組み立てに使われています',
+    recommendation: 'クエリパラメータの型を検証し、オブジェクトや演算子の注入を避けてください',
+  },
   'Code Injection': {
     type: 'critical',
     description: '外部からの入力がコードとして評価されています',

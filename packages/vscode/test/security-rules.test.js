@@ -108,7 +108,10 @@ test('scans by target language and reports zero-based ranges', async () => {
   assert.equal(rules.scanText(code, 'json', compiled).length, 0);
   assert.equal(rules.languageForFile('a.ts'), 'typescript');
   assert.equal(rules.languageForFile('a.d.ts'), undefined);
-  assert.equal(rules.languageForFile('a.py'), undefined);
+  assert.equal(rules.languageForFile('a.py'), 'python');
+  assert.equal(rules.languageForFile('a.go'), 'go');
+  assert.equal(rules.languageForFile('a.java'), 'java');
+  assert.equal(rules.languageForFile('a.rb'), undefined);
 });
 
 test('audit report never claims compliance and CSV neutralizes formulas', async () => {

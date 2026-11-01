@@ -48,7 +48,7 @@ function mockVsCode(root, sourceUrl) {
       getConfiguration: () => ({ get: (key, fallback) => (key === 'sourceUrl' ? sourceUrl : fallback), inspect: () => ({}) }),
       onDidOpenTextDocument: () => ({ dispose() {} }),
       onDidSaveTextDocument: () => ({ dispose() {} }),
-      findFiles: async (glob) => (/py,go/.test(glob) ? [] : fs.readdirSync(path.join(root, 'src')).map((name) => vscode.Uri.file(path.join(root, 'src', name)))),
+      findFiles: async (glob) => (/kt,kts/.test(glob) ? [] : fs.readdirSync(path.join(root, 'src')).map((name) => vscode.Uri.file(path.join(root, 'src', name)))),
     },
     window: {
       setStatusBarMessage: (message) => log.status.push(message),

@@ -2,7 +2,7 @@ import type { Node } from '../syntax/treeSitter';
 import type { GrammarId } from '../syntax/treeSitter';
 
 /** Kinds of dangerous operation the flow analysis looks for. */
-export type SinkCategory = 'Command Injection' | 'SQL Injection' | 'Code Injection' | 'Path Traversal' | 'SSRF' | 'XSS';
+export type SinkCategory = 'Command Injection' | 'SQL Injection' | 'NoSQL Injection' | 'Code Injection' | 'Path Traversal' | 'SSRF' | 'XSS';
 
 export interface SinkRule<C extends string = SinkCategory> {
   category: C;

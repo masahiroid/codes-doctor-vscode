@@ -429,6 +429,66 @@ function g(req) {
   assert.throws(() => compileTaintRule('X', { type: 'object_access', languages: ['typescript'], owner_references: ['(a+)+'] }), /nested quantifiers/);
 });
 
+test('NoSQL Injection: detection across JavaScript, Python, PHP and Go', async () => {
+  const jsNoSQL = `function findUser(req) {
+  const username = req.body.username;
+  db.collection('users').find({ username: username });
+  db.collection('users').$where(req.query.condition);
+}`;
+  assert.deepEqual(sinks(await analyzeFlows('javascript', jsNoSQL)), ['NoSQL Injection@3', 'NoSQL Injection@4']);
+
+  const pyNoSQL = `def search(request):
+    q = request.args.get('filter')
+    db.users.find(q)
+    db.users.find_one_and_update(q, {"$set": {"active": True}})
+`;
+  assert.deepEqual(sinks(await analyzeFlows('python', pyNoSQL)), ['NoSQL Injection@3', 'NoSQL Injection@4']);
+
+  const phpNoSQL = `<?php
+$user = $_GET['user'];
+$collection->find(['name' => $user]);
+`;
+  assert.deepEqual(sinks(await analyzeFlows('php', phpNoSQL)), ['NoSQL Injection@3']);
+
+  const goNoSQL = `package main
+func handle(w http.ResponseWriter, r *http.Request) {
+  raw := r.URL.Query().Get("filter")
+  coll.Find(ctx, raw)
+}`;
+  assert.deepEqual(sinks(await analyzeFlows('go', goNoSQL)), ['NoSQL Injection@4']);
+});
+
+test('distributed taint rules expand to Python, Go and Java with NoSQL and SQL support', async () => {
+  const nosqlRule = compileTaintRule('RULE-NOSQL', {
+    type: 'taint',
+    languages: ['javascript', 'python', 'go'],
+    sinks: [{ builtin: 'NoSQL Injection' }],
+  });
+  assert.ok(nosqlRule.languages.has('python'));
+  assert.ok(nosqlRule.languages.has('go'));
+
+  const pyCode = `def view(request):
+    query = request.args.get('q')
+    users.find(query)
+`;
+  const flowsPy = await analyzeTaintRule(nosqlRule, 'python', 'views.py', pyCode);
+  assert.deepEqual(sinks(flowsPy), ['NoSQL Injection@3']);
+
+  const javaRule = compileTaintRule('RULE-JAVA-SQL', {
+    type: 'taint',
+    languages: ['java'],
+    sinks: [{ builtin: 'SQL Injection' }, { builtin: 'NoSQL Injection' }],
+  });
+  assert.ok(javaRule.languages.has('java'));
+  const javaCode = `public void doGet(HttpServletRequest req, HttpServletResponse resp) {
+    String id = req.getParameter("id");
+    stmt.executeQuery("SELECT * FROM users WHERE id = " + id);
+    collection.find(id);
+}`;
+  const flowsJava = await analyzeTaintRule(javaRule, 'java', 'Servlet.java', javaCode);
+  assert.deepEqual(sinks(flowsJava), ['SQL Injection@3', 'NoSQL Injection@4']);
+});
+
 test('security file scan: file order, traced flows before patterns, test code marked, and the score built from the same issues', async () => {
   const { scanSecurityIssues } = require('../dist/analyzer/security/fileScan');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'codes-filescan-'));

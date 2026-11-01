@@ -25,10 +25,16 @@ function cFamilyAssignment(node: Node) {
 
 const COMMAND = 'Command Injection' as const;
 const SQL = 'SQL Injection' as const;
+const NOSQL = 'NoSQL Injection' as const;
 const CODE = 'Code Injection' as const;
 const PATH = 'Path Traversal' as const;
 const SSRF = 'SSRF' as const;
 const XSS = 'XSS' as const;
+
+/**
+ * NoSQL / MongoDB call names where unsanitized query operators or expressions are evaluated.
+ */
+const NOSQL_METHODS = /(?:^|\.)(?:\$where|find|findOne|findOneAndUpdate|findOneAndDelete|findOneAndReplace|findById|findByIdAndUpdate|findByIdAndDelete|deleteMany|deleteOne|updateMany|updateOne|replaceOne|countDocuments|aggregate)$/;
 
 /**
  * SQL call names across drivers; only the query string (first argument) is checked.
@@ -67,6 +73,7 @@ const JAVASCRIPT: FlowSpec = {
     { category: COMMAND, callee: /(?:^|\.)(?:exec|execSync|spawn|spawnSync|execFile|execFileSync|fork)$/ },
     { category: CODE, callee: /^(?:eval|Function|new Function|setTimeout|setInterval|vm\.runIn\w+)$/, argument: 0 },
     { category: SQL, callee: SQL_METHODS, argument: 0 },
+    { category: NOSQL, callee: NOSQL_METHODS, argument: 0 },
     { category: PATH, callee: /(?:^|\.)(?:readFile|readFileSync|createReadStream|writeFile|writeFileSync|unlink|unlinkSync|sendFile|open|openSync)$/, argument: 0 },
     { category: SSRF, callee: /^(?:fetch|axios(?:\.(?:get|post|put|delete|request))?|https?\.(?:get|request)|got|request)$/, argument: 0 },
     { category: XSS, callee: /^(?:document\.write|document\.writeln|res\.send|res\.write|res\.end)$/, argument: 0 },
@@ -107,6 +114,7 @@ const PHP: FlowSpec = {
     { category: SQL, callee: SQL_METHODS, argument: 0 },
     // PDO, mysqli objects and Laravel's query builder: `$pdo->query(...)`, `DB::select(...)`, `->whereRaw(...)`.
     { category: SQL, callee: /(?:->|::)(?:query|exec|prepare|select|statement|unprepared|raw|whereRaw|orWhereRaw|selectRaw|orderByRaw|havingRaw|groupByRaw)$/, argument: 0 },
+    { category: NOSQL, callee: /(?:->|::)(?:where|find|findOne|update|delete)$/, argument: 0 },
     { category: PATH, callee: /^(?:include|require|include_once|require_once|fopen|file_get_contents|readfile|file|unlink)$/, argument: 0 },
     { category: SSRF, callee: /^(?:curl_init|fsockopen)$/, argument: 0 },
   ],
@@ -128,6 +136,7 @@ const PYTHON: FlowSpec = {
     { category: COMMAND, callee: /^(?:os\.system|os\.popen|subprocess\.(?:run|call|check_call|check_output|Popen|getoutput|getstatusoutput)|commands\.getoutput)$/, argument: 0 },
     { category: CODE, callee: /^(?:eval|exec|compile)$/, argument: 0 },
     { category: SQL, callee: SQL_METHODS, argument: 0 },
+    { category: NOSQL, callee: /(?:^|\.)(?:find|find_one|find_one_and_update|find_one_and_delete|update_one|update_many|delete_one|delete_many|aggregate)$/, argument: 0 },
     { category: PATH, callee: /^(?:open|send_file|send_from_directory|os\.remove|shutil\.rmtree)$/, argument: 0 },
     { category: SSRF, callee: /^(?:requests\.(?:get|post|put|delete|request|head)|urlopen|urllib\.request\.urlopen|httpx\.(?:get|post))$/, argument: 0 },
     { category: XSS, callee: /^(?:HttpResponse|make_response|Markup|render_template_string)$/, argument: 0 },
@@ -150,6 +159,7 @@ const GO: FlowSpec = {
     { category: COMMAND, callee: /^exec\.Command(?:Context)?$/ },
     { category: SQL, callee: GO_SQL_METHODS, argument: 0 },
     { category: SQL, callee: GO_SQL_CONTEXT_METHODS, argument: 1 },
+    { category: NOSQL, callee: /(?:^|\.)(?:Find|FindOne|FindOneAndUpdate|FindOneAndDelete|UpdateOne|UpdateMany|DeleteOne|DeleteMany|Aggregate)$/ },
     { category: PATH, callee: /^(?:os\.(?:Open|OpenFile|ReadFile|Remove|RemoveAll|Create)|ioutil\.ReadFile|http\.ServeFile)$/ },
     { category: SSRF, callee: /^http\.(?:Get|Post|Head)$/, argument: 0 },
     { category: XSS, callee: /^template\.(?:HTML|JS|URL)$/, argument: 0 },
@@ -166,6 +176,7 @@ const JAVA: FlowSpec = {
   sinks: [
     { category: COMMAND, callee: /(?:Runtime\.getRuntime\(\)\.exec|new ProcessBuilder)$/ },
     { category: SQL, callee: SQL_METHODS, argument: 0 },
+    { category: NOSQL, callee: /(?:^|\.)(?:find|findOne|findOneAndUpdate|findOneAndDelete|updateOne|updateMany|deleteOne|deleteMany|aggregate)$/, argument: 0 },
     { category: PATH, callee: /^(?:new File|new FileInputStream|new FileReader|Paths\.get|Path\.of|Files\.\w+)$/, argument: 0 },
     { category: SSRF, callee: /^new URL$/, argument: 0 },
     { category: XSS, callee: /getWriter\(\)\.(?:print|println|write)$/, argument: 0 },

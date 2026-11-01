@@ -481,6 +481,8 @@
   "（入力の到達は確認できていません。要確認）": " (Input reachability not confirmed. Needs review.)",
   "外部からの入力が": "External input is used to build an",
   "文の組み立てに使われています": "statement",
+  "クエリの組み立てに使われています": "query",
+  "クエリパラメータの型を検証し、オブジェクトや演算子の注入を避けてください": "Validate query parameter types and avoid object or operator injection",
   "等の動的評価をやめ、入力をデータとして扱ってください": "and other dynamic evaluation should be removed; treat input as data",
   "外部からの入力が接続先": "External input is used as the request",
   "に使われています": "",
