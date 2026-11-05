@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.3.1
+
+- CLI: publish to npm as codesdoctor from the release workflow via Trusted Publishing, with codes-doctor kept as a command alias.
+- GitHub Action: run the matching npm release instead of building from source, pass inputs safely, and add min-security and min-debt.
+- Engine: skip symlinks while walking files, so a symlink loop or broken link no longer aborts analysis.
+
 ## 7.3.0
 
 - **NoSQL Injection Detection**: Added deterministic taint flow analysis for MongoDB / NoSQL injection across JavaScript/TypeScript, PHP, Python, Go, and Java. Untrusted input reaching sinks like `$where`, `find`, `findOne`, `aggregate`, `updateOne`, `deleteMany`, etc. is now traced to the exact source and line.

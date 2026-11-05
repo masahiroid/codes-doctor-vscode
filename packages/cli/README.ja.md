@@ -8,7 +8,7 @@
 ## 使い方
 
 ```bash
-codes-doctor analyze [パス] [オプション]
+codesdoctor analyze [パス] [オプション]
 ```
 
 | オプション | 内容 |
@@ -23,10 +23,14 @@ codes-doctor analyze [パス] [オプション]
 
 終了コード: `0` 成功、`1` スコアが下限未満、`2` 引数の誤りまたは解析エラー。対応言語のファイルがないフォルダーではスコアは「なし」になり、下限判定で失敗にはなりません。
 
+Node.js 24 以上が必要です。`codes-doctor` もコマンドの別名としてインストールされます。
+
+`codesdoctor` 0.1.0 からの移行: コマンドは `codesdoctor analyze <パス>` になり、`--display-language` は `--lang`、`--output` は `--out` に変わりました。JavaScript API の公開は終了しました。
+
 ## CI での利用
 
 ```yaml
-- run: npx codes-doctor analyze . --out codes-doctor-report --min-security 80
+- run: npx codesdoctor@latest analyze . --out codes-doctor-report --min-security 80
 - uses: actions/upload-artifact@v4
   if: always()
   with:

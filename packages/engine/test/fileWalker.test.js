@@ -97,3 +97,20 @@ test('astSection: caps oversized raw AST files to prevent giant HTML reports', (
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('fileWalker: skips symlinks, including loops and broken links', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'codes-walker-test-'));
+  try {
+    const sub = path.join(dir, 'sub');
+    fs.mkdirSync(sub);
+    fs.writeFileSync(path.join(sub, 'a.ts'), 'export const a = 1;');
+    fs.symlinkSync('..', path.join(sub, 'loop'));
+    fs.symlinkSync('missing.ts', path.join(sub, 'broken.ts'));
+    fs.symlinkSync('a.ts', path.join(sub, 'alias.ts'));
+
+    const { ts } = await listFilesByExtension(dir, [{ id: 'ts', extensions: ['.ts'] }]);
+    assert.deepEqual(ts, [path.join(sub, 'a.ts')]);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

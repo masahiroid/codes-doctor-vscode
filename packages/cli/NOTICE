@@ -1,0 +1,6 @@
+Codes Doctor CLI
+Includes the Codes Doctor analysis engine from
+https://github.com/masahiroid/codes-doctor-vscode and the CSAP / Code Doctor
+project at https://github.com/masahiroid/code-doctor.
+Both projects are licensed under Apache-2.0.
+Browser dependency licenses are retained in the bundled report libraries.

@@ -24,7 +24,7 @@ export const DEFAULT_OUTPUT_DIR = 'codes-doctor-report';
 const REPORT_LANGUAGES: readonly ReportLanguage[] = ['en', 'ja'];
 const SCORE_RANGE = { min: 0, max: 100 } as const;
 
-export const USAGE = `Usage: codes-doctor analyze [path] [options]
+export const USAGE = `Usage: codesdoctor analyze [path] [options]
 
 Analyzes a folder and writes an HTML report.
 
