@@ -8,7 +8,7 @@ Runs the Codes Doctor analysis from a terminal or CI job and writes the same HTM
 ## Usage
 
 ```bash
-codes-doctor analyze [path] [options]
+codesdoctor analyze [path] [options]
 ```
 
 | Option | Meaning |
@@ -23,10 +23,14 @@ codes-doctor analyze [path] [options]
 
 Exit codes: `0` success, `1` a score is below its minimum, `2` invalid usage or analysis error. When a folder has no files in a supported language, scores are reported as not available and thresholds do not fail.
 
+Requires Node.js 24 or newer. `codes-doctor` is also installed as an alias of the command.
+
+Upgrading from `codesdoctor` 0.1.0: the command is now `codesdoctor analyze <path>`, `--display-language` is `--lang`, `--output` is `--out`, and the JavaScript API is no longer exported.
+
 ## In CI
 
 ```yaml
-- run: npx codes-doctor analyze . --out codes-doctor-report --min-security 80
+- run: npx codesdoctor@latest analyze . --out codes-doctor-report --min-security 80
 - uses: actions/upload-artifact@v4
   if: always()
   with:

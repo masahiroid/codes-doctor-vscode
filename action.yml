@@ -5,6 +5,12 @@ inputs:
     description: 'Path or directory to analyze'
     required: false
     default: '.'
+  min-security:
+    description: 'Fail if the security score is below this minimum'
+    required: false
+  min-debt:
+    description: 'Fail if the technical debt score is below this minimum'
+    required: false
 runs:
   using: 'composite'
   steps:
@@ -12,20 +18,16 @@ runs:
       uses: actions/setup-node@v4
       with:
         node-version: 24
-    - name: Checkout Codes Doctor
-      uses: actions/checkout@v4
-      with:
-        repository: masahiroid/codes-doctor-vscode
-        path: .codes-doctor-tool
-    - name: Build Codes Doctor Engine & CLI
-      shell: bash
-      run: |
-        cd .codes-doctor-tool
-        (cd packages/engine && npm ci)
-        (cd packages/cli && npm ci)
-        npm run build --prefix packages/engine
-        npm run build --prefix packages/cli
     - name: Run Codes Doctor Analysis
       shell: bash
+      env:
+        ANALYZE_PATH: ${{ inputs.path }}
+        MIN_SECURITY: ${{ inputs.min-security }}
+        MIN_DEBT: ${{ inputs.min-debt }}
+      # Runs the npm release matching the ref this action was pinned to.
       run: |
-        node .codes-doctor-tool/packages/cli/bin/codes-doctor.js analyze ${{ inputs.path }}
+        version=$(node -p "require(process.env.GITHUB_ACTION_PATH + '/packages/cli/package.json').version")
+        args=(analyze "$ANALYZE_PATH")
+        [ -n "$MIN_SECURITY" ] && args+=(--min-security "$MIN_SECURITY")
+        [ -n "$MIN_DEBT" ] && args+=(--min-debt "$MIN_DEBT")
+        npx --yes "codesdoctor@$version" "${args[@]}"

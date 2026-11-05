@@ -190,7 +190,8 @@ export async function listFilesByExtension<K extends string>(
         continue;
       }
 
-      const stats = fs.statSync(fullPath);
+      // lstat: symlinks are neither followed nor collected, so loops and links out of the tree are harmless.
+      const stats = fs.lstatSync(fullPath);
       if (stats.isDirectory()) {
         walkDir(fullPath, currentScopes);
       } else if (stats.isFile()) {

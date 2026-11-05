@@ -8,6 +8,9 @@ name: Release
 #   the patch version, record the updates in the CHANGELOG, tag, and release.
 # Authenticates to Marketplace via Microsoft Entra ID OIDC (AZURE_CLIENT_ID / AZURE_TENANT_ID)
 # with fallback to VSCE_PAT.
+# The CLI is published to npm as `codesdoctor` by a separate job, so a Marketplace failure does not
+# block it and any released version missing from npm is published by the next run. It authenticates
+# through npm Trusted Publishing (OIDC), so no token is stored.
 on:
   push:
     branches: [main]
@@ -159,3 +162,56 @@ jobs:
             npx vsce publish --packagePath "codes-doctor-${{ steps.vsix.outputs.version }}.vsix"
           fi
 
+
+  publish-npm:
+    needs: release
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+          cache-dependency-path: packages/*/package-lock.json
+
+      - name: Find the released version missing from npm
+        id: plan
+        run: |
+          version=$(node -p "require('./packages/cli/package.json').version")
+          if ! git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "v$version is not released yet; skipping."
+          elif [ -n "$(npm view "codesdoctor@$version" version 2>/dev/null)" ]; then
+            echo "codesdoctor@$version is already on npm; skipping."
+          else
+            git checkout "v$version"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install
+        if: steps.plan.outputs.version
+        run: npm run install:all
+
+      - name: Test and pack
+        if: steps.plan.outputs.version
+        working-directory: packages/cli
+        run: |
+          npm test
+          npm pack --pack-destination "$RUNNER_TEMP"
+
+      - name: Verify the tarball
+        if: steps.plan.outputs.version
+        run: node scripts/verify-cli-package.mjs "$RUNNER_TEMP/codesdoctor-${{ steps.plan.outputs.version }}.tgz"
+
+      - name: Publish to npm
+        if: steps.plan.outputs.version
+        run: npm publish "$RUNNER_TEMP/codesdoctor-${{ steps.plan.outputs.version }}.tgz"

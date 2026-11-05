@@ -1,16 +1,17 @@
 {
-  "name": "codes-doctor",
-  "version": "7.3.0",
-  "private": true,
+  "name": "codesdoctor",
+  "version": "7.3.1",
   "description": "Codes Doctor command line: structural, security and dependency analysis with an HTML report",
   "license": "Apache-2.0",
   "bin": {
+    "codesdoctor": "bin/codes-doctor.js",
     "codes-doctor": "bin/codes-doctor.js"
   },
   "files": [
     "bin",
     "lib",
-    "vendor"
+    "vendor",
+    "NOTICE"
   ],
   "engines": {
     "node": ">=24"
@@ -18,7 +19,8 @@
   "scripts": {
     "vendor": "npm run build --prefix ../engine && node ../../scripts/vendor-engine.mjs .",
     "build": "node ../../scripts/verify-install.mjs ../engine . && npm run vendor && tsc -p tsconfig.json",
-    "test": "npm run build && node --test test/*.test.js"
+    "test": "npm run build && node --test test/*.test.js",
+    "prepack": "npm run build"
   },
   "dependencies": {
     "@typescript-eslint/typescript-estree": "^8.72.1",
@@ -28,5 +30,14 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.6"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/masahiroid/codes-doctor-vscode.git",
+    "directory": "packages/cli"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }

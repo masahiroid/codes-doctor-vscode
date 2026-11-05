@@ -47,6 +47,12 @@ jobs:
       - name: CLI tests
         run: npm test --prefix packages/cli
 
+      - name: Verify the npm package
+        working-directory: packages/cli
+        run: |
+          npm pack --pack-destination "$RUNNER_TEMP"
+          node ../../scripts/verify-cli-package.mjs "$RUNNER_TEMP/codesdoctor-$(node -p "require('./package.json').version").tgz"
+
       - name: Extension tests
         run: |
           npm run vendor:csap --prefix packages/vscode
