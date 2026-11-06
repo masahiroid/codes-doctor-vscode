@@ -69,10 +69,10 @@ Codes Doctor 自身のリポジトリを解析して生成した実際のレポ�
 
 ```bash
 # プロジェクトを解析しレポートを出力
-npx @codes-doctor/cli analyze . --out ./reports
+npx codesdoctor analyze . --out ./reports
 
 # CI 品質ゲート: セキュリティスコアが 80点 未満の場合は終了コード 1 で失敗
-npx @codes-doctor/cli analyze . --min-security 80 --min-debt 75
+npx codesdoctor analyze . --min-security 80 --min-debt 75
 ```
 
 ---

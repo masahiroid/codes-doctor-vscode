@@ -3,6 +3,10 @@ import { parseArgs } from 'node:util';
 
 export type ReportLanguage = 'en' | 'ja';
 
+/** Mildest first. */
+export const SEVERITIES = ['low', 'medium', 'high', 'critical'] as const;
+export type Severity = (typeof SEVERITIES)[number];
+
 export interface AnalyzeOptions {
   repoPath: string;
   outputDir: string;
@@ -13,6 +17,10 @@ export interface AnalyzeOptions {
   /** Fail (exit code 1) when a score is below this minimum. */
   minSecurity?: number;
   minTechnicalDebt?: number;
+  /** Fail (exit code 1) on findings of this severity or worse. */
+  failOn?: Severity;
+  /** Let --fail-on pass when the dependency scan could not finish. */
+  allowIncompleteScan: boolean;
 }
 
 export type Command =
@@ -36,12 +44,17 @@ Options:
                              rust, cpp (default: auto)
       --min-security <n>     Exit with code 1 if the security score is below n
       --min-debt <n>         Exit with code 1 if the technical debt score is below n
+      --fail-on <severity>   Exit with code 1 on security findings of this severity or
+                             worse: low, medium, high, critical. Also fails if the
+                             dependency scan could not finish
+      --allow-incomplete-scan
+                             Do not fail --fail-on because of an unfinished scan
       --json                 Print the summary as JSON
       --verbose              Show the engine's progress log
   -h, --help                 Show this help
   -v, --version              Show the version
 
-Exit codes: 0 success, 1 a score is below its minimum, 2 invalid usage or analysis error.`;
+Exit codes: 0 success, 1 a score or finding check failed, 2 invalid usage or analysis error.`;
 
 /** Parse command line arguments; throws a usage error message on invalid input. */
 export function parseCommand(argv: string[]): Command {
@@ -54,6 +67,8 @@ export function parseCommand(argv: string[]): Command {
       language: { type: 'string' },
       'min-security': { type: 'string' },
       'min-debt': { type: 'string' },
+      'fail-on': { type: 'string' },
+      'allow-incomplete-scan': { type: 'boolean' },
       json: { type: 'boolean' },
       verbose: { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
@@ -72,6 +87,11 @@ export function parseCommand(argv: string[]): Command {
     throw new Error(`--lang must be one of: ${REPORT_LANGUAGES.join(', ')}`);
   }
 
+  const failOn = values['fail-on'];
+  if (failOn !== undefined && !(SEVERITIES as readonly string[]).includes(failOn)) {
+    throw new Error(`--fail-on must be one of: ${SEVERITIES.join(', ')}`);
+  }
+
   return {
     kind: 'analyze',
     options: {
@@ -83,6 +103,8 @@ export function parseCommand(argv: string[]): Command {
       verbose: values.verbose ?? false,
       minSecurity: parseScore(values['min-security'], '--min-security'),
       minTechnicalDebt: parseScore(values['min-debt'], '--min-debt'),
+      failOn: failOn as Severity | undefined,
+      allowIncompleteScan: values['allow-incomplete-scan'] ?? false,
     },
   };
 }

@@ -1,4 +1,5 @@
 import type { AnalysisResult } from '../vendor/csap-en';
+import { SEVERITIES, type Severity } from './options';
 
 export interface ScoreSummary {
   score: number;
@@ -12,13 +13,19 @@ export interface AnalysisSummary {
   security?: ScoreSummary & { critical: number; high: number };
   criticalGodClasses: number;
   circularDependencies: number;
-  /** Scores below the requested minimums, e.g. "security 72 < 80". */
+  /** Source-code and dependency findings added together. */
+  findings: Record<Severity, number>;
+  /** False when the dependency scan could not finish, so its zero counts prove nothing. */
+  dependencyScanComplete: boolean;
+  /** Checks that did not pass, e.g. "security 72 < 80". */
   failures: string[];
 }
 
 export interface Thresholds {
   minSecurity?: number;
   minTechnicalDebt?: number;
+  failOn?: Severity;
+  allowIncompleteScan?: boolean;
 }
 
 /** Condense an analysis into the numbers a CI log or JSON consumer needs. */
@@ -45,6 +52,25 @@ export function summarize(result: AnalysisResult, reportPath: string, thresholds
     failures.push(`technical debt ${technicalDebt.score} < ${thresholds.minTechnicalDebt}`);
   }
 
+  const code = analyzedFiles > 0 ? result.securityScore?.summary : undefined;
+  const dependencies = result.vulnerabilityScan;
+  const findings: Record<Severity, number> = {
+    low: (code?.low ?? 0) + (dependencies?.low ?? 0),
+    medium: (code?.medium ?? 0) + (dependencies?.moderate ?? 0),
+    high: (code?.high ?? 0) + (dependencies?.high ?? 0),
+    critical: (code?.critical ?? 0) + (dependencies?.critical ?? 0),
+  };
+  const dependencyScanComplete = Boolean(dependencies) && !dependencies?.incomplete;
+  if (thresholds.failOn) {
+    const counted = SEVERITIES.slice(SEVERITIES.indexOf(thresholds.failOn)).filter((severity) => findings[severity] > 0);
+    if (counted.length > 0) {
+      failures.push(`findings at ${thresholds.failOn} or worse: ${counted.map((severity) => `${severity} ${findings[severity]}`).join(', ')}`);
+    }
+    if (!dependencyScanComplete && !thresholds.allowIncompleteScan) {
+      failures.push(`dependency scan did not finish: ${dependencies?.summary ?? 'no result'}`);
+    }
+  }
+
   return {
     reportPath,
     analyzedFiles,
@@ -52,6 +78,8 @@ export function summarize(result: AnalysisResult, reportPath: string, thresholds
     security,
     criticalGodClasses: result.godClasses.filter((godClass) => godClass.rank === 'critical').length,
     circularDependencies: result.circularDependencies.length,
+    findings,
+    dependencyScanComplete,
     failures,
   };
 }

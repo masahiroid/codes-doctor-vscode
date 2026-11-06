@@ -7,6 +7,13 @@ Codes Doctor モノレポ（`@codes-doctor/engine`、`codes-doctor` CLI、およ
 
 ---
 
+## 7.3.2
+
+- **CLI**: 指定した重大度以上のコード・依存関係の検出で CI を失敗させる `--fail-on <severity>` を追加。依存関係スキャンが完了しない場合も失敗し、`--allow-incomplete-scan` で無効化可能。`action.yml` に `fail-on` 入力を追加。
+- **エンジン**: 脆弱性スキャンに `incomplete` を記録し、ロックファイルなしや `npm audit` エラーを、Trivy 利用時も含めて脆弱性 0 件として扱わないよう修正。
+- **リリース**: 定期実行と Dependabot の実行では npm に公開しないよう変更。手動実行では `next` タグで公開可能。
+- **ドキュメント**: 未公開の `@codes-doctor/cli` の案内を `codesdoctor` に修正。
+
 ## 7.3.0
 
 - **NoSQLインジェクション検出の導入**: JavaScript/TypeScript、PHP、Python、Go、Java のデータフロー解析（Taint Flow）に NoSQL インジェクション判定を追加。MongoDB等の `$where`、`find`、`findOne`、`aggregate`、`updateOne`、`deleteMany` 等へ未サニタイズの外部入力が渡る経路を決定論的に追跡し、正確な入力元と到達行を提示。

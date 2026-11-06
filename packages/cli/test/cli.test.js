@@ -45,6 +45,51 @@ test('thresholds fail only on scores below the minimum, never on an empty analys
   assert.deepEqual(empty.failures, []);
 });
 
+test('--fail-on counts code and dependency findings at or above the severity', () => {
+  const result = (dependencies) => ({
+    summary: { totalFiles: 1 },
+    securityScore: { overallScore: 90, grade: 'A', summary: { critical: 0, high: 1, medium: 2, low: 0 } },
+    vulnerabilityScan: dependencies,
+    godClasses: [],
+    circularDependencies: [],
+  });
+  const clean = { critical: 0, high: 0, moderate: 0, low: 0 };
+  assert.deepEqual(summarize(result(clean), 'r', { failOn: 'critical' }).failures, []);
+  assert.deepEqual(summarize(result(clean), 'r', { failOn: 'high' }).failures, ['findings at high or worse: high 1']);
+  assert.deepEqual(summarize(result({ ...clean, critical: 2, moderate: 1 }), 'r', { failOn: 'medium' }).failures, ['findings at medium or worse: medium 3, high 1, critical 2']);
+  assert.throws(() => parseCommand(['analyze', '--fail-on', 'severe']), /--fail-on/);
+});
+
+test('an unfinished dependency scan fails --fail-on unless explicitly allowed', () => {
+  const result = (dependencies) => ({
+    summary: { totalFiles: 1 },
+    securityScore: { overallScore: 100, grade: 'A', summary: { critical: 0, high: 0, medium: 0, low: 0 } },
+    vulnerabilityScan: dependencies,
+    godClasses: [],
+    circularDependencies: [],
+  });
+  const unfinished = { critical: 0, high: 0, moderate: 0, low: 0, incomplete: true, summary: 'npm audit failed' };
+  assert.deepEqual(summarize(result(unfinished), 'r', { failOn: 'critical' }).failures, ['dependency scan did not finish: npm audit failed']);
+  assert.deepEqual(summarize(result(unfinished), 'r', { failOn: 'critical', allowIncompleteScan: true }).failures, []);
+  assert.deepEqual(summarize(result(unfinished), 'r', {}).failures, []);
+  assert.equal(summarize(result(undefined), 'r', { failOn: 'critical' }).failures.length, 1);
+});
+
+test('--fail-on reports a real missing lockfile through the exit code', () => {
+  const { root, repo, out } = fixture();
+  try {
+    fs.writeFileSync(path.join(repo, 'b.ts'), 'export const b = 1;\n');
+    fs.writeFileSync(path.join(repo, 'package.json'), '{"name":"fixture","version":"1.0.0"}\n');
+    const failed = spawnSync('node', [BIN, 'analyze', repo, '--out', out, '--fail-on', 'critical'], { encoding: 'utf8' });
+    assert.equal(failed.status, 1, failed.stdout + failed.stderr);
+    assert.match(failed.stdout, /FAILED: dependency scan did not finish/);
+    const allowed = spawnSync('node', [BIN, 'analyze', repo, '--out', out, '--fail-on', 'critical', '--allow-incomplete-scan'], { encoding: 'utf8' });
+    assert.equal(allowed.status, 0, allowed.stdout + allowed.stderr);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('analyzes a folder end to end and reports through the exit code', () => {
   const { root, repo, out } = fixture();
   try {

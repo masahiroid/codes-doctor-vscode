@@ -346,6 +346,8 @@ export interface VulnerabilityScan {
   vulnerabilities: VulnerabilityInfo[];
   fixable: number;
   summary: string;
+  /** The scan did not finish, so zero counts do not mean the dependencies are clean. */
+  incomplete?: boolean;
 }
 
 /**

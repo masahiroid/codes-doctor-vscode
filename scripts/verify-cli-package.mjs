@@ -47,6 +47,8 @@ function main() {
     }
     const gated = run('codesdoctor', 'analyze', target, '--out', path.join(root, 'report-gated'), '--min-security', '100');
     assert.equal(gated.status, 1, gated.stderr);
+    const severity = run('codesdoctor', 'analyze', target, '--out', path.join(root, 'report-severity'), '--fail-on', 'critical');
+    assert.equal(severity.status, 1, severity.stderr);
     assert.equal(run('codesdoctor', 'analyze', '--lang', 'fr').status, 2);
     console.log(`[verify-cli-package] codesdoctor@${VERSION} OK`);
   } finally {
