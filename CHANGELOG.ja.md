@@ -14,6 +14,12 @@ Codes Doctor モノレポ（`@codes-doctor/engine`、`codes-doctor` CLI、およ
 - **リリース**: 定期実行と Dependabot の実行では npm に公開しないよう変更。手動実行では `next` タグで公開可能。
 - **ドキュメント**: 未公開の `@codes-doctor/cli` の案内を `codesdoctor` に修正。
 
+## 7.3.1
+
+- **CLI**: リリースワークフローから Trusted Publishing で npm に `codesdoctor` として公開。`codes-doctor` はコマンドの別名として維持。
+- **GitHub Action**: ソースからビルドせず対応する npm リリースを実行するよう変更。入力を安全に渡すよう修正し、`min-security` と `min-debt` を追加。
+- **エンジン**: ファイル走査でシンボリックリンクをスキップし、リンクのループや切れたリンクで解析が中断しないよう修正。
+
 ## 7.3.0
 
 - **NoSQLインジェクション検出の導入**: JavaScript/TypeScript、PHP、Python、Go、Java のデータフロー解析（Taint Flow）に NoSQL インジェクション判定を追加。MongoDB等の `$where`、`find`、`findOne`、`aggregate`、`updateOne`、`deleteMany` 等へ未サニタイズの外部入力が渡る経路を決定論的に追跡し、正確な入力元と到達行を提示。

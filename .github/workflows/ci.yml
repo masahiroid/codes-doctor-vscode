@@ -29,6 +29,9 @@ jobs:
           cache: npm
           cache-dependency-path: packages/*/package-lock.json
 
+      - name: Check versions are in sync
+        run: npm run check:versions
+
       - name: Install
         run: npm run install:all
 

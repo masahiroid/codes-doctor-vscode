@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.3.2
+
+- **CLI**: Added `--fail-on <severity>` to fail CI on code or dependency findings of a given severity or worse. It also fails when the dependency scan could not finish; `--allow-incomplete-scan` opts out. `action.yml` gains a `fail-on` input.
+- **Engine**: Vulnerability scans now record `incomplete`, and a missing lockfile or `npm audit` error is no longer treated as zero vulnerabilities, including when Trivy is installed.
+- **Release**: Scheduled and Dependabot runs no longer publish to npm; manual runs can publish under the `next` dist-tag.
+- **Docs**: Replaced the unpublished `@codes-doctor/cli` command with `codesdoctor`.
+
 ## 7.3.1
 
 - CLI: publish to npm as codesdoctor from the release workflow via Trusted Publishing, with codes-doctor kept as a command alias.
