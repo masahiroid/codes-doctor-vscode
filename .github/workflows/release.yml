@@ -11,7 +11,9 @@ name: Release
 # The CLI is published to npm as `codesdoctor` by a separate job, so a Marketplace failure does not
 # block it. It publishes the triggering tag, or the current version on main when that version is
 # tagged and missing from npm; run it manually with `npm_tag` to publish an older missed tag. It
-# authenticates through npm Trusted Publishing (OIDC), so no token is stored.
+# authenticates through npm Trusted Publishing (OIDC), so no token is stored. Scheduled and
+# Dependabot runs never publish, so a person always decides what reaches npm; run manually with
+# `npm_dist_tag: next` to try a version before it becomes "latest".
 on:
   push:
     branches: [main]
@@ -28,6 +30,11 @@ on:
         description: Released tag to publish to npm if missing (for example v7.3.1)
         type: string
         default: ""
+      npm_dist_tag:
+        description: npm dist-tag for the manual publish
+        type: choice
+        options: [auto, next]
+        default: auto
 
 permissions:
   contents: write
@@ -170,7 +177,7 @@ jobs:
 
   publish-npm:
     needs: release
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && github.event_name != 'schedule' && github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -191,6 +198,8 @@ jobs:
 
       - name: Find the released version missing from npm
         id: plan
+        env:
+          REQUESTED_DIST_TAG: ${{ inputs.npm_dist_tag }}
         run: |
           version=$(node -p "require('./packages/cli/package.json').version")
           if ! git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
@@ -203,7 +212,7 @@ jobs:
             # An older version published late must not take over "latest".
             latest=$(npm view codesdoctor dist-tags.latest 2>/dev/null || true)
             newest=$(printf '%s\n%s\n' "$version" "$latest" | sort -V | tail -1)
-            if [ "$newest" = "$version" ]; then echo "dist_tag=latest" >> "$GITHUB_OUTPUT"; else echo "dist_tag=backfill" >> "$GITHUB_OUTPUT"; fi
+            if [ "$REQUESTED_DIST_TAG" = "next" ]; then echo "dist_tag=next" >> "$GITHUB_OUTPUT"; elif [ "$newest" = "$version" ]; then echo "dist_tag=latest" >> "$GITHUB_OUTPUT"; else echo "dist_tag=backfill" >> "$GITHUB_OUTPUT"; fi
           fi
 
       - name: Install

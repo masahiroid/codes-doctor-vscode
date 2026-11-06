@@ -67,10 +67,10 @@ Run instant analysis without global installation:
 
 ```bash
 # Run analysis and output report
-npx @codes-doctor/cli analyze . --out ./reports
+npx codesdoctor analyze . --out ./reports
 
 # CI Quality Gate: fail if security score is below 80
-npx @codes-doctor/cli analyze . --min-security 80 --min-debt 75
+npx codesdoctor analyze . --min-security 80 --min-debt 75
 ```
 
 ---

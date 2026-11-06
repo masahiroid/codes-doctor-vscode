@@ -18,6 +18,8 @@ codesdoctor analyze [パス] [オプション]
 | `--language <name>` | 解析する言語を 1 つに限定（`auto`、`typescript`、`javascript`、`php`、`dart`、`python`、`go`、`swift`、`csharp`、`java`、`kotlin`、`rust`、`cpp`） |
 | `--min-security <n>` | セキュリティスコアが `n` 未満なら終了コード 1 |
 | `--min-debt <n>` | 技術的負債スコアが `n` 未満なら終了コード 1 |
+| `--fail-on <severity>` | 指定した重大度以上のセキュリティ検出（コードと依存関係）があれば終了コード 1。`low`、`medium`、`high`、`critical` から指定。ロックファイルがないなど依存関係スキャンが完了しない場合も失敗 |
+| `--allow-incomplete-scan` | スキャン未完了を理由に `--fail-on` を失敗させない |
 | `--json` | 結果の要約を JSON で出力 |
 | `--verbose` | エンジンの進行ログを表示 |
 
@@ -30,7 +32,7 @@ Node.js 24 以上が必要です。`codes-doctor` もコマンドの別名とし
 ## CI での利用
 
 ```yaml
-- run: npx codesdoctor@latest analyze . --out codes-doctor-report --min-security 80
+- run: npx codesdoctor@latest analyze . --out codes-doctor-report --min-security 80 --fail-on critical
 - uses: actions/upload-artifact@v4
   if: always()
   with:

@@ -18,6 +18,8 @@ codesdoctor analyze [path] [options]
 | `--language <name>` | Analyze only one language (`auto`, `typescript`, `javascript`, `php`, `dart`, `python`, `go`, `swift`, `csharp`, `java`, `kotlin`, `rust`, `cpp`) |
 | `--min-security <n>` | Exit with code 1 if the security score is below `n` |
 | `--min-debt <n>` | Exit with code 1 if the technical debt score is below `n` |
+| `--fail-on <severity>` | Exit with code 1 on security findings (code and dependencies) of this severity or worse: `low`, `medium`, `high`, `critical`. Also fails if the dependency scan could not finish, for example without a lockfile |
+| `--allow-incomplete-scan` | Do not fail `--fail-on` because of an unfinished scan |
 | `--json` | Print the summary as JSON |
 | `--verbose` | Show the engine's progress log |
 
@@ -30,7 +32,7 @@ Upgrading from `codesdoctor` 0.1.0: the command is now `codesdoctor analyze <pat
 ## In CI
 
 ```yaml
-- run: npx codesdoctor@latest analyze . --out codes-doctor-report --min-security 80
+- run: npx codesdoctor@latest analyze . --out codes-doctor-report --min-security 80 --fail-on critical
 - uses: actions/upload-artifact@v4
   if: always()
   with:

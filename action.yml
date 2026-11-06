@@ -11,6 +11,9 @@ inputs:
   min-debt:
     description: 'Fail if the technical debt score is below this minimum'
     required: false
+  fail-on:
+    description: 'Fail on security findings of this severity or worse (low, medium, high, critical)'
+    required: false
 runs:
   using: 'composite'
   steps:
@@ -24,10 +27,12 @@ runs:
         ANALYZE_PATH: ${{ inputs.path }}
         MIN_SECURITY: ${{ inputs.min-security }}
         MIN_DEBT: ${{ inputs.min-debt }}
+        FAIL_ON: ${{ inputs.fail-on }}
       # Runs the npm release matching the ref this action was pinned to.
       run: |
         version=$(node -p "require(process.env.GITHUB_ACTION_PATH + '/packages/cli/package.json').version")
         args=(analyze "$ANALYZE_PATH")
         [ -n "$MIN_SECURITY" ] && args+=(--min-security "$MIN_SECURITY")
         [ -n "$MIN_DEBT" ] && args+=(--min-debt "$MIN_DEBT")
+        [ -n "$FAIL_ON" ] && args+=(--fail-on "$FAIL_ON")
         npx --yes "codesdoctor@$version" "${args[@]}"
