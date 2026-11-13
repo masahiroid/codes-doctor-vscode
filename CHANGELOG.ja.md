@@ -7,6 +7,10 @@ Codes Doctor モノレポ（`@codes-doctor/engine`、`codes-doctor` CLI、およ
 
 ---
 
+## 7.3.3
+
+- Dependency update: Bump the minor-and-patch group across 1 directory with 3 updates
+
 ## 7.3.2
 
 - **CLI**: 指定した重大度以上のコード・依存関係の検出で CI を失敗させる `--fail-on <severity>` を追加。依存関係スキャンが完了しない場合も失敗し、`--allow-incomplete-scan` で無効化可能。`action.yml` に `fail-on` 入力を追加。

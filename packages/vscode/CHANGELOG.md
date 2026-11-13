@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.3.3
+
+- Dependency update: Bump the minor-and-patch group across 1 directory with 3 updates
+
 ## 7.3.2
 
 - **CLI**: Added `--fail-on <severity>` to fail CI on code or dependency findings of a given severity or worse. It also fails when the dependency scan could not finish; `--allow-incomplete-scan` opts out. `action.yml` gains a `fail-on` input.
