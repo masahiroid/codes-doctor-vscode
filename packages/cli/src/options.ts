@@ -23,8 +23,34 @@ export interface AnalyzeOptions {
   allowIncompleteScan: boolean;
 }
 
+export const CHANNELS = ['emergency', 'baseline', 'regulatory'] as const;
+export const AUDIT_FORMATS = ['json', 'csv', 'xlsx'] as const;
+export type AuditFormat = (typeof AUDIT_FORMATS)[number];
+
+export interface AuditOptions {
+  repoPath: string;
+  outputDir: string;
+  reportLanguage: ReportLanguage;
+  /** Manifest URL (https: or file:). */
+  rulesUrl?: string;
+  /** Verified copy of the last downloaded rules; compared with the next download. */
+  rulesCache?: string;
+  offline: boolean;
+  channels: string[];
+  packs: string[];
+  formats: AuditFormat[];
+  evidencePath?: string;
+  target?: string;
+  /** Verify the evidence (read only) instead of updating it; exit code 1 when it does not pass. */
+  check: boolean;
+  /** Exit code 1 when an input flow or a missing ownership check is found. */
+  failOnFindings: boolean;
+  json: boolean;
+}
+
 export type Command =
   | { kind: 'analyze'; options: AnalyzeOptions }
+  | { kind: 'audit'; options: AuditOptions }
   | { kind: 'help' }
   | { kind: 'version' };
 
@@ -32,7 +58,10 @@ export const DEFAULT_OUTPUT_DIR = 'codes-doctor-report';
 const REPORT_LANGUAGES: readonly ReportLanguage[] = ['en', 'ja'];
 const SCORE_RANGE = { min: 0, max: 100 } as const;
 
+export const DEFAULT_AUDIT_DIR = path.join(DEFAULT_OUTPUT_DIR, 'security-audit');
+
 export const USAGE = `Usage: codesdoctor analyze [path] [options]
+       codesdoctor audit [path] [options]
 
 Analyzes a folder and writes an HTML report.
 
@@ -54,7 +83,31 @@ Options:
   -h, --help                 Show this help
   -v, --version              Show the version
 
-Exit codes: 0 success, 1 a score or finding check failed, 2 invalid usage or analysis error.`;
+Audit: checks a folder against distributed security rules (security-rules manifest),
+writes the audit report, a management sheet (CSV, Excel) and review evidence.
+
+Audit options:
+  -o, --out <dir>            Report folder (default: ./${DEFAULT_AUDIT_DIR})
+      --rules <url>          Rules manifest URL, https: or file: (default: the public
+                             masahiroid/security-rules manifest)
+      --rules-cache <dir>    Where the last verified rules are kept and compared with
+                             the next download (default: the user cache folder)
+      --offline              Use the cached rules only
+      --channel <list>       Only packs of these channels: emergency, baseline,
+                             regulatory (comma separated)
+      --pack <list>          Only these packs (comma separated ids)
+      --format <list>        Outputs: json, csv, xlsx (default: all)
+      --lang <en|ja>         Sheet language (default: en)
+      --evidence <file>      Create or update this evidence.json (needs --target)
+      --target <name>        Service and environment the evidence is for
+      --check                Do not update the evidence; exit with code 1 unless every
+                             selected rule has a current pass or not-applicable review
+      --fail-on-findings     Exit with code 1 when an input flow or a missing
+                             ownership check is found
+      --json                 Print the summary as JSON
+
+Exit codes: 0 success, 1 a score, finding or evidence check failed, 2 invalid usage or
+analysis error.`;
 
 /** Parse command line arguments; throws a usage error message on invalid input. */
 export function parseCommand(argv: string[]): Command {
@@ -71,6 +124,16 @@ export function parseCommand(argv: string[]): Command {
       'allow-incomplete-scan': { type: 'boolean' },
       json: { type: 'boolean' },
       verbose: { type: 'boolean' },
+      rules: { type: 'string' },
+      'rules-cache': { type: 'string' },
+      offline: { type: 'boolean' },
+      channel: { type: 'string' },
+      pack: { type: 'string' },
+      format: { type: 'string' },
+      evidence: { type: 'string' },
+      target: { type: 'string' },
+      check: { type: 'boolean' },
+      'fail-on-findings': { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
       version: { type: 'boolean', short: 'v' },
     },
@@ -79,12 +142,47 @@ export function parseCommand(argv: string[]): Command {
   if (values.version) return { kind: 'version' };
 
   const [command, target, ...extra] = positionals;
-  if (command !== 'analyze') throw new Error(command ? `Unknown command: ${command}` : 'Missing command');
+  if (command !== 'analyze' && command !== 'audit') throw new Error(command ? `Unknown command: ${command}` : 'Missing command');
   if (extra.length > 0) throw new Error(`Unexpected argument: ${extra[0]}`);
 
   const reportLanguage = values.lang ?? 'en';
   if (!(REPORT_LANGUAGES as readonly string[]).includes(reportLanguage)) {
     throw new Error(`--lang must be one of: ${REPORT_LANGUAGES.join(', ')}`);
+  }
+
+  const analyzeOnly = ['language', 'min-security', 'min-debt', 'fail-on', 'allow-incomplete-scan', 'verbose'] as const;
+  const auditOnly = ['rules', 'rules-cache', 'offline', 'channel', 'pack', 'format', 'evidence', 'target', 'check', 'fail-on-findings'] as const;
+  const misplaced = (command === 'audit' ? analyzeOnly : auditOnly).find((name) => values[name] !== undefined);
+  if (misplaced) throw new Error(`--${misplaced} is not an option of ${command}`);
+
+  if (command === 'audit') {
+    const channels = list(values.channel);
+    const unknown = channels.find((channel) => !(CHANNELS as readonly string[]).includes(channel));
+    if (unknown) throw new Error(`--channel must be one of: ${CHANNELS.join(', ')}`);
+    const formats = values.format === undefined ? [...AUDIT_FORMATS] : list(values.format);
+    const badFormat = formats.find((format) => !(AUDIT_FORMATS as readonly string[]).includes(format));
+    if (badFormat || formats.length === 0) throw new Error(`--format must list: ${AUDIT_FORMATS.join(', ')}`);
+    if (values.evidence !== undefined && !values.target?.trim()) throw new Error('--evidence needs --target (service and environment)');
+    if (values.check && values.evidence === undefined) throw new Error('--check needs --evidence and --target');
+    return {
+      kind: 'audit',
+      options: {
+        repoPath: path.resolve(target ?? '.'),
+        outputDir: path.resolve(values.out ?? DEFAULT_AUDIT_DIR),
+        reportLanguage: reportLanguage as ReportLanguage,
+        rulesUrl: values.rules,
+        rulesCache: values['rules-cache'] === undefined ? undefined : path.resolve(values['rules-cache']),
+        offline: values.offline ?? false,
+        channels,
+        packs: list(values.pack),
+        formats: formats as AuditFormat[],
+        evidencePath: values.evidence === undefined ? undefined : path.resolve(values.evidence),
+        target: values.target?.trim(),
+        check: values.check ?? false,
+        failOnFindings: values['fail-on-findings'] ?? false,
+        json: values.json ?? false,
+      },
+    };
   }
 
   const failOn = values['fail-on'];
@@ -116,4 +214,8 @@ function parseScore(value: string | undefined, flag: string): number | undefined
     throw new Error(`${flag} must be a number from ${SCORE_RANGE.min} to ${SCORE_RANGE.max}`);
   }
   return score;
+}
+
+function list(value: string | undefined): string[] {
+  return (value ?? '').split(',').map((item) => item.trim()).filter(Boolean);
 }

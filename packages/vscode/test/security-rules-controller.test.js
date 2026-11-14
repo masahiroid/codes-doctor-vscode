@@ -8,11 +8,11 @@ const { createSecurityRulesController } = require('../lib/securityRules/controll
 const { sha256Hex } = require('../lib/securityRules');
 
 /** A local rule distribution: one pack with a data-flow rule and a manual rule. */
-function ruleset(dir) {
+function ruleset(dir, { version = '1.0.0', message = 'm', fixStatus } = {}) {
   const pack = JSON.stringify({
-    id: 'nict-test', version: '1.0.0', description: 'd', channel: 'emergency', mandatory: true,
+    id: 'nict-test', version, description: 'd', channel: 'emergency', mandatory: true,
     rules: [
-      { id: 'EMERG-SQLI', title: 'SQLi', category: 'c', severity: 'error', target_languages: ['typescript', 'javascript'], message: 'm',
+      { id: 'EMERG-SQLI', title: 'SQLi', category: 'c', severity: 'error', target_languages: ['typescript', 'javascript'], message, ...(fixStatus ? { fix_status: fixStatus } : {}),
         source_urls: ['https://example.test'], check_steps: ['s'], excel_mapping: { column: 'SQL', action_required: '要対応' },
         detect: { type: 'taint', languages: ['typescript'], sinks: [{ builtin: 'SQL Injection' }] } },
       { id: 'EMERG-LOG', title: 'Logs', category: 'c', severity: 'warning', target_languages: ['json'], message: 'm',
@@ -21,7 +21,7 @@ function ruleset(dir) {
   });
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'nict-test.json'), pack);
-  fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ version: '2.0.0', packs: [{ id: 'nict-test', version: '1.0.0', channel: 'emergency', mandatory: true, file: 'nict-test.json', sha256: sha256Hex(pack) }] }));
+  fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ version: '2.0.0', packs: [{ id: 'nict-test', version, channel: 'emergency', mandatory: true, file: 'nict-test.json', sha256: sha256Hex(pack) }] }));
   return pathToFileURL(path.join(dir, 'manifest.json')).href;
 }
 
@@ -88,9 +88,14 @@ test('security rules controller: sync, scan, export, and the cached copy when th
     await controller.exportReport();
     const directory = path.join(root, '.codes-doctor', 'security-audit');
     const written = fs.readdirSync(directory).sort();
-    assert.equal(written.length, 2);
-    assert.match(written[0], /^security-audit-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.csv$/);
-    assert.equal(written[1], written[0].replace(/\.csv$/, '.json'));
+    assert.equal(written.length, 4);
+    assert.match(written[0], /^security-audit-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-sheet\.csv$/);
+    const stamp = written[0].replace(/-sheet\.csv$/, '');
+    assert.deepEqual(written, [`${stamp}-sheet.csv`, `${stamp}.csv`, `${stamp}.json`, `${stamp}.xlsx`]);
+    written.splice(0, 4, `${stamp}.csv`, `${stamp}.json`);
+    // The management sheet follows the display language (English in this mock).
+    assert.ok(fs.readFileSync(path.join(directory, `${stamp}-sheet.csv`), 'utf8').startsWith('﻿Classification,'));
+    assert.equal(fs.readFileSync(path.join(directory, `${stamp}.xlsx`)).readUInt32LE(0), 0x04034b50);
     const report = JSON.parse(fs.readFileSync(path.join(directory, written[1]), 'utf8'));
     assert.equal(report.workspace, path.basename(root));
     assert.equal(report.rulesetVersion, '2.0.0');
@@ -103,12 +108,20 @@ test('security rules controller: sync, scan, export, and the cached copy when th
     assert.ok(fs.readFileSync(path.join(directory, written[0]), 'utf8').startsWith('﻿pack_id,'));
     assert.deepEqual(vscode.log.info, ['Security audit report saved to .codes-doctor/security-audit. Items are review candidates, not a compliance verdict.']);
 
+    // The rule is updated and its fix released: both are announced, so the item is checked again.
+    ruleset(path.join(root, 'rules'), { version: '1.1.0', message: 'updated', fixStatus: 'released' });
+    await controller.syncRules();
+    assert.deepEqual(vscode.log.warning, ['A fix was released for 1 security rule item(s): SQLi. Check these items again and apply the fix.']);
+    assert.equal(vscode.log.info.at(-1), 'Security rules updated: 0 added, 1 changed, 0 removed. Scan again; reviews of changed items no longer count as evidence.');
+    await controller.syncRules();
+    assert.equal(vscode.log.warning.length, 1, 'an unchanged sync announces nothing');
+
     // The source disappears: the verified copy in the extension's storage is used, with a warning.
     fs.rmSync(path.join(root, 'rules'), { recursive: true, force: true });
     await controller.syncRules();
     state = controller.panel.getState();
     assert.equal(state.source, 'cache');
-    assert.equal(vscode.log.warning.length, 1);
+    assert.equal(vscode.log.warning.length, 2);
     assert.match(state.error, /Using the cached rules/);
     controller.dispose();
   } finally {

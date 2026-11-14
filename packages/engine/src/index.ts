@@ -33,3 +33,4 @@ export type { FlowIndex } from './analyzer/flow/project';
 export type { CompiledTaintRule, TaintRuleDefinition } from './analyzer/flow/ruleTaint';
 export type { DataFlow, FlowStep } from './analyzer/flow/taint';
 export { isTestPath } from './analyzer/security/testCode';
+export * as securityRules from './securityRules';

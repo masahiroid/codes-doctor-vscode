@@ -1,11 +1,9 @@
 import path from 'node:path';
 import { translator } from '../i18n';
+import { getDisplayLanguage } from '../config';
 import { loadEngine } from '../engine';
-import { DEFAULT_MANIFEST_URL, downloadRuleset, readRulesetCache, sha256Hex, writeRulesetCache } from './ruleset';
-import type { LoadedRuleset } from './ruleset';
-import { compileRules, languageForFile, scanFile } from './scan';
-import type { Candidate, CompiledRule, FlowEngine, ProjectIndex } from './scan';
-import type { AuditReport } from './audit';
+import { rulesModule } from './rules';
+import type { AuditReport, Candidate, CompiledRule, FlowEngine, LoadedRuleset, ProjectIndex, RulesetChanges } from './rules';
 import { REPORT_DIRECTORY, buildWorkspaceAuditReport, writeAuditReportFiles } from './auditExport';
 import { buildDiagnostic, buildHoverMarkdown } from './presentation';
 import { scanWorkspaceFiles } from './workspaceScan';
@@ -63,8 +61,8 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
 
   const config = () => vscode.workspace.getConfiguration('codeDoctor.securityRules');
   const manifestUrl = () => {
-    const value = config().get('sourceUrl', DEFAULT_MANIFEST_URL);
-    return typeof value === 'string' && value.trim() ? value.trim() : DEFAULT_MANIFEST_URL;
+    const value = config().get('sourceUrl', rulesModule().DEFAULT_MANIFEST_URL);
+    return typeof value === 'string' && value.trim() ? value.trim() : rulesModule().DEFAULT_MANIFEST_URL;
   };
   const intervalHours = () => {
     const value = config().get('syncIntervalHours', 24);
@@ -73,7 +71,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
   const workspaceRoot = () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   // The verified copy lives in the extension's storage, keyed by source. A copy inside the workspace
   // could be supplied by the repository under review and would decide its own audit.
-  const cacheDir = () => path.join(context.globalStorageUri.fsPath, 'security-rules', sha256Hex(manifestUrl()).slice(0, 16));
+  const cacheDir = () => path.join(context.globalStorageUri.fsPath, 'security-rules', rulesModule().sha256Hex(manifestUrl()).slice(0, 16));
   // Packs are stored as the disabled set, so a pack added upstream is on until the user turns it off.
   const disabledPacks = () => new Set(context.workspaceState.get<string[]>(DISABLED_PACKS_KEY, []));
   const activeRules = () => {
@@ -122,7 +120,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
     } catch {
       // Without the engine, rules with a detector are listed as not evaluated.
     }
-    ({ compiled, invalid } = compileRules(next.packs, available));
+    ({ compiled, invalid } = rulesModule().compileRules(next.packs, available));
   }
 
   const ruleFor = (candidate: Candidate) => compiled.find((item) => item.pack.id === candidate.packId && item.rule.id === candidate.ruleId);
@@ -147,7 +145,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
 
   async function scanDocument(document: import('vscode').TextDocument) {
     if (!ruleset || document.uri.scheme !== 'file') return;
-    const language = languageForFile(document.fileName);
+    const language = rulesModule().languageForFile(document.fileName);
     if (!language || isTestFile(document.fileName)) return;
     let available: FlowEngine | undefined;
     try {
@@ -155,7 +153,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
     } catch {
       // Pattern rules still run without the engine.
     }
-    publish(document.uri, await scanFile(document.getText(), language, document.fileName, activeRules(), available, projectIndex));
+    publish(document.uri, await rulesModule().scanFile(document.getText(), language, document.fileName, activeRules(), available, projectIndex));
   }
 
   const rescanOpenDocuments = () => vscode.workspace.textDocuments.forEach((document) => void scanDocument(document));
@@ -171,9 +169,12 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
   async function runSync(silent: boolean) {
     error = undefined;
     try {
-      const downloaded = await downloadRuleset(manifestUrl());
-      await writeRulesetCache(cacheDir(), downloaded);
+      // The rules before this sync, so changed items can be pointed out after it.
+      const previous = ruleset?.packs ?? await rulesModule().readRulesetCache(cacheDir()).then((cached) => cached.packs, () => undefined);
+      const downloaded = await rulesModule().downloadRuleset(manifestUrl());
+      await rulesModule().writeRulesetCache(cacheDir(), downloaded);
       applyRuleset(downloaded);
+      if (previous) notifyChanges(rulesModule().compareRulesets(previous, downloaded.packs));
       await context.globalState.update(LAST_SYNC_KEY, Date.now());
       clearFindings();
       rescanOpenDocuments();
@@ -187,7 +188,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
       const reason = failure instanceof Error ? failure.message : String(failure);
       // Offline or a rejected download falls back to the last verified copy in the workspace.
       try {
-        applyRuleset(await readRulesetCache(cacheDir()));
+        applyRuleset(await rulesModule().readRulesetCache(cacheDir()));
         clearFindings();
         rescanOpenDocuments();
         error = t('Could not sync security rules ({reason}). Using the cached rules.', { reason });
@@ -196,6 +197,23 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
         error = t('Could not sync security rules ({reason}). No cached rules are available.', { reason });
         vscode.window.showErrorMessage(error);
       }
+    }
+  }
+
+  /** Shown after every sync that changed the rules, automatic ones included: changed items need checking again. */
+  function notifyChanges(changes: RulesetChanges) {
+    if (!rulesModule().hasRulesetChanges(changes)) return;
+    if (changes.fixReleased.length > 0) {
+      void vscode.window.showWarningMessage(t('A fix was released for {count} security rule item(s): {items}. Check these items again and apply the fix.', {
+        count: changes.fixReleased.length,
+        items: changes.fixReleased.map((rule) => rule.title).join(', '),
+      }));
+    }
+    const rules = changes.addedRules.length + changes.changedRules.length + changes.removedRules.length;
+    if (rules > 0 || changes.updatedPacks.length > 0) {
+      void vscode.window.showInformationMessage(t('Security rules updated: {added} added, {changed} changed, {removed} removed. Scan again; reviews of changed items no longer count as evidence.', {
+        added: changes.addedRules.length, changed: changes.changedRules.length, removed: changes.removedRules.length,
+      }));
     }
   }
 
@@ -265,7 +283,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
     const root = workspaceRoot();
     const report = await withProgress(t('Security rules scan running'), runScan);
     if (!root || !report) return;
-    const { csvPath } = await writeAuditReportFiles(root, report);
+    const { csvPath } = await writeAuditReportFiles(root, report, getDisplayLanguage(vscode));
     const open = t('Open CSV');
     // Not awaited: the panel must not stay busy while a notification waits for a click.
     void Promise.resolve(vscode.window.showInformationMessage(
@@ -325,7 +343,7 @@ export function createSecurityRulesController(vscode: typeof import('vscode'), c
   // Loading the workspace copy is local only; the network is touched by an explicit sync or by autoSync.
   async function initialize() {
     try {
-      applyRuleset(await readRulesetCache(cacheDir()));
+      applyRuleset(await rulesModule().readRulesetCache(cacheDir()));
       rescanOpenDocuments();
       emit();
     } catch {

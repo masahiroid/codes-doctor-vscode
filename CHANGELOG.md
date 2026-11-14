@@ -7,6 +7,13 @@ All notable changes to the Codes Doctor monorepo (`@codes-doctor/engine`, `codes
 
 ---
 
+## 7.4.0
+
+- **CLI**: Added `codesdoctor audit` to check a folder against the distributed security rules from a terminal or CI. It writes the audit report (JSON, CSV), a management sheet for advisory submissions (CSV, Excel), creates and verifies review evidence (`evidence.json`, same format and conditions as security-rules' `rules.py`), and fails with `--check` or `--fail-on-findings`.
+- **Rule updates**: The CLI and the extension compare new rules with the cached ones and report added, changed and removed rules and fixes released (`fix_status: released`); evidence for changed rules returns to pending.
+- **Extension**: The security audit export also writes the management sheet as CSV and Excel.
+- **Engine**: Rule loading, scanning and audit reports moved from the extension into the engine, so the extension and the CLI use the same code.
+
 ## 7.3.3
 
 - Dependency update: Bump the minor-and-patch group across 1 directory with 3 updates

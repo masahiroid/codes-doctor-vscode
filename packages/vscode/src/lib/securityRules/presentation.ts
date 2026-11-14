@@ -1,5 +1,5 @@
 import path from 'node:path';
-import type { Candidate, CompiledRule, FlowLine } from './scan';
+import type { Candidate, CompiledRule, FlowLine } from './rules';
 
 type Translate = (message: string, values?: Record<string, unknown>) => string;
 

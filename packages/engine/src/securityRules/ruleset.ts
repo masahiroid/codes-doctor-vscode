@@ -29,6 +29,13 @@ export interface SecurityRule {
   checkSteps: string[];
   excelColumn: string;
   actionRequired: string;
+  /**
+   * Advisory fix state, when the rule carries one (`fix_status`, e.g. `draft` before a fix is
+   * published and `released` after). Optional: rules without it are compared by content only.
+   */
+  fixStatus?: string;
+  /** The rule as distributed; its digest (`ruleDigest`) ties review evidence to this exact rule. */
+  raw?: Record<string, unknown>;
 }
 
 export interface PackEntry {
@@ -92,6 +99,31 @@ export function sha256Hex(data: Uint8Array | string): string {
   return createHash('sha256').update(data).digest('hex');
 }
 
+/**
+ * JSON with sorted keys and two-space indentation, as Python's
+ * `json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True)` writes it.
+ */
+export function canonicalJson(value: unknown): string {
+  const sort = (item: unknown): unknown => {
+    if (Array.isArray(item)) return item.map(sort);
+    if (item && typeof item === 'object') {
+      return Object.fromEntries(Object.keys(item as Record<string, unknown>).sort().map((key) => [key, sort((item as Record<string, unknown>)[key])]));
+    }
+    return item;
+  };
+  return JSON.stringify(sort(value), null, 2);
+}
+
+/**
+ * The rule's SHA-256, computed as security-rules' `rules.py` does, so evidence written by either
+ * tool names the same rule content. A changed rule gets a new digest and its evidence expires.
+ */
+export function ruleDigest(rule: SecurityRule): string {
+  // A rule built by hand rather than parsed has no distributed form; its parsed fields stand in.
+  const { raw, ...parsed } = rule;
+  return sha256Hex(`${canonicalJson(raw ?? parsed)}\n`);
+}
+
 export function parseManifest(text: string): Manifest {
   const data = record(JSON.parse(text), 'manifest');
   if (!Array.isArray(data.packs) || data.packs.length === 0) fail('Invalid ruleset: manifest has no packs');
@@ -133,6 +165,8 @@ function parseRule(raw: unknown, index: number): SecurityRule {
     checkSteps: strings(rule.check_steps, `${id}.check_steps`),
     excelColumn: str(excel.column, `${id}.excel_mapping.column`),
     actionRequired: str(excel.action_required, `${id}.excel_mapping.action_required`),
+    fixStatus: typeof rule.fix_status === 'string' && rule.fix_status ? rule.fix_status : undefined,
+    raw: rule,
   };
 }
 
@@ -218,4 +252,3 @@ export async function readRulesetCache(cacheDir: string): Promise<LoadedRuleset>
   return { manifest, packs, source: 'cache', files };
 }
 
-module.exports = { DEFAULT_MANIFEST_URL, MANIFEST_FILE, sha256Hex, parseManifest, parsePack, fetchBytes, downloadRuleset, writeRulesetCache, readRulesetCache };

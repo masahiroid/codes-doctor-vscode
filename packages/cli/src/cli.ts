@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { AnalyzeOptions, parseCommand, USAGE } from './options';
 import { formatSummary, summarize } from './summary';
+import { audit, formatAuditSummary } from './audit';
+import type { AuditOptions } from './options';
 
 type Engine = typeof import('../vendor/csap-en');
 
@@ -39,6 +41,13 @@ async function analyze(options: AnalyzeOptions): Promise<number> {
   return summary.failures.length > 0 ? EXIT.thresholdFailed : EXIT.ok;
 }
 
+async function runAudit(options: AuditOptions): Promise<number> {
+  const engine = loadEngine(options.reportLanguage);
+  const summary = await quietly(false, () => audit(engine, options, VERSION));
+  process.stdout.write((options.json ? JSON.stringify(summary, null, 2) : formatAuditSummary(summary)) + '\n');
+  return summary.failures.length > 0 ? EXIT.thresholdFailed : EXIT.ok;
+}
+
 export async function main(argv: string[]): Promise<number> {
   let command;
   try {
@@ -56,7 +65,7 @@ export async function main(argv: string[]): Promise<number> {
     return EXIT.ok;
   }
   try {
-    return await analyze(command.options);
+    return command.kind === 'audit' ? await runAudit(command.options) : await analyze(command.options);
   } catch (error) {
     process.stderr.write(`codes-doctor: ${error instanceof Error ? error.message : String(error)}\n`);
     return EXIT.error;

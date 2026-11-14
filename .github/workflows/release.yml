@@ -9,11 +9,11 @@ name: Release
 # Authenticates to Marketplace via Microsoft Entra ID OIDC (AZURE_CLIENT_ID / AZURE_TENANT_ID)
 # with fallback to VSCE_PAT.
 # The CLI is published to npm as `codesdoctor` by a separate job, so a Marketplace failure does not
-# block it. It publishes the triggering tag, or the current version on main when that version is
-# tagged and missing from npm; run it manually with `npm_tag` to publish an older missed tag. It
-# authenticates through npm Trusted Publishing (OIDC), so no token is stored. Scheduled and
-# Dependabot runs never publish, so a person always decides what reaches npm; run manually with
-# `npm_dist_tag: next` to try a version before it becomes "latest".
+# block it. It runs only for the version this run released, or for `npm_tag` on a manual run, so a
+# push without a new version never publishes. Every publish waits for approval in the `npm`
+# environment, so a person always decides what reaches npm. If a publish fails or is rejected, run
+# manually with `npm_tag` to retry; add `npm_dist_tag: next` to try a version before it becomes
+# "latest". It authenticates through npm Trusted Publishing (OIDC), so no token is stored.
 on:
   push:
     branches: [main]
@@ -40,11 +40,13 @@ permissions:
   contents: write
   id-token: write
 
-concurrency: release
-
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Per job, so a publish waiting for approval does not hold up later releases.
+    concurrency: release
+    outputs:
+      version: ${{ steps.vsix.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -177,15 +179,17 @@ jobs:
 
   publish-npm:
     needs: release
-    if: ${{ !cancelled() && github.event_name != 'schedule' && github.actor != 'dependabot[bot]' }}
+    if: ${{ !cancelled() && (needs.release.outputs.version != '' || inputs.npm_tag != '') }}
     runs-on: ubuntu-latest
+    environment: npm
+    concurrency: publish-npm
     permissions:
       contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.npm_tag || (github.ref_type == 'tag' && github.ref_name) || 'main' }}
+          ref: ${{ inputs.npm_tag || format('v{0}', needs.release.outputs.version) }}
           fetch-depth: 0
           persist-credentials: false
 
