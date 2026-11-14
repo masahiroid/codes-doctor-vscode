@@ -14,6 +14,10 @@ All notable changes to the Codes Doctor monorepo (`@codes-doctor/engine`, `codes
 - **Extension**: The security audit export also writes the management sheet as CSV and Excel.
 - **Engine**: Rule loading, scanning and audit reports moved from the extension into the engine, so the extension and the CLI use the same code.
 
+## 7.3.3
+
+- Dependency update: Bump the minor-and-patch group across 1 directory with 3 updates
+
 ## 7.3.2
 
 - **CLI**: Added `--fail-on <severity>` to fail CI on code or dependency findings of a given severity or worse. It also fails when the dependency scan could not finish; `--allow-incomplete-scan` opts out. `action.yml` gains a `fail-on` input.
