@@ -1,3 +1,4 @@
+import { ruleDigest } from './ruleset';
 import type { SecurityPack } from './ruleset';
 import { ruleKey } from './scan';
 import type { Candidate, CompiledRule, EndpointResult, FlowEngine } from './scan';
@@ -81,7 +82,9 @@ export function buildAuditReport(
       packVersion: pack.version,
       channel: pack.channel,
       ruleId: rule.id,
+      ruleSha256: ruleDigest(rule),
       title: rule.title,
+      category: rule.category,
       severity: rule.severity,
       owaspCategory: rule.owaspCategory ?? '',
       excelColumn: rule.excelColumn,
@@ -121,7 +124,7 @@ export function buildAuditReport(
 export type AuditReport = ReturnType<typeof buildAuditReport>;
 
 // Spreadsheet applications run cells that start with these characters as formulas.
-function csvCell(value: unknown): string {
+export function csvCell(value: unknown): string {
   let text = String(value ?? '');
   if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
@@ -139,4 +142,3 @@ export function auditReportToCsv(report: AuditReport): string {
   return `﻿${[header.join(','), ...lines].join('\r\n')}\r\n`;
 }
 
-module.exports = { buildAuditReport, auditReportToCsv };

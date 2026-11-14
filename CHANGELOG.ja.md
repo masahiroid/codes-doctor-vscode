@@ -7,6 +7,13 @@ Codes Doctor モノレポ（`@codes-doctor/engine`、`codes-doctor` CLI、およ
 
 ---
 
+## 7.4.0
+
+- **CLI**: 配信セキュリティルールでフォルダを点検する `codesdoctor audit` を追加。ターミナルやCIから実行でき、監査レポート（JSON・CSV）、注意喚起の点検提出用の管理表（CSV・Excel）を出力し、点検の証跡（`evidence.json`。security-rules の `rules.py` と同じ形式・判定条件）を作成・検証。`--check` と `--fail-on-findings` で終了コードを制御。
+- **ルール更新**: CLIと拡張機能で新しいルールをキャッシュと比較し、追加・変更・削除されたルールと修正版の公開（`fix_status: released`）を通知。変更されたルールの証跡は未着手に戻す。
+- **拡張機能**: セキュリティ監査レポートの出力で、管理表もCSVとExcelで出力。
+- **エンジン**: ルールの取得・走査・監査レポートを拡張機能からエンジンへ移し、拡張機能とCLIで同じ処理を使うように変更。
+
 ## 7.3.2
 
 - **CLI**: 指定した重大度以上のコード・依存関係の検出で CI を失敗させる `--fail-on <severity>` を追加。依存関係スキャンが完了しない場合も失敗し、`--allow-incomplete-scan` で無効化可能。`action.yml` に `fail-on` 入力を追加。

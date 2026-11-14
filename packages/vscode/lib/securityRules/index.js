@@ -34,8 +34,6 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 /** Security rule sets: the pure modules (no VS Code API), re-exported for tests and tools. */
-const ruleset = __importStar(require("./ruleset"));
-const scan = __importStar(require("./scan"));
-const audit = __importStar(require("./audit"));
+const rules_1 = require("./rules");
 const presentation = __importStar(require("./presentation"));
-module.exports = { ...ruleset, ...scan, ...audit, escapeMarkdown: presentation.escapeMarkdown };
+module.exports = { ...(0, rules_1.rulesModule)(), escapeMarkdown: presentation.escapeMarkdown };

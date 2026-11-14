@@ -218,4 +218,3 @@ export async function scanFile(text: string, language: string, filePath: string,
   return candidates;
 }
 
-module.exports = { SCAN_LIMITS, compileRules, flowRulesOf, ruleKey, languageForFile, SCAN_GLOB, UNSUPPORTED_SOURCE_GLOB, SCAN_EXCLUDE_GLOB, scanText, scanFile };

@@ -178,5 +178,7 @@
   "No ownership check": "所有者照合なし",
   "the ID from line {line} selects the object here without a check that it belongs to the signed-in user": "{line}行目のIDでここの対象を選んでいますが、ログイン中のユーザーの所有物かを確認していません",
   "Compare the object owner with the signed-in user, scope the lookup to that user, or call an authorization check. If the object is public by design, record the reason.": "対象の所有者とログイン中のユーザーを照合するか、問い合わせをそのユーザーで絞り込むか、認可チェックを呼んでください。設計上公開してよい対象であれば、その理由を記録してください。",
-  "\"Access\" items list request handlers where a requested ID selects an object with no ownership check found. Whether an object may be public cannot be judged from code.": "「アクセス制御」は、リクエストで指定されたIDで対象を選んでいるのに、所有者の照合が見つからない処理を示します。その対象を公開してよいかは、コードからは判断できません。"
+  "\"Access\" items list request handlers where a requested ID selects an object with no ownership check found. Whether an object may be public cannot be judged from code.": "「アクセス制御」は、リクエストで指定されたIDで対象を選んでいるのに、所有者の照合が見つからない処理を示します。その対象を公開してよいかは、コードからは判断できません。",
+  "A fix was released for {count} security rule item(s): {items}. Check these items again and apply the fix.": "{count}件のセキュリティルール項目で修正版が公開されました: {items}。再点検し、修正を適用してください。",
+  "Security rules updated: {added} added, {changed} changed, {removed} removed. Scan again; reviews of changed items no longer count as evidence.": "セキュリティルールが更新されました（追加{added}件、変更{changed}件、削除{removed}件）。再点検してください。変更された項目の点検結果は証跡として扱われません。"
 }
