@@ -120,6 +120,37 @@ jobs:
 
 自動判定は確認候補です。「到達なし」は安全の証明ではなく、どの結果も単独では適合を示しません。
 
+## AIエージェント向けMCPサーバー
+
+```bash
+codesdoctor mcp [root] [--lang <en|ja>]
+```
+
+Codes Doctor を stdio の MCP（Model Context Protocol）サーバーとして起動します。Claude Desktop、Claude Code、Cursor などのエージェントが、当て推量ではなく構文解析（AST）とデータフロー追跡の事実に基づいてコードを修正・検証できます。解析できるのは `root`（既定は現在のフォルダ）の中のフォルダだけで、シンボリックリンクでも外へは出られません。ソースコードはPCの外へ送らず、解析対象のフォルダにファイルを書き込まず、標準出力にはプロトコルのメッセージだけを出します。
+
+| ツール | 返す内容 |
+| --- | --- |
+| `analyze` | フォルダの技術的負債・セキュリティのスコア、重大度別のセキュリティ検出（経路を追跡したもの・パターン一致のみのもの）、God Class、循環依存、依存パッケージの脆弱性 |
+| `get_taint_flow` | 入力元（source）から各ステップを経て危険な処理（sink）に届く経路付きのセキュリティ検出。ファイル・行・コードを返します。絞り込み: `file`、`category`、`min_severity`、`include_pattern`、`include_tests`、`limit` |
+| `get_god_classes` | 肥大化したクラスをスコアの高い順に、メソッド数・行数・import数・プロパティ数・複雑度・指摘理由とともに返します。絞り込み: `min_rank`、`limit` |
+
+各ツールは `path`（root からの相対フォルダ）を受け取ります。解析結果は、`refresh: true` を渡すまで後の呼び出しで再利用します。`--lang ja` で検出の説明文を日本語で返します。
+
+Claude Desktop（`claude_desktop_config.json`）や Cursor（`.cursor/mcp.json`）:
+
+```json
+{
+  "mcpServers": {
+    "codes-doctor": {
+      "command": "npx",
+      "args": ["-y", "codesdoctor@latest", "mcp", "/path/to/project"]
+    }
+  }
+}
+```
+
+Claude Code: `claude mcp add codes-doctor -- npx -y codesdoctor@latest mcp .`
+
 ## このリポジトリからのビルド
 
 ```bash

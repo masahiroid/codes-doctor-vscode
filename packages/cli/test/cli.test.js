@@ -200,3 +200,69 @@ test('audits a folder with distributed rules: reports, evidence, check, findings
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('mcp: parses its options and rejects others', () => {
+  const command = parseCommand(['mcp', 'src', '--lang', 'ja']);
+  assert.equal(command.kind, 'mcp');
+  assert.equal(command.options.root, path.resolve('src'));
+  assert.equal(command.options.reportLanguage, 'ja');
+  assert.throws(() => parseCommand(['mcp', '--json']), /not an option of mcp/);
+});
+
+test('mcp: serves analyze, get_taint_flow and get_god_classes over stdio, inside the root only', () => {
+  const { root, repo } = fixture();
+  fs.symlinkSync(os.tmpdir(), path.join(repo, 'escape'));
+  const requests = [
+    { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '1' } } },
+    { jsonrpc: '2.0', method: 'notifications/initialized' },
+    { jsonrpc: '2.0', id: 2, method: 'tools/list' },
+    { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'analyze', arguments: { path: 'repo' } } },
+    { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'get_taint_flow', arguments: { path: 'repo', min_severity: 'high' } } },
+    { jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'get_god_classes', arguments: { path: 'repo' } } },
+    { jsonrpc: '2.0', id: 6, method: 'tools/call', params: { name: 'analyze', arguments: { path: '..' } } },
+    { jsonrpc: '2.0', id: 7, method: 'tools/call', params: { name: 'analyze', arguments: { path: 'repo/escape' } } },
+    { jsonrpc: '2.0', id: 8, method: 'tools/call', params: { name: 'get_god_classes', arguments: { limit: 0 } } },
+    { jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'delete_everything' } },
+    { jsonrpc: '2.0', id: 10, method: 'unknown/method' },
+    'not json',
+  ];
+  const run = spawnSync(process.execPath, [BIN, 'mcp', root], {
+    input: requests.map((item) => (typeof item === 'string' ? item : JSON.stringify(item))).join('\n') + '\n',
+    encoding: 'utf8',
+  });
+  assert.equal(run.status, 0, run.stderr);
+  // stdout carries protocol messages only; the engine's log goes to stderr.
+  const replies = run.stdout.trim().split('\n').map((line) => JSON.parse(line));
+  const byId = new Map(replies.map((reply) => [reply.id, reply]));
+  assert.equal(replies.length, 11, 'one reply per request, none for the notification');
+
+  assert.equal(byId.get(1).result.protocolVersion, '2025-06-18');
+  assert.ok(byId.get(1).result.capabilities.tools);
+  assert.deepEqual(byId.get(2).result.tools.map((tool) => tool.name), ['analyze', 'get_taint_flow', 'get_god_classes']);
+
+  const analysis = byId.get(3).result.structuredContent;
+  assert.equal(analysis.path, 'repo');
+  assert.equal(analysis.summary.totalFiles, 2);
+  assert.ok(analysis.security.tracedFlows >= 1);
+
+  const flows = byId.get(4).result.structuredContent;
+  const injection = flows.findings.find((item) => item.category === 'Code Injection');
+  assert.equal(injection.file, 'b.ts');
+  assert.equal(injection.line, 1);
+  assert.equal(injection.confidence, 'flow');
+  assert.ok(injection.flow.source && injection.flow.sink);
+  assert.ok(flows.findings.every((item) => item.severity === 'high' || item.severity === 'critical'));
+
+  const classes = byId.get(5).result.structuredContent;
+  assert.equal(classes.total, classes.godClasses.length);
+  for (const item of classes.godClasses) assert.equal(path.isAbsolute(item.file), false);
+
+  assert.equal(byId.get(6).result.isError, true);
+  assert.match(byId.get(6).result.content[0].text, /Outside the server root/);
+  assert.equal(byId.get(7).result.isError, true, 'a symbolic link cannot lead out of the root');
+  assert.match(byId.get(8).result.content[0].text, /limit/);
+  assert.equal(byId.get(9).error.code, -32602);
+  assert.equal(byId.get(10).error.code, -32601);
+  assert.equal(byId.get(null).error.code, -32700);
+  assert.deepEqual(fs.readdirSync(repo).sort(), ['a.ts', 'b.ts', 'escape'], 'nothing is written into the analyzed folder');
+});

@@ -7,6 +7,10 @@ Codes Doctor モノレポ（`@codes-doctor/engine`、`codes-doctor` CLI、およ
 
 ---
 
+## 7.5.0
+
+- **CLI**: AIエージェント向けに stdio の MCP（Model Context Protocol）サーバー `codesdoctor mcp` を追加。Claude Desktop、Claude Code、Cursor などから使え、ツール `analyze`・`get_taint_flow`・`get_god_classes` で、スコア、入力元から危険な処理までの経路（ファイル・行・コード）付きのセキュリティ検出、God Class を返します。解析できるのはサーバーのルート内のフォルダだけで、ソースコードはPCの外へ送りません。
+
 ## 7.4.0
 
 - **CLI**: 配信セキュリティルールでフォルダを点検する `codesdoctor audit` を追加。ターミナルやCIから実行でき、監査レポート（JSON・CSV）、注意喚起の点検提出用の管理表（CSV・Excel）を出力し、点検の証跡（`evidence.json`。security-rules の `rules.py` と同じ形式・判定条件）を作成・検証。`--check` と `--fail-on-findings` で終了コードを制御。

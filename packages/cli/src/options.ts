@@ -48,9 +48,16 @@ export interface AuditOptions {
   json: boolean;
 }
 
+export interface McpOptions {
+  /** Only folders inside this one can be analyzed. */
+  root: string;
+  reportLanguage: ReportLanguage;
+}
+
 export type Command =
   | { kind: 'analyze'; options: AnalyzeOptions }
   | { kind: 'audit'; options: AuditOptions }
+  | { kind: 'mcp'; options: McpOptions }
   | { kind: 'help' }
   | { kind: 'version' };
 
@@ -62,6 +69,7 @@ export const DEFAULT_AUDIT_DIR = path.join(DEFAULT_OUTPUT_DIR, 'security-audit')
 
 export const USAGE = `Usage: codesdoctor analyze [path] [options]
        codesdoctor audit [path] [options]
+       codesdoctor mcp [root] [--lang <en|ja>]
 
 Analyzes a folder and writes an HTML report.
 
@@ -106,6 +114,10 @@ Audit options:
                              ownership check is found
       --json                 Print the summary as JSON
 
+MCP: runs an MCP (Model Context Protocol) server over stdio for AI agents, with the
+tools analyze, get_taint_flow and get_god_classes. Only folders inside root (default:
+the current folder) can be analyzed. --lang sets the language of the findings' text.
+
 Exit codes: 0 success, 1 a score, finding or evidence check failed, 2 invalid usage or
 analysis error.`;
 
@@ -142,12 +154,18 @@ export function parseCommand(argv: string[]): Command {
   if (values.version) return { kind: 'version' };
 
   const [command, target, ...extra] = positionals;
-  if (command !== 'analyze' && command !== 'audit') throw new Error(command ? `Unknown command: ${command}` : 'Missing command');
+  if (command !== 'analyze' && command !== 'audit' && command !== 'mcp') throw new Error(command ? `Unknown command: ${command}` : 'Missing command');
   if (extra.length > 0) throw new Error(`Unexpected argument: ${extra[0]}`);
 
   const reportLanguage = values.lang ?? 'en';
   if (!(REPORT_LANGUAGES as readonly string[]).includes(reportLanguage)) {
     throw new Error(`--lang must be one of: ${REPORT_LANGUAGES.join(', ')}`);
+  }
+
+  if (command === 'mcp') {
+    const extraOption = Object.keys(values).find((name) => name !== 'lang' && values[name as keyof typeof values] !== undefined);
+    if (extraOption) throw new Error(`--${extraOption} is not an option of mcp`);
+    return { kind: 'mcp', options: { root: path.resolve(target ?? '.'), reportLanguage: reportLanguage as ReportLanguage } };
   }
 
   const analyzeOnly = ['language', 'min-security', 'min-debt', 'fail-on', 'allow-incomplete-scan', 'verbose'] as const;
