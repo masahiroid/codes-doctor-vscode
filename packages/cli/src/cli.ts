@@ -3,7 +3,8 @@ import path from 'node:path';
 import { AnalyzeOptions, parseCommand, USAGE } from './options';
 import { formatSummary, summarize } from './summary';
 import { audit, formatAuditSummary } from './audit';
-import type { AuditOptions } from './options';
+import type { AuditOptions, McpOptions } from './options';
+import { McpServer } from './mcp';
 
 type Engine = typeof import('../vendor/csap-en');
 
@@ -48,6 +49,21 @@ async function runAudit(options: AuditOptions): Promise<number> {
   return summary.failures.length > 0 ? EXIT.thresholdFailed : EXIT.ok;
 }
 
+/** Serve MCP on stdin/stdout until the client closes the stream. Logs go to stderr. */
+async function runMcp(options: McpOptions): Promise<number> {
+  const engine = loadEngine(options.reportLanguage);
+  const server = new McpServer({
+    root: options.root,
+    engine,
+    version: VERSION,
+    input: process.stdin,
+    output: process.stdout,
+    log: (line) => process.stderr.write(`${line}\n`),
+  });
+  await server.serve();
+  return EXIT.ok;
+}
+
 export async function main(argv: string[]): Promise<number> {
   let command;
   try {
@@ -65,6 +81,7 @@ export async function main(argv: string[]): Promise<number> {
     return EXIT.ok;
   }
   try {
+    if (command.kind === 'mcp') return await runMcp(command.options);
     return command.kind === 'audit' ? await runAudit(command.options) : await analyze(command.options);
   } catch (error) {
     process.stderr.write(`codes-doctor: ${error instanceof Error ? error.message : String(error)}\n`);

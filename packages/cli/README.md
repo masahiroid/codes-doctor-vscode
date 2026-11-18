@@ -3,7 +3,7 @@
 - English: this document
 - 日本語: [README.ja.md](README.ja.md)
 
-Runs the Codes Doctor analysis from a terminal or CI job and writes the same HTML report as the VS Code extension: God Classes, technical debt, security findings, dependency graphs and an SBOM.
+Runs the Codes Doctor analysis from a terminal, a CI job or an AI agent (MCP) and writes the same HTML report as the VS Code extension: God Classes, technical debt, security findings, dependency graphs and an SBOM.
 
 ## Usage
 
@@ -119,6 +119,37 @@ jobs:
 Run the same workflow in each repository; the uploaded `security-audit.json` and `.xlsx` of each run can be collected from the artifacts. Collecting them into one sheet across repositories is not built in.
 
 Automatic results are review candidates. "No flow found" is not proof of safety, and no result establishes compliance by itself.
+
+## MCP server for AI agents
+
+```bash
+codesdoctor mcp [root] [--lang <en|ja>]
+```
+
+Runs Codes Doctor as an MCP (Model Context Protocol) server over stdio, so an agent such as Claude Desktop, Claude Code or Cursor can fix and verify code from the facts of the AST and data-flow analysis instead of guessing. Only folders inside `root` (default: the current folder) can be analyzed; symbolic links cannot lead outside it. The source stays on the machine, nothing is written into the analyzed folder, and stdout carries protocol messages only.
+
+| Tool | Returns |
+| --- | --- |
+| `analyze` | Technical debt and security scores, security findings by severity (traced flows and pattern matches), God Classes, circular dependencies and dependency vulnerabilities of a folder |
+| `get_taint_flow` | Security findings with the traced path from the input (source) through each step to the dangerous call (sink): file, line and code. Filters: `file`, `category`, `min_severity`, `include_pattern`, `include_tests`, `limit` |
+| `get_god_classes` | Oversized classes, highest score first, with methods, lines, imports, properties, complexity and the reasons they were flagged. Filters: `min_rank`, `limit` |
+
+Each tool takes `path` (a folder relative to the root). The result of an analysis is reused by later calls until `refresh: true` is passed. `--lang ja` returns the findings' descriptions in Japanese.
+
+Claude Desktop (`claude_desktop_config.json`) or Cursor (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "codes-doctor": {
+      "command": "npx",
+      "args": ["-y", "codesdoctor@latest", "mcp", "/path/to/project"]
+    }
+  }
+}
+```
+
+Claude Code: `claude mcp add codes-doctor -- npx -y codesdoctor@latest mcp .`
 
 ## Building from this repository
 

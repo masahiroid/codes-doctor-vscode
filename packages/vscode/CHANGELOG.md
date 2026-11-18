@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.5.0
+
+- **CLI**: Added `codesdoctor mcp`, an MCP (Model Context Protocol) server over stdio for AI agents such as Claude Desktop, Claude Code and Cursor. Its tools `analyze`, `get_taint_flow` and `get_god_classes` return scores, security findings with the traced path from input to dangerous call (file, line, code), and God Classes. Only folders inside the server root are analyzed, and the source stays on the machine.
+
 ## 7.4.0
 
 - **CLI**: Added `codesdoctor audit` to check a folder against the distributed security rules from a terminal or CI. It writes the audit report (JSON, CSV), a management sheet for advisory submissions (CSV, Excel), creates and verifies review evidence (`evidence.json`, same format and conditions as security-rules' `rules.py`), and fails with `--check` or `--fail-on-findings`.
