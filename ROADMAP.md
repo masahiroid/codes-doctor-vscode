@@ -91,12 +91,23 @@ Codes Doctor のセキュリティ点検機能の今後の計画です。7.0.0 �
 - 解析できるのは起動時に指定したルート内のフォルダだけです（シンボリックリンクで外へ出る指定も拒否）。解析対象のフォルダにファイルを書き込まず、エンジンのログは標準エラーへ出します。
 - 未対応: 配信セキュリティルールの点検（`audit`）と証跡の更新は MCP のツールにしていません。
 
+## 7.6 — 実行環境のバージョンをSBOMへ（7.6.0で対応）
+
+8.x の「実行環境のバージョン」を先行して実装しました。外部への問い合わせがなく、決定論的に判定できるためです。
+
+7.6.0の結果:
+
+- `package.json` の `engines.node`、`.nvmrc`、`.node-version`、`composer.json` の `require.php`、`.python-version`、`go.mod` の `go`/`toolchain`、プロジェクト直下の Dockerfile・Containerfile の `FROM` を読み、SBOMの「実行環境・ベースイメージ」に加えます。公式の言語イメージ（`node`・`php`・`python`・`golang`・`ruby`・`openjdk`・`eclipse-temurin`）は、タグから言語のバージョンも取り出します。
+- 各項目に宣言箇所（ファイルと行）を付けます。値は宣言のままで、実際に動いているバージョンではありません。
+- CycloneDX（`container`・`framework` と `codesdoctor:source` プロパティ）と SPDX の出力に含めます。依存関係の件数は変わりません。
+- 未対応: ビルド引数（`ARG`）を使う `FROM`、サブフォルダの Dockerfile、`pyproject.toml` の `requires-python`、実行環境の脆弱性との照合。
+
 ## 8.x — 脆弱性情報との連携（検討）
 
 - **CWEとの対応づけ**: 注意喚起やCVEに付いたCWEから、該当する検出ロジックを選びます。
 - **脆弱性データベース**: NVD、OSV、JVN、CISA KEV の情報を、配信ルール経由で取り込みます。直接の問い合わせは任意にします（パッケージ名が外部に送られるため）。
 - **バリアント分析**: 公表された修正差分から危険な書き方を抽出し、自分のコードに同じパターンがないかを構文で探します。
-- **実行環境のバージョン**: PHP本体やNode本体のバージョン（`composer.json` の `require.php`、`Dockerfile` の `FROM` など）をSBOMに加えます。
+- **実行環境のバージョン**: PHP本体やNode本体のバージョン（`composer.json` の `require.php`、`Dockerfile` の `FROM` など）をSBOMに加えます。（宣言値の収集は7.6.0で対応。脆弱性との照合は未着手）
 
 ## 進め方の原則
 

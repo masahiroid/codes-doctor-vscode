@@ -47,7 +47,7 @@ Codes Doctor 自身のリポジトリを解析して生成した実際のレポ�
 - **汚染データフロー追跡（Taint Flow）**: 外部からの入力値（Source）が危険な処理（Sink: SQL 実行、XSS innerHTML、コマンド実行、パストラバーサル）に届く経路を解析し、定数呼び出しなどの誤検知を排除。
 - **1クリック AI Fix 差分プレビュー**: GitHub Copilot（`vscode.lm`）や外部 LLM（OpenAI、Anthropic、Gemini）を活用し、左右の差分エディタで修正案をプレビューして安全にワンクリック適用（Apply Fix）。
 - **高速 Git 変更差分解析**: `Analyze Git Changes` により、未コミットの変更ファイル（または直前コミット）のみを数秒でピンポイント診断。
-- **完全な SBOM & 脆弱性スキャン**: 直接・推移的・開発依存を含むソフトウェア部品表の出力と、Trivy / `npm audit` による既知の CVE 検出。
+- **完全な SBOM & 脆弱性スキャン**: 直接・推移的・開発依存を含むソフトウェア部品表の出力と、Trivy / `npm audit` による既知の CVE 検出。プロジェクトが宣言する実行環境のバージョン（`engines.node`、`.nvmrc`、`require.php`、`.python-version`、`go.mod`、Dockerfile の `FROM`）も、宣言箇所（ファイルと行）付きで一覧します。
 - **CI/CD 品質ゲート**: `--min-security 80` などの閾値を指定し、基準スコアを下回った場合に CI パイプラインを自動で Fail 判定。
 - **プライバシー保護**: 静的解析は完全にローカルマシン上で実行され、ソースコードが勝手に外部へアップロードされることはありません。
 

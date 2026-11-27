@@ -38,5 +38,16 @@ export function exportSBOMAsSDPX(sbom: SBOM): string {
     lines.push('');
   });
 
+  (sbom.runtimes ?? []).forEach((runtime, index) => {
+    lines.push(`PackageName: ${runtime.name}`);
+    lines.push(`SPDXID: SPDXRef-Runtime-${index}`);
+    lines.push(`PackageVersion: ${runtime.version}`);
+    lines.push('PackageDownloadLocation: NOASSERTION');
+    lines.push('FilesAnalyzed: false');
+    lines.push(`PackageComment: ${runtime.kind} declared in ${runtime.source.file}:${runtime.source.line}`);
+    lines.push(`ExternalRef: PACKAGE-MANAGER purl ${runtime.purl}`);
+    lines.push('');
+  });
+
   return lines.join('\n');
 }

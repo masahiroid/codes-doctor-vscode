@@ -7,6 +7,10 @@ Codes Doctor モノレポ（`@codes-doctor/engine`、`codes-doctor` CLI、およ
 
 ---
 
+## 7.6.0
+
+- **SBOM**: プロジェクトが宣言する実行環境のバージョンをSBOMに追加。`package.json` の `engines.node`、`.nvmrc`、`.node-version`、`composer.json` の `require.php`、`.python-version`、`go.mod` の `go`/`toolchain`、プロジェクト直下の Dockerfile の `FROM`（公式の `node`・`php`・`python`・`golang`・`ruby`・`openjdk`・`eclipse-temurin` イメージは言語のバージョンも）を読みます。宣言された値をそのまま、宣言したファイルと行とともに記録します。実際に動いているバージョンではなく宣言値です。ビルド引数を使うイメージ、ステージ名、`scratch` は対象外です。レポートと、CycloneDX（container/framework のコンポーネントと `codesdoctor:source` プロパティ）・SPDX の出力に含み、依存関係の件数は変わりません。
+
 ## 7.5.0
 
 - **CLI**: AIエージェント向けに stdio の MCP（Model Context Protocol）サーバー `codesdoctor mcp` を追加。Claude Desktop、Claude Code、Cursor などから使え、ツール `analyze`・`get_taint_flow`・`get_god_classes` で、スコア、入力元から危険な処理までの経路（ファイル・行・コード）付きのセキュリティ検出、God Class を返します。解析できるのはサーバーのルート内のフォルダだけで、ソースコードはPCの外へ送りません。
