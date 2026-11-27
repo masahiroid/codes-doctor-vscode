@@ -7,6 +7,10 @@ Codes Doctor モノレポ（`@codes-doctor/engine`、`codes-doctor` CLI、およ
 
 ---
 
+## 7.6.1
+
+- 依存関係: `@typescript-eslint/typescript-estree` を 8.74.0 に更新。`minimatch` 11.0.9 を使うようになり、engine・CLI・拡張機能で GHSA-g3hv-75wg-m249 を解消しました。許可リストの例外は、パッケージ作成ツール `@vscode/vsce` が使う `minimatch` 10.2.6（修正版を受け入れる安定版がまだない）だけに絞りました。`picomatch` の例外は typescript-estree 8.74.0 で再確認しました。
+
 ## 7.6.0
 
 - **SBOM**: プロジェクトが宣言する実行環境のバージョンをSBOMに追加。`package.json` の `engines.node`、`.nvmrc`、`.node-version`、`composer.json` の `require.php`、`.python-version`、`go.mod` の `go`/`toolchain`、プロジェクト直下の Dockerfile の `FROM`（公式の `node`・`php`・`python`・`golang`・`ruby`・`openjdk`・`eclipse-temurin` イメージは言語のバージョンも）を読みます。宣言された値をそのまま、宣言したファイルと行とともに記録します。実際に動いているバージョンではなく宣言値です。ビルド引数を使うイメージ、ステージ名、`scratch` は対象外です。レポートと、CycloneDX（container/framework のコンポーネントと `codesdoctor:source` プロパティ）・SPDX の出力に含み、依存関係の件数は変わりません。

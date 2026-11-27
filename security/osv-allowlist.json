@@ -2,13 +2,13 @@
   {
     "id": "GHSA-g3hv-75wg-m249",
     "package": "minimatch@10.2.6",
-    "reason": "Transitive dependency of @typescript-eslint/typescript-estree (minimatch ^10.2.2). The advisory affects pattern amplification when optimizationLevel >= 2 on untrusted user-supplied glob patterns; typescript-estree uses it internally with default options during local AST parsing. Remove when @typescript-eslint updates to minimatch >=11.0.1.",
-    "expires": "2026-11-30"
+    "reason": "Development dependency of @vscode/vsce only (vsce 4.1.1, the latest stable release, requires minimatch ^10.2.6; minimatch >=11.0.1 is accepted only by the 4.1.2 prereleases). The runtime path through @typescript-eslint/typescript-estree is fixed (8.74.0, minimatch 11.0.9). vsce runs only when packaging this repository and matches .vscodeignore patterns written in this repository, never untrusted user-supplied patterns, and does not set optimizationLevel >= 2. Remove when a stable @vscode/vsce accepts minimatch >=11.0.1.",
+    "expires": "2026-12-14"
   },
   {
     "id": "GHSA-fc5q-39xc-vjpf",
     "package": "picomatch@4.0.7",
-    "reason": "Transitive dependency of @typescript-eslint/typescript-estree through tinyglobby; no fixed picomatch release exists (4.0.7 is the last affected). typescript-estree calls tinyglobby only in resolveProjectList, for the `project` parser option; the engine, CLI and extension call parse() only and never pass `project`, so no glob pattern, user-supplied or otherwise, reaches picomatch. Remove when a fixed picomatch is released.",
-    "expires": "2026-12-02"
+    "reason": "Transitive dependency of @typescript-eslint/typescript-estree through tinyglobby; no fixed picomatch release exists (4.0.7 is the last affected). typescript-estree (re-checked at 8.74.0) calls tinyglobby only in resolveProjectList, for the `project` parser option; the engine, CLI and extension call parse() only and never pass `project`, so no glob pattern, user-supplied or otherwise, reaches picomatch. Remove when a fixed picomatch is released.",
+    "expires": "2026-12-14"
   }
 ]

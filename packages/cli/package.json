@@ -1,6 +1,6 @@
 {
   "name": "codesdoctor",
-  "version": "7.6.0",
+  "version": "7.6.1",
   "description": "Codes Doctor command line: structural, security and dependency analysis with an HTML report",
   "license": "Apache-2.0",
   "bin": {
@@ -23,7 +23,7 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@typescript-eslint/typescript-estree": "^8.72.1",
+    "@typescript-eslint/typescript-estree": "^8.74.0",
     "@vscode/tree-sitter-wasm": "^0.3.1",
     "php-parser": "^3.7.0",
     "typescript": "^6.0.3"
