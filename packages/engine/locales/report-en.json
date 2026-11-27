@@ -543,5 +543,12 @@
   "検出箇所": "Locations",
   "不要": "None",
   "認可（": "Authorization (",
-  "ルール": "Rule "
+  "ルール": "Rule ",
+  "名前": "Name",
+  "宣言されたバージョン": "Declared version",
+  "種類": "Kind",
+  "宣言箇所": "Declared at",
+  "ベースイメージ": "Base image",
+  "実行環境": "Runtime",
+  "実行環境・ベースイメージ（宣言値）": "Runtimes and base images (declared)"
 }

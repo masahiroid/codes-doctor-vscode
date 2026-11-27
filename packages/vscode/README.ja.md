@@ -50,7 +50,7 @@ Codes Doctor は、現在開いているワークスペースフォルダーを�
 
 ![Dependency graph tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/packages/vscode/media/screenshots/dependency-graph.png)
 
-**SBOM & Vulnerabilities** — 直接・推移・開発依存の内訳を含む完全なソフトウェア部品表と、依存関係の脆弱性スキャン（Trivy があれば Trivy、なければ `npm audit`）です。
+**SBOM & Vulnerabilities** — 直接・推移・開発依存の内訳を含む完全なソフトウェア部品表と、依存関係の脆弱性スキャン（Trivy があれば Trivy、なければ `npm audit`）です。プロジェクトが宣言する実行環境のバージョン（`engines.node`、`.nvmrc`、`require.php`、`.python-version`、`go.mod`、Dockerfile の `FROM`）も、宣言箇所（ファイルと行）付きで一覧します。
 
 ![SBOM tab](https://raw.githubusercontent.com/masahiroid/codes-doctor-vscode/main/packages/vscode/media/screenshots/sbom.png)
 

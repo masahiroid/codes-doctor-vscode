@@ -36,7 +36,18 @@ export function exportSBOMAsJson(sbom: SBOM): string {
       version: comp.version,
       purl: comp.purl,
       scope: comp.isDev ? 'excluded' : 'required',
-    })),
+    })).concat((sbom.runtimes ?? []).map((runtime) => ({
+      // CycloneDX 1.4 has no "platform" type; a language runtime is recorded as a framework.
+      type: runtime.kind === 'container' ? 'container' : 'framework',
+      name: runtime.name,
+      version: runtime.version,
+      purl: runtime.purl,
+      scope: 'required',
+      properties: [
+        { name: 'codesdoctor:kind', value: runtime.kind },
+        { name: 'codesdoctor:source', value: `${runtime.source.file}:${runtime.source.line}` },
+      ],
+    })) as any[]),
   };
 
   return JSON.stringify(cycloneDx, null, 2);

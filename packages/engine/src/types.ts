@@ -290,6 +290,17 @@ export interface SBOMComponent {
   isTransitive?: boolean;
 }
 
+/** A runtime or container base image the project declares (engines.node, require.php, FROM, ...). */
+export interface SBOMRuntime {
+  name: string;
+  /** The declared constraint, verbatim (e.g. ">=20", "^8.1", "20-alpine"). */
+  version: string;
+  kind: 'runtime' | 'container';
+  purl: string;
+  /** Where it is declared, relative to the project root. */
+  source: { file: string; line: number };
+}
+
 export interface SBOMDependency {
   name: string;
   dependsOn: string;
@@ -301,6 +312,8 @@ export interface SBOM {
   format: 'CycloneDX' | 'SPDX';
   components: SBOMComponent[];
   dependencies: SBOMDependency[];
+  /** Runtimes and base images; kept apart from `components` so dependency counts stay unchanged. */
+  runtimes?: SBOMRuntime[];
   metadata: {
     timestamp: string;
     projectName?: string;

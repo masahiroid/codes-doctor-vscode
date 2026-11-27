@@ -37,7 +37,8 @@ function dependencyKind(component: NonNullable<AnalysisResult['sbom']>['componen
 }
 
 export function generateSBOMSection(result: AnalysisResult): string {
-  if (!result.sbom?.components.length) return '';
+  const runtimes = result.sbom?.runtimes ?? [];
+  if (!result.sbom || (!result.sbom.components.length && !runtimes.length)) return '';
   const { components, metadata } = result.sbom;
   const total = components.length;
   const direct = components.filter((component) => !component.isTransitive).length;
@@ -63,6 +64,12 @@ export function generateSBOMSection(result: AnalysisResult): string {
       ${stat('推移的依存', transitive, { tone: 'sky' })}
       ${stat('開発依存', dev, { tone: 'butter' })}
     </div>
+    ${runtimes.length ? panel(table(['名前', '宣言されたバージョン', '種類', '宣言箇所'], runtimes.map((runtime) => `<tr>
+    <td><code>${escapeHtml(runtime.name)}</code></td>
+    <td class="mono muted">${escapeHtml(runtime.version)}</td>
+    <td>${runtime.kind === 'container' ? badge('ベースイメージ', 'sky') : badge('実行環境', 'mint')}</td>
+    <td class="mono muted">${escapeHtml(runtime.source.file)}:${runtime.source.line}</td>
+  </tr>`)), { title: '実行環境・ベースイメージ（宣言値）' }) : ''}
     ${panel(table(['パッケージ名', 'バージョン', 'タイプ', '依存の種類'], rows, { more: hidden > 0 ? '他 ' + hidden + ' 件を除外表示' : undefined }), { title: '依存関係一覧' })}
     ${notice('mint', 'SBOM の説明', about)}`);
 }

@@ -1,5 +1,6 @@
 import { SBOM } from '../types';
 import { scanNpmPackages } from './sbom/packageJsonScanner';
+import { scanRuntimes } from './sbom/runtimeScanner';
 
 const SBOM_SCHEMA_VERSION = '1.0';
 const SBOM_FORMAT = 'CycloneDX';
@@ -17,6 +18,7 @@ export function generateSBOM(repoPath: string): SBOM {
     format: SBOM_FORMAT,
     components: scanResult.components,
     dependencies: scanResult.dependencies,
+    runtimes: scanRuntimes(repoPath),
     metadata: {
       timestamp: new Date().toISOString(),
       projectName: scanResult.projectName,
@@ -51,5 +53,6 @@ export function calculateComponentStats(sbom: SBOM): {
   };
 }
 
+export { scanRuntimes } from './sbom/runtimeScanner';
 export { exportSBOMAsJson } from './sbom/cycloneDxExport';
 export { exportSBOMAsSDPX } from './sbom/spdxExport';
