@@ -2,7 +2,7 @@
   "name": "codes-doctor",
   "displayName": "Codes Doctor",
   "description": "%extension.description%",
-  "version": "7.6.0",
+  "version": "7.6.1",
   "publisher": "masahirocom",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -340,7 +340,7 @@
     "bundle": "node scripts/bundle.mjs"
   },
   "dependencies": {
-    "@typescript-eslint/typescript-estree": "^8.73.0",
+    "@typescript-eslint/typescript-estree": "^8.74.0",
     "@vscode/tree-sitter-wasm": "^0.3.1",
     "php-parser": "^3.7.0",
     "typescript": "^6.0.3"

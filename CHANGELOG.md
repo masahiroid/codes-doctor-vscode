@@ -7,6 +7,10 @@ All notable changes to the Codes Doctor monorepo (`@codes-doctor/engine`, `codes
 
 ---
 
+## 7.6.1
+
+- Dependencies: `@typescript-eslint/typescript-estree` 8.74.0, which uses `minimatch` 11.0.9 and fixes GHSA-g3hv-75wg-m249 in the engine, CLI and extension. The allowlist exception now covers only the `minimatch` 10.2.6 used by the packaging tool `@vscode/vsce` (no stable release accepts the fix yet), and the `picomatch` exception was re-checked against typescript-estree 8.74.0.
+
 ## 7.6.0
 
 - **SBOM**: Runtime versions declared by the project are added to the SBOM: `engines.node` in `package.json`, `.nvmrc`, `.node-version`, `require.php` in `composer.json`, `.python-version`, `go`/`toolchain` in `go.mod`, and the `FROM` images of Dockerfiles at the project root (with the language version of official `node`, `php`, `python`, `golang`, `ruby`, `openjdk` and `eclipse-temurin` images). Each entry records the declared value verbatim and the file and line where it is declared; it is a declaration, not the version that actually runs. Images using build arguments, stage aliases and `scratch` are skipped. They appear in the report and in the CycloneDX (container/framework components with a `codesdoctor:source` property) and SPDX exports, and do not change the dependency counts.
