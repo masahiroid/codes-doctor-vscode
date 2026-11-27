@@ -22,10 +22,9 @@ export function scanRuntimes(repoPath: string): SBOMRuntime[] {
 }
 
 function read(repoPath: string, file: string): string | undefined {
+  // Read directly rather than stat-then-read: a directory or missing file throws here.
   try {
-    const full = path.join(repoPath, file);
-    if (!fs.statSync(full).isFile()) return undefined;
-    return fs.readFileSync(full, 'utf-8');
+    return fs.readFileSync(path.join(repoPath, file), 'utf-8');
   } catch {
     return undefined;
   }

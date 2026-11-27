@@ -10,6 +10,7 @@ Codes Doctor モノレポ（`@codes-doctor/engine`、`codes-doctor` CLI、およ
 ## 7.6.0
 
 - **SBOM**: プロジェクトが宣言する実行環境のバージョンをSBOMに追加。`package.json` の `engines.node`、`.nvmrc`、`.node-version`、`composer.json` の `require.php`、`.python-version`、`go.mod` の `go`/`toolchain`、プロジェクト直下の Dockerfile の `FROM`（公式の `node`・`php`・`python`・`golang`・`ruby`・`openjdk`・`eclipse-temurin` イメージは言語のバージョンも）を読みます。宣言された値をそのまま、宣言したファイルと行とともに記録します。実際に動いているバージョンではなく宣言値です。ビルド引数を使うイメージ、ステージ名、`scratch` は対象外です。レポートと、CycloneDX（container/framework のコンポーネントと `codesdoctor:source` プロパティ）・SPDX の出力に含み、依存関係の件数は変わりません。
+- **依存関係**: `@vscode/vsce` の開発依存 `@azure/identity` を 4.14.1、`@azure/msal-node` を 7.2.3 に更新し、GHSA-xcx6-jx8p-x3h5 を解消。許可リストの例外を削除しました。
 
 ## 7.5.0
 

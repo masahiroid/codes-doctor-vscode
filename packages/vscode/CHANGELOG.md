@@ -3,6 +3,7 @@
 ## 7.6.0
 
 - **SBOM**: Runtime versions declared by the project are added to the SBOM: `engines.node` in `package.json`, `.nvmrc`, `.node-version`, `require.php` in `composer.json`, `.python-version`, `go`/`toolchain` in `go.mod`, and the `FROM` images of Dockerfiles at the project root (with the language version of official `node`, `php`, `python`, `golang`, `ruby`, `openjdk` and `eclipse-temurin` images). Each entry records the declared value verbatim and the file and line where it is declared; it is a declaration, not the version that actually runs. Images using build arguments, stage aliases and `scratch` are skipped. They appear in the report and in the CycloneDX (container/framework components with a `codesdoctor:source` property) and SPDX exports, and do not change the dependency counts.
+- **Dependencies**: `@azure/identity` 4.14.1 and `@azure/msal-node` 7.2.3 (development dependency of `@vscode/vsce`), fixing GHSA-xcx6-jx8p-x3h5; its allowlist exception is removed.
 
 ## 7.5.0
 
